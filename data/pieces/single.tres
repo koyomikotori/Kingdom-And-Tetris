@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="PieceShapeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/pieces/piece_shape_data.gd" id="1_shape"]
+
+[resource]
+script = ExtResource("1_shape")
+shape_id = &"single"
+display_name = "Ô đơn"
+cells = Array[Vector2i]([Vector2i(0, 0)])
+spawn_weight = 1.0

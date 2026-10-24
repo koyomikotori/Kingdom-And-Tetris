@@ -17,6 +17,10 @@ const CASTLE_COLOR := Color(0.62, 0.22, 0.2)
 const CASTLE_ROOF_COLOR := Color(0.85, 0.4, 0.3)
 const COORD_TEXT_COLOR := Color(1, 1, 1, 0.55)
 const COORD_FONT_SIZE := 8
+const KEY_MARKER_COLOR := Color(1.0, 0.85, 0.2)
+const GHOST_ALPHA := 0.75
+const GHOST_VALID_COLOR := Color(0.45, 1.0, 0.45)
+const GHOST_INVALID_COLOR := Color(1.0, 0.3, 0.3)
 
 ## Shows "x,y" in every cell. Toggled with G in the kingdom scene.
 var show_coords := true:
@@ -27,6 +31,9 @@ var show_coords := true:
 var _board: BoardData
 var _terrains: Dictionary[StringName, TerrainData] = {}
 var _hovered := OFF_BOARD
+var _ghost_piece: LandPiece
+var _ghost_origin := Vector2i.ZERO
+var _ghost_valid := false
 
 
 func setup(board: BoardData, terrains: Dictionary[StringName, TerrainData]) -> void:
@@ -49,6 +56,25 @@ static func cell_to_local(coord: Vector2i) -> Vector2:
 ## Returns null for unknown ids.
 func get_terrain(terrain_id: StringName) -> TerrainData:
 	return _terrains.get(terrain_id)
+
+
+## Shows a translucent preview of `piece` placed at `origin`, outlined green or red.
+func show_ghost(piece: LandPiece, origin: Vector2i, valid: bool) -> void:
+	_ghost_piece = piece
+	_ghost_origin = origin
+	_ghost_valid = valid
+	queue_redraw()
+
+
+func hide_ghost() -> void:
+	if _ghost_piece == null:
+		return
+	_ghost_piece = null
+	queue_redraw()
+
+
+func get_hovered_cell() -> Vector2i:
+	return _hovered
 
 
 func get_board_rect() -> Rect2:
@@ -86,17 +112,48 @@ func _draw() -> void:
 	_draw_buildings()
 	if show_coords:
 		_draw_coords()
-	if _hovered != OFF_BOARD:
+	if _ghost_piece != null:
+		_draw_ghost()
+	elif _hovered != OFF_BOARD:
 		draw_rect(_cell_rect(_hovered), HOVER_COLOR, false, 2.0)
 
 
 func _draw_cell(cell: CellData) -> void:
 	var color := EMPTY_COLOR
 	if cell.has_terrain():
-		var terrain := get_terrain(cell.terrain_id)
-		color = terrain.color if terrain != null else Color.MAGENTA
+		color = _terrain_color(cell.terrain_id)
 	draw_rect(_cell_rect(cell.coord), color)
 	draw_rect(_cell_rect(cell.coord), GRID_COLOR, false, 1.0)
+	if cell.is_key:
+		draw_key_marker(self, _cell_rect(cell.coord))
+
+
+func _draw_ghost() -> void:
+	var outline := GHOST_VALID_COLOR if _ghost_valid else GHOST_INVALID_COLOR
+	var coords := _ghost_piece.get_board_coords(_ghost_origin)
+	for i in coords.size():
+		var rect := _cell_rect(coords[i])
+		var fill := _terrain_color(_ghost_piece.terrains[i])
+		fill.a = GHOST_ALPHA
+		draw_rect(rect, fill)
+		if _ghost_piece.is_key_cell(i):
+			draw_key_marker(self, rect)
+		draw_rect(rect.grow(-1), outline, false, 2.0)
+
+
+## Gold diamond in the middle of `rect`. Static so piece cards can share it.
+static func draw_key_marker(canvas: CanvasItem, rect: Rect2) -> void:
+	var c := rect.get_center()
+	var r := rect.size.x * 0.22
+	var points := PackedVector2Array([c + Vector2(0, -r), c + Vector2(r, 0), c + Vector2(0, r), c + Vector2(-r, 0)])
+	canvas.draw_colored_polygon(points, KEY_MARKER_COLOR)
+	points.append(points[0])
+	canvas.draw_polyline(points, Color.BLACK, 1.0)
+
+
+func _terrain_color(terrain_id: StringName) -> Color:
+	var terrain := get_terrain(terrain_id)
+	return terrain.color if terrain != null else Color.MAGENTA
 
 
 ## Draws an edge wherever an owned cell touches a non-owned cell or the board edge.

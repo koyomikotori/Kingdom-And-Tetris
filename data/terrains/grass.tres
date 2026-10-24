@@ -7,3 +7,4 @@ script = ExtResource("1_terrain")
 terrain_id = &"grass"
 display_name = "Cỏ"
 color = Color(0.45, 0.68, 0.32, 1)
+spawn_weight = 1.0

@@ -79,6 +79,18 @@ func set_owned(coord: Vector2i, owned: bool) -> void:
 	cell_changed.emit(coord)
 
 
+## Claims a cell with new land, replacing whatever terrain and key cell it had.
+## Validation is the caller's job (see PlacementRules).
+func set_land(coord: Vector2i, terrain_id: StringName, is_key: bool) -> void:
+	var cell := get_cell(coord)
+	if cell == null:
+		return
+	cell.terrain_id = terrain_id
+	cell.is_key = is_key
+	cell.owned = true
+	cell_changed.emit(coord)
+
+
 ## A building fits when every cell is on the board, owned and free of other buildings.
 func can_place_building(origin: Vector2i, size: Vector2i) -> bool:
 	if size.x <= 0 or size.y <= 0:
