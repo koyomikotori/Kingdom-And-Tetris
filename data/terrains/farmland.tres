@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="TerrainData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/board/terrain_data.gd" id="1_terrain"]
+
+[resource]
+script = ExtResource("1_terrain")
+terrain_id = &"farmland"
+display_name = "Ruộng"
+color = Color(0.85, 0.74, 0.35, 1)
