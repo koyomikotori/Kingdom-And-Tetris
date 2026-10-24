@@ -164,10 +164,23 @@ Màn hình ngang, chia theo bề ngang:
 
 **Hệ quả kỹ thuật:** vì có rút lui giữa trận và cung bắn theo thời gian, trận đánh chuyển sang mô phỏng **theo thời gian** (tick), có thể chạy từng bước. Màn hình trận đánh điều khiển bộ mô phỏng: tạm dừng thì ngừng gọi, tăng tốc thì chạy nhiều tick mỗi khung hình, rút lui thì kết thúc ngay. Bộ mô phỏng vẫn thuần logic, có seed và test headless được (test có thể giả lập "rút lui ở giây thứ X").
 
-**Đề xuất cho các con số chưa chốt** (sẽ hỏi lại khi làm):
-- Sĩ khí bắt đầu 100. Mỗi khi đơn vị mất thêm 25% quân thì −20. Tướng chết thì −30 cho cả phe.
-- Thiệt hại 50% khi rút lui tính trên số lính **còn lại** của mỗi đơn vị. Tài nguyên vẫn bị mất như thua bình thường; không cộng thêm 30% tháo chạy.
-- Thua bình thường: đơn vị hết sĩ khí bị tính là mất hết; đơn vị chưa vỡ mất 30% như hiện nay.
+**Đơn vị (squad):** mỗi lần tuyển được **một đơn vị gồm nhiều lính** (ví dụ kiếm sĩ: 20 lính). Trên màn hình trận đánh, mỗi đơn vị chỉ vẽ vài hình đại diện (ví dụ 5 hình cho 20 lính) để tránh lag, giống Ninja Village. Mỗi đơn vị là một quân riêng, có số lính và sĩ khí riêng (sau này: kinh nghiệm riêng). Giá tuyển và phí nuôi tính theo đơn vị.
+
+**Quản lý đơn vị:**
+- **Bổ sung quân:** cuối mỗi lượt, đơn vị thiếu quân tự hồi 25% quân số chuẩn (làm tròn lên, không vượt chuẩn), **miễn phí** (đã tốn lương thực nuôi quân). Cần có ít nhất 1 doanh trại.
+- **Giới hạn số đơn vị:** thành chính cho 2, mỗi doanh trại thêm 4; tối đa 3 doanh trại (tổng 14). Sau này: nâng cấp / mở rộng thành để tăng giới hạn và mở rộng ra đất hoang mới.
+- **Giải tán:** người chơi có thể giải tán một đơn vị (ví dụ còn quá ít quân, hoặc muốn thay bằng loại tốt hơn). Không hoàn tài nguyên.
+- Không có gộp đơn vị.
+
+**Sĩ khí:** mỗi loại lính có mức sĩ khí riêng; lính càng tốt sĩ khí càng cao (như Shogun 2). Sĩ khí giảm mỗi khi đơn vị mất thêm 25% quân, và khi tướng chết (khi có tướng). Về 0 thì đơn vị **vỡ**.
+
+**Kết thúc trận:** phe có toàn bộ đơn vị bị vỡ hoặc chết hết thì thua. Hết giờ thì phe còn tỉ lệ quân cao hơn thắng (bằng nhau thì phe phòng thủ thắng).
+
+**Thiệt hại khi thua** (cả thua thường lẫn rút lui):
+- Đơn vị **đã vỡ** (hết quân hoặc hết sĩ khí): **mất sạch**.
+- Đơn vị **chưa vỡ** (rút lui, hoặc khi hết giờ): **giữ 50%** số lính còn lại.
+- Tài nguyên vẫn bị mất như thua bình thường (cướp: 30%).
+- Phe thắng: đơn vị bị vỡ vẫn giữ số lính sống sót (họ quay về sau trận).
 
 ## 8. Công trình & quân đội
 
@@ -193,15 +206,17 @@ Công trình có thể có phí duy trì. Phí này được trả sau tiền nu
 - Thanh tài nguyên hiển thị thu nhập ròng (sản lượng trừ nuôi quân).
 - Cuối lượt: thu sản lượng trước, rồi trả tiền nuôi quân. Nếu không đủ lương thực, lính **bỏ đi** (nhóm đông nhất bỏ trước) cho đến khi đủ.
 
-| Lính | Máu | Công | Thủ | Hàng / kiểu | Giá | Điều kiện |
-|---|---|---|---|---|---|---|
-| Kiếm sĩ | 100 | 12 | 4 | Trước / cận chiến | 3 lương thực, 1 đá | Doanh trại |
-| Thương binh | 90 | 10 | 3 | Giữa / cận chiến | 2 lương thực, 2 gỗ | Doanh trại |
-| Cung thủ | 60 | 9 | 1 | Sau / cung | 2 lương thực, 3 gỗ | Doanh trại + ≥3 ô rừng |
+Mỗi lần tuyển được 1 đơn vị; giá và phí nuôi tính theo đơn vị.
 
-Quân cướp (`data/enemy_units/`): Cướp cầm dao (70 máu, 9 công, 1 thủ, trước / cận chiến), Cướp cung (50 máu, 7 công, sau / cung).
+| Lính | Số lính | Hàng / kiểu | Cận chiến | Phòng thủ | Giáp | Xung kích | Sĩ khí | Bắn xa / nạp | Giá | Điều kiện |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Kiếm sĩ | 20 | Trước / cận chiến | 9 | 7 | 5 | 5 | 8 | — | 3 lương thực, 1 đá | Doanh trại |
+| Thương binh | 20 | Giữa / cận chiến | 6 | 9 | 4 | 3 | 7 | — | 2 lương thực, 2 gỗ | Doanh trại |
+| Cung thủ | 15 | Sau / cung | 3 | 2 | 2 | 1 | 5 | 6 / 5 giây | 2 lương thực, 3 gỗ | Doanh trại + ≥3 ô rừng |
+| Cướp cầm dao | 16 | Trước / cận chiến | 6 | 3 | 1 | 4 | 4 | — | (địch) | |
+| Cướp cung | 10 | Sau / cung | 2 | 1 | 0 | 0 | 3 | 4 / 6 giây | (địch) | |
 
-Cân bằng hiện tại (mô phỏng 200 trận): cần khoảng một nửa số cướp là đủ lính để thắng gần như chắc chắn. Lượt 6 có 4 tên cướp, 2 kiếm sĩ là đủ; lượt 30 có 12 tên, cần khoảng 8 lính.
+Số đơn vị cướp = 1 + lượt × 0.15. Cân bằng hiện tại (mô phỏng 200 trận mỗi trường hợp): lượt 6 cần 1 đơn vị, lượt 12 khoảng 2, lượt 20–30 khoảng 4 đơn vị (2 kiếm sĩ + 1 thương binh + 1 cung thủ). Trận kéo dài khoảng 7–40 giây tùy chênh lệch lực lượng.
 
 Sau này: lính khiên, kỵ binh, lính súng; tướng (1 tướng võ + 1 quân sư mẫu).
 
@@ -240,7 +255,7 @@ Biển, sông: chưa làm, để sau.
 | M3 | Sản lượng mỗi lượt, kết thúc lượt, nhận mảnh đầu lượt, ô ◆ ×2 | Xong |
 | M4 | Công trình, dữ liệu đơn vị, doanh trại, tuyển quân, nuôi quân, mở khóa theo địa hình | Xong |
 | M5 | Logic trận đánh theo pha + **cướp** (ngẫu nhiên, không báo trước) + trạm lính canh + bảng thống kê sau trận | Xong |
-| M6 | **Chiến đấu v2** (logic): chỉ số mới, sĩ khí, charge, súng 1 loạt, cung theo thời gian nạp, mô phỏng theo tick, rút lui | |
+| M6 | **Chiến đấu v2** (logic): chỉ số mới, sĩ khí, charge, súng 1 loạt, cung theo thời gian nạp, mô phỏng theo tick, rút lui + **quản lý đơn vị** (bổ sung quân, giới hạn theo doanh trại, giải tán) | Đang làm |
 | M7 | Màn hình trận đánh cinematic (5/20/50/20/5, hoạt ảnh, tạm dừng, tăng tốc, nút rút lui) | |
 | M8 | Bản đồ thế giới làm sẵn + gia tộc + quan hệ + giao thương | |
 | M9 | Quân xâm lược (mất đất theo hướng) + đi xâm lược + liên minh | |

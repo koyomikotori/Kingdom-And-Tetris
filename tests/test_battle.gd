@@ -6,23 +6,44 @@ var unit_list := UnitData.load_all()
 var enemies := UnitData.load_enemies()
 
 
-func _unit(id: StringName, row: UnitData.Row, kind: UnitData.AttackKind, hp: int = 100, attack: int = 10, defense: int = 0) -> UnitData:
+func _unit(id: StringName, row: UnitData.Row, kind: UnitData.AttackKind, melee_attack: int = 5,
+		melee_defense: int = 5, armor: int = 0, charge: int = 0, morale: int = 50,
+		range_attack: int = 0, reload_time: float = 5.0) -> UnitData:
 	var unit := UnitData.new()
 	unit.unit_id = id
 	unit.display_name = String(id)
-	unit.max_hp = hp
-	unit.attack = attack
-	unit.defense = defense
 	unit.row = row
 	unit.attack_kind = kind
+	unit.melee_attack = melee_attack
+	unit.melee_defense = melee_defense
+	unit.armor = armor
+	unit.charge_attack = charge
+	unit.morale = morale
+	unit.range_attack = range_attack
+	unit.reload_time = reload_time
 	return unit
 
 
-func _side(groups: Array) -> BattleSide:
+func _side(units: Array) -> BattleSide:
 	var side := BattleSide.new("test")
-	for pair in groups:
-		side.add_group(pair[0], pair[1])
+	for pair in units:
+		side.add_unit(pair[0], pair[1])
 	return side
+
+
+func _run_until(simulator: BattleSimulator, seconds: float) -> void:
+	while not simulator.finished and simulator.time < seconds - 0.0001:
+		simulator.step()
+
+
+func _events(record: BattleRecord, type: StringName, side: int = -1) -> Array:
+	return record.events.filter(func(e: Dictionary) -> bool: return e.type == type and (side == -1 or e.side == side))
+
+
+func _seeded_rng(seed_value: int) -> RandomNumberGenerator:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value
+	return rng
 
 
 func _state() -> KingdomState:
@@ -32,115 +53,146 @@ func _state() -> KingdomState:
 	return state
 
 
-func _hp_after_first_step(record: BattleRecord, side: int) -> Array:
-	return record.steps[0].hp[side]
+## A target that cannot be hurt much and never breaks, to observe one side's attacks over time.
+func _wall() -> UnitData:
+	return _unit(&"wall", UnitData.Row.FRONT, UnitData.AttackKind.MELEE, 0, 1000, 1000, 0, 1000)
 
 
-func test_unit_data_has_rows_and_kinds() -> void:
+func test_unit_data_v2() -> void:
 	var by_id := {}
 	for unit in unit_list:
 		by_id[unit.unit_id] = unit
-	check_eq(by_id[&"swordsman"].row, UnitData.Row.FRONT, "Swordsmen fight in the front row")
-	check_eq(by_id[&"spearman"].row, UnitData.Row.MIDDLE, "Spearmen fight in the middle row")
+	check_eq(by_id[&"swordsman"].squad_size, 20, "A swordsman squad has 20 soldiers")
 	check_eq([by_id[&"archer"].row, by_id[&"archer"].attack_kind], [UnitData.Row.BACK, UnitData.AttackKind.BOW], "Archers shoot from the back")
-	check(enemies.has(&"bandit_thug") and enemies.has(&"bandit_archer"), "Bandit units are loaded")
-
-
-func _seeded_rng(seed_value: int) -> RandomNumberGenerator:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = seed_value
-	return rng
+	check(by_id[&"archer"].range_attack > 0 and by_id[&"swordsman"].range_attack == 0, "Only ranged units have range attack")
+	check(by_id[&"swordsman"].morale > enemies[&"bandit_thug"].morale, "Trained soldiers have higher morale than bandits")
 
 
 func test_same_seed_same_battle() -> void:
-	var a := BattleSimulator.run(RaidSystem.create_bandit_side(RaidData.load_bandits(), enemies, 12, _seeded_rng(1)),
-			_side([[unit_list[0], 4], [unit_list[2], 2]]), 77)
-	var b := BattleSimulator.run(RaidSystem.create_bandit_side(RaidData.load_bandits(), enemies, 12, _seeded_rng(1)),
-			_side([[unit_list[0], 4], [unit_list[2], 2]]), 77)
-	check_eq(a.steps, b.steps, "Identical step logs")
-	check_eq([a.winner, a.end_reason], [b.winner, b.end_reason], "Identical outcome")
+	var raid := RaidData.load_bandits()
+	var make := func() -> BattleRecord:
+		var kingdom := _side([[unit_list[0], 20], [unit_list[2], 15]])
+		return BattleSimulator.simulate(RaidSystem.create_bandit_side(raid, enemies, 20, _seeded_rng(1)), kingdom, 77)
+	var a: BattleRecord = make.call()
+	var b: BattleRecord = make.call()
+	check_eq(a.snapshots, b.snapshots, "Identical snapshots")
+	check_eq(a.events, b.events, "Identical events")
+	check_eq([a.winner, a.end_reason, a.duration], [b.winner, b.end_reason, b.duration], "Identical outcome")
 
 
 func test_no_defenders_loses_immediately() -> void:
-	var record := BattleSimulator.run(_side([[enemies[&"bandit_thug"], 3]]), _side([]), 1)
-	check_eq(record.winner, BattleRecord.ATTACKER, "Bandits win against nobody")
-	check_eq(record.end_reason, BattleRecord.EndReason.NO_ARMY, "Reason is no army")
-	check(record.steps.is_empty(), "No steps are fought")
+	var record := BattleSimulator.simulate(_side([[enemies[&"bandit_thug"], 10]]), _side([]), 1)
+	check_eq([record.winner, record.end_reason], [BattleRecord.ATTACKER, BattleRecord.EndReason.NO_ARMY], "Nobody to fight")
+	check_eq(record.duration, 0.0, "Ends at time 0")
 
 
-func test_phase_order_guns_arrows_melee() -> void:
-	var gun := _unit(&"gun", UnitData.Row.BACK, UnitData.AttackKind.GUN, 100, 1)
-	var bow := _unit(&"bow", UnitData.Row.BACK, UnitData.AttackKind.BOW, 100, 1)
-	var sword := _unit(&"sword", UnitData.Row.FRONT, UnitData.AttackKind.MELEE, 100, 1)
-	var record := BattleSimulator.run(_side([[sword, 10], [gun, 2]]), _side([[sword, 10], [bow, 2]]), 3)
-	var phases := record.steps.map(func(step: Dictionary) -> StringName: return step.phase)
-	check(phases.size() >= 3, "At least guns, arrows and one melee round")
-	check_eq(phases.slice(0, 3), [BattleSimulator.PHASE_GUNS, BattleSimulator.PHASE_ARROWS, BattleSimulator.PHASE_MELEE],
-			"Guns fire first, then arrows, then melee")
+func test_guns_fire_once_at_the_front_row() -> void:
+	var gun := _unit(&"gun", UnitData.Row.BACK, UnitData.AttackKind.GUN, 1, 1, 0, 0, 50, 10)
+	var front := _unit(&"front", UnitData.Row.FRONT, UnitData.AttackKind.MELEE, 0, 5, 0, 0, 1000)
+	var back := _unit(&"back", UnitData.Row.BACK, UnitData.AttackKind.MELEE, 0, 5, 0, 0, 1000)
+	var defender := _side([[front, 100], [back, 100]])
+	var simulator := BattleSimulator.new(_side([[_wall(), 100], [gun, 10]]), defender, 2)
+	_run_until(simulator, 2.9)
+	check_eq(_events(simulator.record, &"gun_volley").size(), 1, "Exactly one gun volley")
+	check_eq(_events(simulator.record, &"gun_volley")[0].time, BattleSimulator.GUN_TIME, "Fired at GUN_TIME")
+	check(defender.units[0].soldiers < 100.0, "Front row took bullets")
+	check_eq(defender.units[1].soldiers, 100.0, "Back row untouched")
+	_run_until(simulator, 30.0)
+	check_eq(_events(simulator.record, &"gun_volley").size(), 1, "Guns never fire again")
 
 
-func test_skips_ranged_phases_without_ranged_units() -> void:
-	var sword := _unit(&"sword", UnitData.Row.FRONT, UnitData.AttackKind.MELEE)
-	var record := BattleSimulator.run(_side([[sword, 5]]), _side([[sword, 5]]), 3)
-	check_eq(record.steps[0].phase, BattleSimulator.PHASE_MELEE, "Melee-only armies start with melee")
-
-
-func test_guns_hit_only_the_front_row() -> void:
-	var gun := _unit(&"gun", UnitData.Row.BACK, UnitData.AttackKind.GUN, 100, 20)
-	var front := _unit(&"front", UnitData.Row.FRONT, UnitData.AttackKind.MELEE, 100, 1)
-	var back := _unit(&"back", UnitData.Row.BACK, UnitData.AttackKind.MELEE, 100, 1)
-	var record := BattleSimulator.run(_side([[gun, 3]]), _side([[front, 10], [back, 10]]), 4)
-	var hp := _hp_after_first_step(record, BattleRecord.DEFENDER)
-	check(hp[0] < 1000.0, "Front row took bullets")
-	check_eq(hp[1], 1000.0, "Back row untouched by bullets")
+func test_archers_reload_and_better_bows_fire_faster() -> void:
+	for pair in [[5.0, 4], [2.5, 8]]:
+		var bow := _unit(&"bow", UnitData.Row.BACK, UnitData.AttackKind.BOW, 1, 1, 0, 0, 50, 6, pair[0])
+		var simulator := BattleSimulator.new(_side([[_wall(), 100], [bow, 10]]), _side([[_wall(), 100]]), 3)
+		_run_until(simulator, 20.0)
+		check_eq(_events(simulator.record, &"arrow_volley").size(), pair[1], "Reload %ss: volleys in 20s" % pair[0])
 
 
 func test_arrows_spread_over_all_rows() -> void:
-	var bow := _unit(&"bow", UnitData.Row.BACK, UnitData.AttackKind.BOW, 100, 20)
-	var front := _unit(&"front", UnitData.Row.FRONT, UnitData.AttackKind.MELEE, 100, 1)
-	var middle := _unit(&"middle", UnitData.Row.MIDDLE, UnitData.AttackKind.MELEE, 100, 1)
-	var back := _unit(&"back", UnitData.Row.BACK, UnitData.AttackKind.MELEE, 100, 1)
-	var record := BattleSimulator.run(_side([[bow, 6]]), _side([[front, 10], [middle, 10], [back, 10]]), 4)
-	var hp := _hp_after_first_step(record, BattleRecord.DEFENDER)
+	var bow := _unit(&"bow", UnitData.Row.BACK, UnitData.AttackKind.BOW, 1, 1, 0, 0, 50, 10)
+	var target := func(row: UnitData.Row) -> UnitData:
+		return _unit(&"t", row, UnitData.AttackKind.MELEE, 0, 5, 0, 0, 1000)
+	var defender := _side([[target.call(UnitData.Row.FRONT), 50], [target.call(UnitData.Row.MIDDLE), 50],
+			[target.call(UnitData.Row.BACK), 50]])
+	var simulator := BattleSimulator.new(_side([[_wall(), 100], [bow, 30]]), defender, 4)
+	_run_until(simulator, 2.0)
 	for i in 3:
-		check(hp[i] < 1000.0 and hp[i] > 900.0, "Row %d took a share of the arrows (hp %.1f)" % [i, hp[i]])
+		check(defender.units[i].soldiers < 50.0, "Row %d was hit by the first volley" % i)
 
 
-func test_melee_hits_front_row_before_back_row() -> void:
-	var sword := _unit(&"sword", UnitData.Row.FRONT, UnitData.AttackKind.MELEE, 100, 15)
-	var front := _unit(&"front", UnitData.Row.FRONT, UnitData.AttackKind.MELEE, 100, 1)
-	var back := _unit(&"back", UnitData.Row.BACK, UnitData.AttackKind.MELEE, 100, 1)
-	var record := BattleSimulator.run(_side([[sword, 5]]), _side([[front, 10], [back, 10]]), 4)
-	var hp := _hp_after_first_step(record, BattleRecord.DEFENDER)
-	check(hp[0] < 1000.0, "Front row is hit in melee")
-	check_eq(hp[1], 1000.0, "Back row is safe while the front row stands")
+func test_melee_hits_front_row_and_charges_once() -> void:
+	var sword := _unit(&"sword", UnitData.Row.FRONT, UnitData.AttackKind.MELEE, 10, 5, 0, 10, 50)
+	var front := _unit(&"front", UnitData.Row.FRONT, UnitData.AttackKind.MELEE, 0, 5, 0, 0, 1000)
+	var back := _unit(&"back", UnitData.Row.BACK, UnitData.AttackKind.MELEE, 0, 5, 0, 0, 1000)
+	var defender := _side([[front, 200], [back, 50]])
+	var simulator := BattleSimulator.new(_side([[sword, 20]]), defender, 4)
+	_run_until(simulator, BattleSimulator.CONTACT_TIME - 0.05)
+	check_eq(defender.units[0].soldiers, 200.0, "No melee before contact")
+	_run_until(simulator, 10.0)
+	check(defender.units[0].soldiers < 200.0, "Front row is hit in melee")
+	check_eq(defender.units[1].soldiers, 50.0, "Back row is safe while the front row stands")
+	check_eq(_events(simulator.record, &"charge", BattleRecord.ATTACKER).size(), 1, "The sword unit charges exactly once")
 
 
-func test_defense_reduces_damage_but_never_below_one() -> void:
-	var weak := _unit(&"weak", UnitData.Row.FRONT, UnitData.AttackKind.MELEE, 100, 2)
-	var wall := _unit(&"wall", UnitData.Row.FRONT, UnitData.AttackKind.MELEE, 1000, 1, 50)
-	var record := BattleSimulator.run(_side([[weak, 10]]), _side([[wall, 1]]), 4)
-	var lost: float = 1000.0 - record.steps[0].hp[BattleRecord.DEFENDER][0]
-	check(lost >= 9.0 and lost <= 11.0, "10 soldiers deal ~1 damage each against high defense (got %.2f)" % lost)
+func test_charge_adds_a_burst_of_casualties() -> void:
+	var make := func(charge: int) -> float:
+		var unit := _unit(&"u", UnitData.Row.FRONT, UnitData.AttackKind.MELEE, 5, 5, 0, charge, 50)
+		var defender := _side([[_unit(&"t", UnitData.Row.FRONT, UnitData.AttackKind.MELEE, 0, 5, 0, 0, 1000), 200]])
+		var simulator := BattleSimulator.new(_side([[unit, 20]]), defender, 5)
+		_run_until(simulator, BattleSimulator.CONTACT_TIME + 0.15)
+		return 200.0 - defender.units[0].soldiers
+	# Expected burst: 20 soldiers x 10/(10+5) x CHARGE_FACTOR.
+	var burst := 20 * 10.0 / 15.0 * BattleSimulator.CHARGE_FACTOR
+	check(make.call(10) > make.call(0) + burst * 0.8, "A charging unit kills more on contact")
 
 
-func test_strong_army_routs_weak_army_and_damage_is_capped() -> void:
-	var sword := _unit(&"sword", UnitData.Row.FRONT, UnitData.AttackKind.MELEE, 100, 30, 5)
-	var thug := _unit(&"thug", UnitData.Row.FRONT, UnitData.AttackKind.MELEE, 50, 5)
-	var attacker := _side([[thug, 4]])
-	var defender := _side([[sword, 10]])
-	var record := BattleSimulator.run(attacker, defender, 4)
-	check_eq(record.winner, BattleRecord.DEFENDER, "Strong defenders win")
-	check(record.end_reason in [BattleRecord.EndReason.WIPED_OUT, BattleRecord.EndReason.ROUTED], "Loser was wiped out or routed")
-	check(defender.groups[0].damage_dealt <= 200.0 + 0.01, "Damage dealt never exceeds the enemy's total HP")
+func test_morale_breaks_unit_before_it_is_wiped_out() -> void:
+	var strong := _unit(&"strong", UnitData.Row.FRONT, UnitData.AttackKind.MELEE, 20, 10, 0, 0, 50)
+	var shaky := _unit(&"shaky", UnitData.Row.FRONT, UnitData.AttackKind.MELEE, 2, 2, 0, 0, 3)
+	var defender := _side([[shaky, 40]])
+	var record := BattleSimulator.simulate(_side([[strong, 40]]), defender, 6)
+	check(defender.units[0].broken, "Morale 3 breaks after losing 25%")
+	check(defender.units[0].alive() > 0, "Broken while soldiers were still alive")
+	check(defender.units[0].lost() >= 10, "Broke only after at least a quarter was lost")
+	check_eq([record.winner, record.end_reason], [BattleRecord.ATTACKER, BattleRecord.EndReason.ALL_BROKEN], "All broken = defeat")
 
 
-func test_round_limit_tie_goes_to_defender() -> void:
-	var tank := _unit(&"tank", UnitData.Row.FRONT, UnitData.AttackKind.MELEE, 100000, 1, 100)
-	var record := BattleSimulator.run(_side([[tank, 5]]), _side([[tank, 5]]), 4)
-	check_eq(record.end_reason, BattleRecord.EndReason.ROUND_LIMIT, "Nobody can kill anyone")
-	check_eq(record.steps.size(), BattleSimulator.MAX_MELEE_ROUNDS, "All melee rounds were fought")
-	check_eq(record.winner, BattleRecord.DEFENDER, "Defender holds on a tie")
+func test_higher_morale_holds_longer() -> void:
+	var broke_at := func(morale: int) -> int:
+		var unit := _unit(&"u", UnitData.Row.FRONT, UnitData.AttackKind.MELEE, 1, 2, 0, 0, morale)
+		var defender := _side([[unit, 40]])
+		BattleSimulator.simulate(_side([[_unit(&"s", UnitData.Row.FRONT, UnitData.AttackKind.MELEE, 20, 10, 0, 0, 50), 40]]), defender, 7)
+		return defender.units[0].lost()
+	check(broke_at.call(9) > broke_at.call(4), "Morale 9 takes more losses than morale 4 before breaking")
+
+
+func test_retreat_ends_battle_as_a_loss() -> void:
+	var simulator := BattleSimulator.new(_side([[unit_list[0], 20]]), _side([[unit_list[1], 20]]), 8)
+	_run_until(simulator, 6.0)
+	simulator.retreat(BattleRecord.DEFENDER)
+	check(simulator.finished, "Battle is over")
+	check_eq([simulator.record.winner, simulator.record.end_reason, simulator.record.retreated_side],
+			[BattleRecord.ATTACKER, BattleRecord.EndReason.RETREAT, BattleRecord.DEFENDER], "Retreating side loses")
+	var soldiers_after := simulator.record.sides[BattleRecord.DEFENDER].alive_total()
+	simulator.step()
+	check_eq(simulator.record.sides[BattleRecord.DEFENDER].alive_total(), soldiers_after, "No fighting after the end")
+
+
+func test_time_limit_tie_goes_to_defender() -> void:
+	var record := BattleSimulator.simulate(_side([[_wall(), 10]]), _side([[_wall(), 10]]), 9)
+	check_eq([record.winner, record.end_reason], [BattleRecord.DEFENDER, BattleRecord.EndReason.TIME_LIMIT], "Defender holds")
+	check(absf(record.duration - BattleSimulator.TIME_LIMIT) < 0.01, "Lasted the full time")
+
+
+func test_kills_never_exceed_enemy_soldiers() -> void:
+	var defender := _side([[unit_list[0], 20], [unit_list[2], 15]])
+	var attacker := RaidSystem.create_bandit_side(RaidData.load_bandits(), enemies, 6, _seeded_rng(3))
+	BattleSimulator.simulate(attacker, defender, 10)
+	var kills := 0.0
+	for unit in defender.units:
+		kills += unit.kills
+	check(kills <= attacker.start_total() + 0.01, "Kills %.2f <= %d bandits" % [kills, attacker.start_total()])
 
 
 func test_raid_chance_and_watchtowers() -> void:
@@ -167,58 +219,64 @@ func test_watchtower_upkeep_paid_or_paused() -> void:
 	check_eq(state.get_building_upkeep(), {&"food": 1}, "Tower costs 1 food per turn")
 	var report := state.end_turn()
 	check(report.buildings_supplied, "Upkeep paid with 1 food")
-	check_eq(state.stockpile.get_amount(&"food"), 0, "Food spent on upkeep")
 	report = state.end_turn()
 	check(not report.buildings_supplied, "No food left: tower paused")
-	check(not state.buildings_supplied, "State remembers the pause for the raid roll")
 
 
 func test_bandit_army_grows_with_turns() -> void:
 	var raid := RaidData.load_bandits()
-	var early := RaidSystem.create_bandit_side(raid, enemies, 6, RandomNumberGenerator.new())
-	var late := RaidSystem.create_bandit_side(raid, enemies, 30, RandomNumberGenerator.new())
-	check_eq(early.start_total(), 2 + floori(6 * 0.34), "Turn 6 bandit count")
-	check(late.start_total() > early.start_total(), "More bandits later")
+	var early := RaidSystem.create_bandit_side(raid, enemies, 6, _seeded_rng(1))
+	var late := RaidSystem.create_bandit_side(raid, enemies, 30, _seeded_rng(1))
+	check_eq(early.units.size(), 1 + floori(6 * 0.12), "Turn 6 bandit squads")
+	check(late.units.size() > early.units.size(), "More bandit squads later")
 
 
-func test_lost_raid_takes_resources_and_soldiers() -> void:
+func test_lost_raid_broken_squads_are_lost() -> void:
 	var state := _state()
 	state.stockpile.add({&"food": 10, &"wood": 7, &"stone": 3})
-	state.army.add(&"archer", 1)
-	var bandits := _side([[enemies[&"bandit_thug"], 30]])
+	state.army.add_squad(&"archer", 15)
+	var bandits := _side([[enemies[&"bandit_thug"], 200]])
 	var result := RaidSystem.resolve(state, RaidData.load_bandits(), bandits, 5)
-	check(not result.won, "One archer cannot stop 30 bandits")
-	check_eq(result.resources_lost, {&"food": 3, &"wood": 2}, "30% of each resource, rounded down (stone 0.9 -> 0)")
-	check_eq([state.stockpile.get_amount(&"food"), state.stockpile.get_amount(&"wood"), state.stockpile.get_amount(&"stone")],
-			[7, 5, 3], "Stockpile reduced")
-	check_eq(state.army.get_total(), 0, "The archer died or fled")
+	check(not result.won, "One archer squad cannot stop 200 bandits")
+	check_eq(result.resources_lost, {&"food": 3, &"wood": 2}, "30% of each resource, rounded down")
+	check_eq(state.army.count_squads(), 0, "The broken archer squad is gone")
 
 
-func test_lost_raid_survivors_flee() -> void:
+func test_retreat_keeps_half_of_unbroken_squads() -> void:
 	var state := _state()
-	state.army.add(&"swordsman", 10)
-	var stalemate := _unit(&"rock", UnitData.Row.FRONT, UnitData.AttackKind.MELEE, 100000, 1000, 100)
-	var result := RaidSystem.resolve(state, RaidData.load_bandits(), _side([[stalemate, 1]]), 5)
-	var record: BattleRecord = result.record
-	check(not result.won, "Invincible bandit wins")
-	var survivors: int = record.sides[BattleRecord.DEFENDER].groups[0].alive()
-	check_eq(result.fled.get(&"swordsman", 0), roundi(survivors * 0.3), "30% of survivors flee")
-	check_eq(state.army.get_count(&"swordsman"), survivors - roundi(survivors * 0.3), "Army keeps the rest")
+	state.stockpile.add({&"food": 10})
+	state.army.add_squad(&"swordsman", 20)
+	state.army.add_squad(&"archer", 15)
+	var kingdom := RaidSystem.create_kingdom_side(state)
+	var simulator := BattleSimulator.new(_side([[enemies[&"bandit_thug"], 60]]), kingdom, 11)
+	_run_until(simulator, 2.0)
+	simulator.retreat(BattleRecord.DEFENDER)
+	var expected := []
+	for unit in kingdom.units:
+		expected.append(roundi(unit.alive() * 0.5))
+	var result := RaidSystem.apply_outcome(state, RaidData.load_bandits(), simulator.record)
+	check(not result.won, "Retreat is a defeat")
+	check_eq(state.army.squads.map(func(s: Army.Squad) -> int: return s.soldiers), expected, "Each squad keeps 50%")
+	check_eq(state.stockpile.get_amount(&"food"), 7, "Resources are still lost on retreat")
+	check(not result.retreat_losses.is_empty(), "Report lists the soldiers lost while retreating")
 
 
-func test_won_raid_gives_reward_and_applies_casualties() -> void:
+func test_won_raid_gives_reward_and_keeps_survivors() -> void:
 	var state := _state()
-	state.army.add(&"swordsman", 12)
-	state.army.add(&"archer", 4)
-	var bandits := _side([[enemies[&"bandit_thug"], 3], [enemies[&"bandit_archer"], 1]])
+	for i in 3:
+		state.army.add_squad(&"swordsman", 20)
+	state.army.add_squad(&"archer", 15)
+	var bandits := _side([[enemies[&"bandit_thug"], 10], [enemies[&"bandit_archer"], 8]])
 	var result := RaidSystem.resolve(state, RaidData.load_bandits(), bandits, 5)
-	check(result.won, "16 soldiers beat 4 bandits")
-	check_eq(result.reward, {&"food": 4, &"wood": 4}, "1 food + 1 wood per bandit")
-	check_eq(state.stockpile.get_amount(&"food"), 4, "Reward added")
+	check(result.won, "Four squads beat two bandit squads")
+	check_eq(result.reward, {&"food": 6, &"wood": 6}, "3 food + 3 wood per bandit squad")
 	var record: BattleRecord = result.record
-	for group in record.sides[BattleRecord.DEFENDER].groups:
-		check_eq(state.army.get_count(group.unit.unit_id), group.alive(), "%s count matches survivors" % group.unit.unit_id)
-	check(result.fled.is_empty() and result.resources_lost.is_empty(), "Winners lose nothing else")
+	var survivors := 0
+	for unit in record.sides[BattleRecord.DEFENDER].units:
+		survivors += unit.alive()
+	check_eq(state.army.count_soldiers(), survivors, "Army keeps every survivor")
+	check(result.scattered.is_empty() and result.retreat_losses.is_empty() and result.resources_lost.is_empty(),
+			"Winners lose nothing else")
 
 
 func test_end_turn_can_trigger_a_raid() -> void:

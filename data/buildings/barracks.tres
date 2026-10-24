@@ -6,8 +6,10 @@
 script = ExtResource("1_building")
 building_id = &"barracks"
 display_name = "Doanh trại"
-description = "Cho phép tuyển quân. Xây trên ô cỏ."
+description = "Cho phép tuyển quân và bổ sung quân mỗi lượt. Mỗi doanh trại thêm 4 chỗ cho đơn vị. Tối đa 3. Xây trên ô cỏ."
 cost = Dictionary[StringName, int]({&"wood": 6, &"stone": 2})
 allowed_terrains = Array[StringName]([&"grass"])
-max_count = 1
+max_count = 3
 color = Color(0.45, 0.3, 0.2, 1)
+squad_capacity = 4
+enables_replenishment = true
