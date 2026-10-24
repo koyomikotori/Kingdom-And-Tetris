@@ -37,7 +37,8 @@ The user is a beginner-to-intermediate developer working with AI assistance. Tal
 
 - **M1 — done:** 12×12 board, 2×2 castle, camera zoom/pan, hover cell info.
 - **M2 — done:** shapes in `data/pieces/`, each rotation is its own draw (player cannot rotate), hand of 3, ghost preview, connection rule, overwrite replaces terrain and key cell, castle protected. See GDD §4. Playtested: OK.
-- **M3 — done pending user review** (branch `m3/turns-and-yield`): `KingdomState` owns board/hand/stockpile/turn; terrain `yields` + key cell ×2 (`Economy`), `Stockpile` with all-or-nothing `spend`, end turn collects yield and deals a fresh hand (unplaced pieces discarded), resource bar, yield-change preview. See GDD §5.
-- Next: **M4** — buildings (first use of `Stockpile.spend`), unit data, barracks, recruitment.
+- **M3 — done:** `KingdomState` owns board/hand/stockpile/turn; terrain `yields` + key cell ×2 (`Economy`), `Stockpile` with all-or-nothing `spend`, end turn collects yield and deals a fresh hand (unplaced pieces discarded), resource bar, yield-change preview. See GDD §5.
+- **M4 — done pending user review** (branch `m4/buildings-and-army`): `BuildingData` + `BuildRules` (barracks), `UnitData` + `RecruitmentRules` + `Army` (swordsman, spearman, archer needs 3 forest), food upkeep with desertion in `KingdomState.end_turn()` (returns a report dict), side-panel tabs with `BuildPanel` / `ArmyPanel`. See GDD §8.
+- Next: **M5** — auto-battle (GDD §7): `BattleSimulator` producing an event list from `UnitData` stats, `BattlePresenter` replaying it, enemy waves on fixed turns.
 
 Each milestone goes on its own branch (`mN/<topic>`); the user merges it into `main` on GitHub.

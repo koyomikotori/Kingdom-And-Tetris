@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="UnitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/army/unit_data.gd" id="1_unit"]
+
+[resource]
+script = ExtResource("1_unit")
+unit_id = &"swordsman"
+display_name = "Kiếm sĩ"
+sort_order = 0
+max_hp = 100
+attack = 12
+defense = 4
+attack_range = 1.0
+attack_interval = 1.0
+move_speed = 1.0
+recruit_cost = Dictionary[StringName, int]({&"food": 3, &"stone": 1})
+upkeep = Dictionary[StringName, int]({&"food": 1})
+required_building = &"barracks"
+required_terrain = Dictionary[StringName, int]({})

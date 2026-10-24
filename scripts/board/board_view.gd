@@ -34,11 +34,15 @@ var _hovered := OFF_BOARD
 var _ghost_piece: LandPiece
 var _ghost_origin := Vector2i.ZERO
 var _ghost_valid := false
+var _ghost_building: BuildingData
+var _buildings: Dictionary[StringName, BuildingData] = {}
 
 
-func setup(board: BoardData, terrains: Dictionary[StringName, TerrainData]) -> void:
+func setup(board: BoardData, terrains: Dictionary[StringName, TerrainData],
+		buildings: Dictionary[StringName, BuildingData] = {}) -> void:
 	_board = board
 	_terrains = terrains
+	_buildings = buildings
 	_board.cell_changed.connect(func(_coord: Vector2i) -> void: queue_redraw())
 	queue_redraw()
 
@@ -61,15 +65,26 @@ func get_terrain(terrain_id: StringName) -> TerrainData:
 ## Shows a translucent preview of `piece` placed at `origin`, outlined green or red.
 func show_ghost(piece: LandPiece, origin: Vector2i, valid: bool) -> void:
 	_ghost_piece = piece
+	_ghost_building = null
+	_ghost_origin = origin
+	_ghost_valid = valid
+	queue_redraw()
+
+
+## Shows a translucent preview of `building` with its top-left cell at `origin`.
+func show_building_ghost(building: BuildingData, origin: Vector2i, valid: bool) -> void:
+	_ghost_building = building
+	_ghost_piece = null
 	_ghost_origin = origin
 	_ghost_valid = valid
 	queue_redraw()
 
 
 func hide_ghost() -> void:
-	if _ghost_piece == null:
+	if _ghost_piece == null and _ghost_building == null:
 		return
 	_ghost_piece = null
+	_ghost_building = null
 	queue_redraw()
 
 
@@ -114,6 +129,8 @@ func _draw() -> void:
 		_draw_coords()
 	if _ghost_piece != null:
 		_draw_ghost()
+	elif _ghost_building != null:
+		_draw_building_ghost()
 	elif _hovered != OFF_BOARD:
 		draw_rect(_cell_rect(_hovered), HOVER_COLOR, false, 2.0)
 
@@ -139,6 +156,28 @@ func _draw_ghost() -> void:
 		if _ghost_piece.is_key_cell(i):
 			draw_key_marker(self, rect)
 		draw_rect(rect.grow(-1), outline, false, 2.0)
+
+
+func _draw_building_ghost() -> void:
+	var rect := Rect2(cell_to_local(_ghost_origin), Vector2(_ghost_building.size * TILE_SIZE))
+	var fill := _ghost_building.color
+	fill.a = GHOST_ALPHA
+	_draw_house(rect.grow(-4), fill)
+	draw_rect(rect.grow(-1), GHOST_VALID_COLOR if _ghost_valid else GHOST_INVALID_COLOR, false, 2.0)
+
+
+## Placeholder building sprite: a wall with a darker roof.
+func _draw_house(rect: Rect2, color: Color) -> void:
+	var roof_height := rect.size.y * 0.4
+	var wall := Rect2(rect.position + Vector2(0, roof_height), rect.size - Vector2(0, roof_height))
+	draw_rect(wall, color)
+	var roof := PackedVector2Array([
+		rect.position + Vector2(0, roof_height),
+		rect.position + Vector2(rect.size.x * 0.5, 0),
+		rect.position + Vector2(rect.size.x, roof_height),
+	])
+	draw_colored_polygon(roof, color.darkened(0.35))
+	draw_rect(wall, Color(0, 0, 0, color.a), false, 1.0)
 
 
 ## Gold diamond in the middle of `rect`. Static so piece cards can share it.
@@ -186,9 +225,10 @@ func _draw_buildings() -> void:
 		if cell.building_id == BoardData.CASTLE_ID:
 			draw_rect(inner, CASTLE_COLOR)
 			draw_rect(Rect2(inner.position, Vector2(inner.size.x, inner.size.y * 0.35)), CASTLE_ROOF_COLOR)
+			draw_rect(inner, Color.BLACK, false, 1.0)
 		else:
-			draw_rect(inner, Color.WHITE)
-		draw_rect(inner, Color.BLACK, false, 1.0)
+			var building: BuildingData = _buildings.get(cell.building_id)
+			_draw_house(inner, building.color if building != null else Color.WHITE)
 
 
 func _draw_coords() -> void:
