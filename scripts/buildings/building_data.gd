@@ -14,6 +14,10 @@ extends Resource
 @export var max_count: int = 0
 ## Placeholder color until pixel-art sprites exist.
 @export var color: Color = Color.WHITE
+## Paid every turn per building. When it cannot be paid, the building's effects pause that turn.
+@export var upkeep: Dictionary[StringName, int] = {}
+## Subtracted from the per-turn bandit raid chance (0.04 = 4 percentage points).
+@export var raid_chance_reduction: float = 0.0
 
 
 static func load_all() -> Dictionary[StringName, BuildingData]:

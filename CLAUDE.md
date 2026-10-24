@@ -38,7 +38,10 @@ The user is a beginner-to-intermediate developer working with AI assistance. Tal
 - **M1 — done:** 12×12 board, 2×2 castle, camera zoom/pan, hover cell info.
 - **M2 — done:** shapes in `data/pieces/`, each rotation is its own draw (player cannot rotate), hand of 3, ghost preview, connection rule, overwrite replaces terrain and key cell, castle protected. See GDD §4. Playtested: OK.
 - **M3 — done:** `KingdomState` owns board/hand/stockpile/turn; terrain `yields` + key cell ×2 (`Economy`), `Stockpile` with all-or-nothing `spend`, end turn collects yield and deals a fresh hand (unplaced pieces discarded), resource bar, yield-change preview. See GDD §5.
-- **M4 — done pending user review** (branch `m4/buildings-and-army`): `BuildingData` + `BuildRules` (barracks), `UnitData` + `RecruitmentRules` + `Army` (swordsman, spearman, archer needs 3 forest), food upkeep with desertion in `KingdomState.end_turn()` (returns a report dict), side-panel tabs with `BuildPanel` / `ArmyPanel`. See GDD §8.
-- Next: **M5** — auto-battle (GDD §7): `BattleSimulator` producing an event list from `UnitData` stats, `BattlePresenter` replaying it, enemy waves on fixed turns.
+- **M4 — done:** `BuildingData` + `BuildRules` (barracks), `UnitData` + `RecruitmentRules` + `Army` (swordsman, spearman, archer needs 3 forest), food upkeep with desertion in `KingdomState.end_turn()` (returns a report dict), side-panel tabs with `BuildPanel` / `ArmyPanel`. See GDD §8.
+- **M5 — done, playtested OK** (branch `m5/battle-and-bandits`): phase-based `BattleSimulator` (guns → arrows → melee rounds, rows, rout at 40%) producing a `BattleRecord` with per-step HP/alive snapshots; bandit raids (`RaidData`, `RaidSystem`, enemy units in `data/enemy_units/`) rolled at the start of a turn; watchtower with building upkeep (`buildings_supplied`); `BattleReport` modal. See GDD §7.
+- Next: **M6 — combat v2 logic** (GDD §7.6): unit stats HP/Number, melee attack/defense, armor, charge attack, morale, range attack + reload time; guns fire once, archers on a timer; tick-based steppable simulator so the battle screen can pause, speed up and **retreat** (loss, 50% of remaining soldiers). Ask the user about the open numbers in §7.6 before coding.
+- Then **M7** — cinematic battle screen driving the simulator (GDD §7.5).
+- Later: M8 world map + clans, M9 invasions / conquest, M10 save/load, M11 events + heroes, M12 art and release (GDD §11).
 
 Each milestone goes on its own branch (`mN/<topic>`); the user merges it into `main` on GitHub.

@@ -11,6 +11,11 @@ func get_amount(resource_id: StringName) -> int:
 	return _amounts.get(resource_id, 0)
 
 
+## Copy of every held amount.
+func get_all() -> Dictionary[StringName, int]:
+	return _amounts.duplicate()
+
+
 func add(amounts: Dictionary[StringName, int]) -> void:
 	for resource_id in amounts:
 		assert(amounts[resource_id] >= 0, "Use spend() to remove resources")

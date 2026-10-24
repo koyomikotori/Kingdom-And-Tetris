@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="RaidData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/raids/raid_data.gd" id="1_raid"]
+
+[resource]
+script = ExtResource("1_raid")
+first_turn = 6
+base_chance = 0.15
+base_size = 2
+size_per_turn = 0.34
+unit_weights = Dictionary[StringName, float]({&"bandit_thug": 3.0, &"bandit_archer": 1.0})
+resource_loss_on_defeat = 0.3
+soldier_loss_on_defeat = 0.3
+reward_per_bandit = Dictionary[StringName, int]({&"food": 1, &"wood": 1})

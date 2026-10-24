@@ -19,6 +19,8 @@ var _resource_labels: Dictionary[StringName, Label] = {}
 var _selected := NO_SELECTION
 ## Building chosen in the build tab, or NO_BUILDING. Never set together with _selected.
 var _selected_building := NO_BUILDING
+## Open post-battle report; blocks kingdom input while shown.
+var _battle_report: BattleReport
 
 @onready var board_view: BoardView = $BoardView
 @onready var camera: CameraController = $Camera
@@ -54,7 +56,7 @@ func _ready() -> void:
 
 	var seed_value := piece_seed if piece_seed != 0 else randi()
 	var hand := PieceHand.new(PieceGenerator.new(_shapes, _terrains, seed_value))
-	state = KingdomState.new(board, hand, _terrains, _buildings, units)
+	state = KingdomState.new(board, hand, _terrains, _buildings, units, seed_value)
 	state.hand.changed.connect(_rebuild_piece_cards)
 	state.stockpile.changed.connect(_refresh_economy)
 	state.army.changed.connect(_refresh_economy)
@@ -72,6 +74,11 @@ func _ready() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not event.pressed or event.echo:
+		return
+	if _battle_report != null:
+		if event.keycode in [KEY_ENTER, KEY_KP_ENTER, KEY_ESCAPE]:
+			_battle_report.close()
+			get_viewport().set_input_as_handled()
 		return
 	match event.keycode:
 		KEY_G:
@@ -143,7 +150,19 @@ func _on_end_turn_pressed() -> void:
 		lines.append("Nuôi quân: %s." % upkeep)
 	for unit_id: StringName in report.deserted:
 		lines.append("%d %s bỏ đi vì thiếu lương thực!" % [report.deserted[unit_id], state.units[unit_id].display_name])
+	if not report.buildings_supplied:
+		lines.append("Không đủ phí duy trì công trình: công trình tạm ngưng tác dụng lượt này.")
+	if report.has("raid"):
+		lines.append("Quân cướp tấn công! %s" % ("Đã đánh lui." if report.raid.won else "Thất thủ."))
+		_show_battle_report(report.raid)
 	placement_status.text = "\n".join(lines)
+
+
+func _show_battle_report(raid: Dictionary) -> void:
+	_battle_report = BattleReport.new()
+	$UI.add_child(_battle_report)
+	_battle_report.show_raid(raid, _resource_types, state.units)
+	_battle_report.closed.connect(func() -> void: _battle_report = null)
 
 
 func _on_turn_started(turn: int) -> void:

@@ -10,14 +10,14 @@ Người chơi đặt các mảnh đất (polyomino kiểu Tetris) để mở r�
 
 ## 2. Vòng lặp một lượt
 
-1. Nhận mảnh đất (mặc định 3 mảnh/lượt, sẽ cân chỉnh).
-2. Đặt / xoay mảnh để mở rộng hoặc cải tạo lãnh thổ.
-3. Thu tài nguyên theo địa hình + quy tắc kề nhau.
-4. Xây công trình, tuyển quân.
-5. Xử lý sự kiện (nếu có).
-6. Đến lượt có đợt địch → auto-battle.
+1. Nhận 3 mảnh đất.
+2. Đặt mảnh để mở rộng hoặc cải tạo lãnh thổ.
+3. Xây công trình, tuyển quân, ngoại giao (từ M6).
+4. Kết thúc lượt: thu tài nguyên theo địa hình, trả tiền nuôi quân.
+5. Nếu có cướp / quân xâm lược đến, hoặc mình đi đánh → auto-battle (§7).
+6. Xử lý sự kiện (nếu có).
 
-Bản đầu **không có bản đồ chiến dịch**: thay bằng các đợt địch theo mốc lượt (ví dụ lượt 5, 10, 15…). Bản đồ chiến dịch thêm sau khi vòng lặp chính đã vui.
+Không còn "đợt địch theo mốc lượt cố định": địch đến từ cướp ngẫu nhiên và từ các gia tộc láng giềng (§7, §9).
 
 ## 3. Bản đồ
 
@@ -91,12 +91,83 @@ Bản đồ ảnh hưởng chiến đấu trực tiếp chứ không chỉ qua t
 
 ## 7. Chiến đấu — kiểu Ninja Village (Kairosoft)
 
-- Màn hình nhìn ngang, quân ta bên trái, địch bên phải, mỗi bên có căn cứ/cổng thành.
-- Quân tự tiến lên, gặp địch trong tầm thì dừng lại đánh; cung thủ đứng sau bắn.
-- Thắng khi phá căn cứ địch hoặc hạ hết quân địch.
-- Người chơi chỉ chuẩn bị trước trận: chọn quân, thứ tự xuất quân, tướng.
+### 7.1 Ba loại xung đột
 
-**Kỹ thuật:** `BattleSimulator` chạy theo tick cố định (ví dụ 10 tick/giây), dùng RNG có seed và xuất ra **danh sách sự kiện** (di chuyển, tấn công, trúng đòn, ngã xuống…). `BattlePresenter` chỉ phát lại danh sách đó bằng hoạt ảnh. Cùng seed + cùng đội hình = cùng kết quả, nên có thể kiểm thử headless.
+| Loại | Xuất hiện khi | Thua thì | Thắng thì (đề xuất) |
+|---|---|---|---|
+| **Cướp** | Ngẫu nhiên mỗi lượt, hoặc do sự kiện | Mất một phần tài nguyên | Thu một ít chiến lợi phẩm |
+| **Quân xâm lược** | Gia tộc láng giềng có quan hệ xấu tấn công | Mất đất ở phía biên giáp kẻ địch | Quan hệ / uy tín thay đổi, có thể đòi bồi thường |
+| **Đi xâm lược** | Người chơi đem quân đánh vùng xung quanh | Mất **toàn bộ** quân + bồi thường tài nguyên | Chiếm vùng / tài nguyên |
+
+**Toàn bộ quân tham chiến** trong mọi trận.
+
+### 7.2 Cướp
+
+- Từ lượt 6, mỗi lượt có **15%** khả năng cướp xuất hiện.
+- **Không báo trước:** cướp đến ngay đầu lượt, trận đánh diễn ra luôn.
+- Quân cướp đông dần theo số lượt (cấu hình trong `data/raids/bandits.tres`).
+- **Thua:** mất 30% mỗi loại tài nguyên, và lính còn sống mất thêm 30% mỗi loại (tháo chạy). Lính chết trong trận thì vẫn mất như thường.
+- **Thắng:** nhận một ít tài nguyên theo số cướp bị đánh bại. Sau này: kinh nghiệm cho tướng, mưu sĩ, lính.
+- **Trạm lính canh:** mỗi trạm giảm 4% tỉ lệ cướp, tối đa 3 trạm, tốn phí duy trì mỗi lượt. Nếu không trả đủ phí duy trì thì lượt đó trạm không có tác dụng. Sau này có thể thêm tác dụng khác.
+
+### 7.3 Quân xâm lược & mất đất
+
+Bản đồ vương quốc có 4 cạnh tương ứng 4 hướng trên bản đồ thế giới. Thua trước quân xâm lược đến từ hướng nào thì mất các ô lãnh thổ sát cạnh đó: ô trở lại đất hoang, công trình trên đó bị phá. Thành chính không bao giờ mất. Cần có bản đồ thế giới (§9) để biết hướng.
+
+### 7.4 Trận đánh theo pha (bản M5, sẽ thay bằng §7.6)
+
+Mỗi loại lính có **hàng** (trước / giữa / sau) và **kiểu đánh** (cận chiến / cung / súng). Quân tính theo **số lượng**, không tính từng con.
+
+1. **Súng** (nếu có): hai phe nổ súng cùng lúc, sát thương vào **hàng đầu** của đối phương.
+2. **Cung**: tên bắn vòng lên rồi rơi xuống, sát thương **chia đều cho cả 3 hàng** của đối phương (dàn trải nên yếu hơn mỗi hàng).
+3. **Xung phong**: bộ binh (sau này cả tướng, kỵ binh) lao vào nhau giữa chiến trường. Mỗi hiệp, toàn bộ lính cận chiến đánh vào hàng đầu còn sống của đối phương; cung thủ vẫn bắn yểm trợ với 50% sức.
+4. Sau mỗi bước: phe nào chết hết, hoặc **còn dưới 40% quân** ban đầu thì tan vỡ và thua. Hết 8 hiệp mà chưa phân thắng bại thì phe còn tỉ lệ quân cao hơn thắng (bằng nhau thì phe phòng thủ thắng).
+
+Sát thương của một nhóm = số lính còn sống × max(1, công − thủ của mục tiêu) × hệ số pha × ngẫu nhiên ±10%. Hai phe ra đòn cùng lúc trong mỗi bước.
+
+Không có quân thì thua ngay.
+
+### 7.5 Hiển thị (M6)
+
+Màn hình ngang, chia theo bề ngang:
+
+| 5% | 20% | 50% | 20% | 5% |
+|---|---|---|---|---|
+| Thông tin phe 1 (số quân còn lại) | Xạ thủ phe 1 | Chiến trường cận chiến | Xạ thủ phe 2 | Thông tin phe 2 |
+
+- Súng: loạt đạn li ti bay vụt qua chiến trường.
+- Cung: tên bay lên khỏi khung hình, rồi rơi xuống từ phía trên.
+- Xung phong: bộ binh + tướng (cưỡi ngựa) lao vào, va chạm ở giữa.
+- Mỗi hình lính đại diện cho một nhóm lính; khi thiệt hại đủ số lượng thì hình bị thổi bay ra phía sau, ra khỏi khung hình.
+- Nút điều khiển: **tạm dừng**, **tăng tốc**, **rút lui** (§7.6).
+- Kết thúc: bảng thống kê thiệt hại của cả 2 phe và sát thương gây ra theo loại lính (đã có từ M5).
+
+### 7.6 Chiến đấu v2 — chỉ số lính, sĩ khí, rút lui (đã chốt)
+
+**Chỉ số của một đơn vị lính:**
+
+| Chỉ số | Ý nghĩa |
+|---|---|
+| **HP / Number** | Số lính còn lại của đơn vị. Bị đánh thì số lính giảm. |
+| **Melee Attack** | Sát thương khi đánh gần. |
+| **Melee Defense** | Giảm sát thương nhận từ đánh gần. |
+| **Armor** | Giảm sát thương nhận từ đạn và tên. |
+| **Charge Attack** | Sát thương cộng thêm, chỉ ở **lần lao vào giao tranh đầu tiên**; sau đó không còn tác dụng. |
+| **Morale** (sĩ khí) | Giảm khi tướng chết, và khi số lính giảm xuống dưới các mốc nhất định. Về 0 thì cả đơn vị **bị loại khỏi trận như bị tiêu diệt hoàn toàn**, dù vẫn còn lính. |
+| **Range Attack** | Sát thương đánh xa. Chỉ đơn vị dùng súng hoặc cung mới có. |
+
+**Đánh xa:**
+- **Súng:** nã một loạt đạn duy nhất ở đầu trận, sau đó không tham gia trận đánh nữa.
+- **Cung:** bắn nhiều loạt tên, cách nhau một khoảng thời gian. Cung càng tốt thì bắn càng nhanh (chỉ số thời gian nạp tên).
+
+**Rút lui:** trong trận có nút **Rút lui**, dùng được bất cứ lúc nào. Rút lui thì trận đó tính là **thua**, nhưng toàn bộ quân chỉ thiệt hại **50%** thay vì bị đánh tan. Dùng khi tiền tuyến đã vỡ và muốn giữ lại hậu tuyến (súng, cung).
+
+**Hệ quả kỹ thuật:** vì có rút lui giữa trận và cung bắn theo thời gian, trận đánh chuyển sang mô phỏng **theo thời gian** (tick), có thể chạy từng bước. Màn hình trận đánh điều khiển bộ mô phỏng: tạm dừng thì ngừng gọi, tăng tốc thì chạy nhiều tick mỗi khung hình, rút lui thì kết thúc ngay. Bộ mô phỏng vẫn thuần logic, có seed và test headless được (test có thể giả lập "rút lui ở giây thứ X").
+
+**Đề xuất cho các con số chưa chốt** (sẽ hỏi lại khi làm):
+- Sĩ khí bắt đầu 100. Mỗi khi đơn vị mất thêm 25% quân thì −20. Tướng chết thì −30 cho cả phe.
+- Thiệt hại 50% khi rút lui tính trên số lính **còn lại** của mỗi đơn vị. Tài nguyên vẫn bị mất như thua bình thường; không cộng thêm 30% tháo chạy.
+- Thua bình thường: đơn vị hết sĩ khí bị tính là mất hết; đơn vị chưa vỡ mất 30% như hiện nay.
 
 ## 8. Công trình & quân đội
 
@@ -112,6 +183,9 @@ Bản đồ ảnh hưởng chiến đấu trực tiếp chứ không chỉ qua t
 | Công trình | Giá | Điều kiện | Tác dụng |
 |---|---|---|---|
 | Doanh trại | 6 gỗ, 2 đá | Ô cỏ, tối đa 1 | Cho phép tuyển quân |
+| Trạm lính canh | 4 gỗ, 3 đá | Ô cỏ, tối đa 3 | −4% khả năng bị cướp mỗi trạm; duy trì 1 lương thực/lượt |
+
+Công trình có thể có phí duy trì. Phí này được trả sau tiền nuôi quân; nếu không đủ thì lượt đó công trình tạm ngưng tác dụng.
 
 ### Quân lính (M4)
 
@@ -119,15 +193,33 @@ Bản đồ ảnh hưởng chiến đấu trực tiếp chứ không chỉ qua t
 - Thanh tài nguyên hiển thị thu nhập ròng (sản lượng trừ nuôi quân).
 - Cuối lượt: thu sản lượng trước, rồi trả tiền nuôi quân. Nếu không đủ lương thực, lính **bỏ đi** (nhóm đông nhất bỏ trước) cho đến khi đủ.
 
-| Lính | Máu | Công | Thủ | Tầm | Giá | Điều kiện |
+| Lính | Máu | Công | Thủ | Hàng / kiểu | Giá | Điều kiện |
 |---|---|---|---|---|---|---|
-| Kiếm sĩ | 100 | 12 | 4 | 1 | 3 lương thực, 1 đá | Doanh trại |
-| Thương binh | 90 | 10 | 3 | 1 | 2 lương thực, 2 gỗ | Doanh trại |
-| Cung thủ | 60 | 9 | 1 | 5 | 2 lương thực, 3 gỗ | Doanh trại + ≥3 ô rừng |
+| Kiếm sĩ | 100 | 12 | 4 | Trước / cận chiến | 3 lương thực, 1 đá | Doanh trại |
+| Thương binh | 90 | 10 | 3 | Giữa / cận chiến | 2 lương thực, 2 gỗ | Doanh trại |
+| Cung thủ | 60 | 9 | 1 | Sau / cung | 2 lương thực, 3 gỗ | Doanh trại + ≥3 ô rừng |
+
+Quân cướp (`data/enemy_units/`): Cướp cầm dao (70 máu, 9 công, 1 thủ, trước / cận chiến), Cướp cung (50 máu, 7 công, sau / cung).
+
+Cân bằng hiện tại (mô phỏng 200 trận): cần khoảng một nửa số cướp là đủ lính để thắng gần như chắc chắn. Lượt 6 có 4 tên cướp, 2 kiếm sĩ là đủ; lượt 30 có 12 tên, cần khoảng 8 lính.
 
 Sau này: lính khiên, kỵ binh, lính súng; tướng (1 tướng võ + 1 quân sư mẫu).
 
-## 9. Quyết định kỹ thuật
+## 9. Bản đồ thế giới & ngoại giao
+
+- Thêm tab/nút **Ngoại giao**. Bấm vào thì mở một màn hình bản đồ lớn: vương quốc của mình ở một vị trí, các gia tộc / vương quốc xung quanh hiển thị quanh đó.
+- Với mỗi gia tộc: xem quan hệ, giao thương (trao đổi tài nguyên), kết liên minh, tuyên chiến.
+- Quan hệ xấu thì gia tộc đó có thể gửi quân xâm lược (§7.3). Người chơi cũng có thể đem quân đánh họ.
+- Mỗi gia tộc nằm ở một hướng so với vương quốc của mình, quyết định cạnh nào của bản đồ vương quốc bị mất đất khi thua.
+
+**Thế giới làm sẵn** (đã chốt) (khoảng 5–6 gia tộc, mỗi gia tộc một file dữ liệu: tên, vị trí, tính cách, sức mạnh, quan hệ ban đầu). Lý do:
+- Dễ cân bằng và dễ viết sự kiện / cốt truyện cho từng gia tộc.
+- Ít việc hơn nhiều so với một bộ sinh bản đồ ngẫu nhiên (sông, biển, địa lý…).
+- Vì gia tộc là dữ liệu, sau này vẫn có thể thêm chế độ sinh ngẫu nhiên ra các file đó mà không phải viết lại hệ thống.
+
+Biển, sông: chưa làm, để sau.
+
+## 10. Quyết định kỹ thuật
 
 | Vấn đề | Quyết định |
 |---|---|
@@ -138,7 +230,7 @@ Sau này: lính khiên, kỵ binh, lính súng; tướng (1 tướng võ + 1 qu�
 | Kiểm thử | Script headless tự viết trong `tests/`, không dùng thư viện ngoài |
 | Tên lớp | Tránh trùng lớp có sẵn của Godot (ví dụ dùng `CellData`, không dùng `TileData`) |
 
-## 10. Lộ trình
+## 11. Lộ trình
 
 | Mốc | Nội dung | Trạng thái |
 |---|---|---|
@@ -146,13 +238,19 @@ Sau này: lính khiên, kỵ binh, lính súng; tướng (1 tướng võ + 1 qu�
 | M2 | Mảnh đất (hướng cố định), xem trước, kết nối, đè thay thế, ô quan trọng | Xong |
 | ⏸ | **Chơi thử: xếp đất có vui không? Chỉnh trước khi đi tiếp** | Xong (ổn) |
 | M3 | Sản lượng mỗi lượt, kết thúc lượt, nhận mảnh đầu lượt, ô ◆ ×2 | Xong |
-| M4 | Công trình, dữ liệu đơn vị, doanh trại, tuyển quân, nuôi quân, mở khóa theo địa hình | Đang làm |
-| M5 | Auto-battle kiểu Ninja Village + đợt địch theo lượt | |
-| M6 | Sự kiện, tướng, điều kiện thắng/thua | |
-| M7 | Lưu/tải, thêm nội dung | |
-| M8 | Pixel art, âm thanh, cân bằng, build Windows | |
+| M4 | Công trình, dữ liệu đơn vị, doanh trại, tuyển quân, nuôi quân, mở khóa theo địa hình | Xong |
+| M5 | Logic trận đánh theo pha + **cướp** (ngẫu nhiên, không báo trước) + trạm lính canh + bảng thống kê sau trận | Xong |
+| M6 | **Chiến đấu v2** (logic): chỉ số mới, sĩ khí, charge, súng 1 loạt, cung theo thời gian nạp, mô phỏng theo tick, rút lui | |
+| M7 | Màn hình trận đánh cinematic (5/20/50/20/5, hoạt ảnh, tạm dừng, tăng tốc, nút rút lui) | |
+| M8 | Bản đồ thế giới làm sẵn + gia tộc + quan hệ + giao thương | |
+| M9 | Quân xâm lược (mất đất theo hướng) + đi xâm lược + liên minh | |
+| M10 | Lưu/tải (JSON có version) | |
+| M11 | Sự kiện, tướng, mưu sĩ, kinh nghiệm, điều kiện thắng/thua | |
+| M12 | Pixel art, âm thanh, cân bằng, build Windows | |
 
-## 11. Câu hỏi mở
+Lưu/tải được đưa lên trước sự kiện và tướng, vì trạng thái game càng nhiều thì càng khó thêm lưu game về sau.
+
+## 12. Câu hỏi mở
 
 - Đè lên ô có công trình (ngoài thành): cấm hẳn, hay cho phép phá công trình và hoàn lại một phần tài nguyên?
 - Sau khi chơi thử: có nên cho người chơi xoay mảnh không?

@@ -8,6 +8,7 @@ const TEST_FILES := [
 	"res://tests/test_pieces.gd",
 	"res://tests/test_economy.gd",
 	"res://tests/test_army.gd",
+	"res://tests/test_battle.gd",
 ]
 
 
@@ -16,6 +17,12 @@ func _initialize() -> void:
 	var failed := 0
 	for path in TEST_FILES:
 		var suite_script: GDScript = load(path)
+		# A test file that fails to compile must fail the run, not silently contribute 0 tests.
+		if suite_script == null or not suite_script.can_instantiate():
+			total += 1
+			failed += 1
+			print("  FAIL  %s could not be loaded (see the script error above)" % path)
+			continue
 		for method in suite_script.get_script_method_list():
 			var test_name: String = method.name
 			if not test_name.begins_with("test_"):
