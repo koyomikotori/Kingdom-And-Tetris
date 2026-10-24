@@ -131,6 +131,23 @@ func count_owned_cells() -> int:
 	return count
 
 
+func count_owned_terrain(terrain_id: StringName) -> int:
+	var count := 0
+	for cell in _cells:
+		if cell.owned and cell.terrain_id == terrain_id:
+			count += 1
+	return count
+
+
+## Number of separate buildings of this type (counted by their top-left cell).
+func count_buildings(building_id: StringName) -> int:
+	var count := 0
+	for cell in _cells:
+		if cell.building_id == building_id and cell.coord == cell.building_origin:
+			count += 1
+	return count
+
+
 func _rect_coords(rect: Rect2i) -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
 	for y in range(rect.position.y, rect.end.y):

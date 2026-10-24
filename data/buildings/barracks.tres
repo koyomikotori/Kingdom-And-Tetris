@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/buildings/building_data.gd" id="1_building"]
+
+[resource]
+script = ExtResource("1_building")
+building_id = &"barracks"
+display_name = "Doanh trại"
+description = "Cho phép tuyển quân. Xây trên ô cỏ."
+cost = Dictionary[StringName, int]({&"wood": 6, &"stone": 2})
+allowed_terrains = Array[StringName]([&"grass"])
+max_count = 1
+color = Color(0.45, 0.3, 0.2, 1)

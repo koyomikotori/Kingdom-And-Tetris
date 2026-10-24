@@ -98,12 +98,34 @@ Bản đồ ảnh hưởng chiến đấu trực tiếp chứ không chỉ qua t
 
 **Kỹ thuật:** `BattleSimulator` chạy theo tick cố định (ví dụ 10 tick/giây), dùng RNG có seed và xuất ra **danh sách sự kiện** (di chuyển, tấn công, trúng đòn, ngã xuống…). `BattlePresenter` chỉ phát lại danh sách đó bằng hoạt ảnh. Cùng seed + cùng đội hình = cùng kết quả, nên có thể kiểm thử headless.
 
-## 8. Kinh tế & quân đội (giữ nguyên ý từ v0.1, rút gọn phạm vi)
+## 8. Công trình & quân đội
 
 - Prototype: 3 tài nguyên (lương thực, gỗ, đá). Quặng và vàng thêm khi có quân cao cấp / tướng.
-- Quân ban đầu: kiếm sĩ, cung thủ, thương binh. Sau đó: lính khiên, kỵ binh, lính súng.
-- Tướng: 1 tướng võ + 1 quân sư mẫu.
-- Tất cả chỉ số nằm trong file dữ liệu (`Resource`), không viết cứng trong code.
+- Tất cả chỉ số nằm trong file dữ liệu (`data/buildings/`, `data/units/`), không viết cứng trong code.
+
+### Công trình (M4)
+
+- Xây trong lãnh thổ, chọn ở tab **Xây dựng**, có bóng xem trước giống mảnh đất.
+- Xây xong thì trừ tài nguyên. Không đủ tài nguyên hoặc chỗ không hợp lệ thì không xây và không trừ gì.
+- Mảnh đất không được đè lên công trình.
+
+| Công trình | Giá | Điều kiện | Tác dụng |
+|---|---|---|---|
+| Doanh trại | 6 gỗ, 2 đá | Ô cỏ, tối đa 1 | Cho phép tuyển quân |
+
+### Quân lính (M4)
+
+- Tuyển ở tab **Quân đội**. Mỗi lính tốn **1 lương thực mỗi lượt** để nuôi.
+- Thanh tài nguyên hiển thị thu nhập ròng (sản lượng trừ nuôi quân).
+- Cuối lượt: thu sản lượng trước, rồi trả tiền nuôi quân. Nếu không đủ lương thực, lính **bỏ đi** (nhóm đông nhất bỏ trước) cho đến khi đủ.
+
+| Lính | Máu | Công | Thủ | Tầm | Giá | Điều kiện |
+|---|---|---|---|---|---|---|
+| Kiếm sĩ | 100 | 12 | 4 | 1 | 3 lương thực, 1 đá | Doanh trại |
+| Thương binh | 90 | 10 | 3 | 1 | 2 lương thực, 2 gỗ | Doanh trại |
+| Cung thủ | 60 | 9 | 1 | 5 | 2 lương thực, 3 gỗ | Doanh trại + ≥3 ô rừng |
+
+Sau này: lính khiên, kỵ binh, lính súng; tướng (1 tướng võ + 1 quân sư mẫu).
 
 ## 9. Quyết định kỹ thuật
 
@@ -123,8 +145,8 @@ Bản đồ ảnh hưởng chiến đấu trực tiếp chứ không chỉ qua t
 | M1 | Lưới 12×12, thành 2×2, zoom/pan, xem thông tin ô | Xong |
 | M2 | Mảnh đất (hướng cố định), xem trước, kết nối, đè thay thế, ô quan trọng | Xong |
 | ⏸ | **Chơi thử: xếp đất có vui không? Chỉnh trước khi đi tiếp** | Xong (ổn) |
-| M3 | Sản lượng mỗi lượt, kết thúc lượt, nhận mảnh đầu lượt, ô ◆ ×2 | Đang làm |
-| M4 | Công trình, dữ liệu đơn vị, doanh trại, tuyển quân, mở khóa theo địa hình | |
+| M3 | Sản lượng mỗi lượt, kết thúc lượt, nhận mảnh đầu lượt, ô ◆ ×2 | Xong |
+| M4 | Công trình, dữ liệu đơn vị, doanh trại, tuyển quân, nuôi quân, mở khóa theo địa hình | Đang làm |
 | M5 | Auto-battle kiểu Ninja Village + đợt địch theo lượt | |
 | M6 | Sự kiện, tướng, điều kiện thắng/thua | |
 | M7 | Lưu/tải, thêm nội dung | |

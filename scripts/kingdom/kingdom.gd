@@ -2,6 +2,8 @@ extends Node2D
 ## Kingdom screen: turns input into KingdomState actions and keeps the board view and UI in sync.
 
 const NO_SELECTION := -1
+const NO_BUILDING: StringName = &""
+const TAB_TITLES: Array[String] = ["Mảnh đất", "Xây dựng", "Quân đội"]
 
 @export var board_size := 12
 ## 0 = random seed each run. Set a number to replay the same pieces while testing.
@@ -10,9 +12,13 @@ const NO_SELECTION := -1
 var state: KingdomState
 var _terrains: Dictionary[StringName, TerrainData] = {}
 var _shapes: Dictionary[StringName, PieceShapeData] = {}
+var _buildings: Dictionary[StringName, BuildingData] = {}
 var _resource_types: Array[ResourceTypeData] = []
 var _resource_labels: Dictionary[StringName, Label] = {}
+## Hand index of the selected piece, or NO_SELECTION.
 var _selected := NO_SELECTION
+## Building chosen in the build tab, or NO_BUILDING. Never set together with _selected.
+var _selected_building := NO_BUILDING
 
 @onready var board_view: BoardView = $BoardView
 @onready var camera: CameraController = $Camera
@@ -21,7 +27,10 @@ var _selected := NO_SELECTION
 @onready var top_bar: Control = %TopBar
 @onready var resource_bar: Container = %ResourceBar
 @onready var turn_label: Label = %TurnLabel
+@onready var tabs: TabContainer = %Tabs
 @onready var piece_list: Container = %PieceList
+@onready var build_panel: BuildPanel = %BuildPanel
+@onready var army_panel: ArmyPanel = %ArmyPanel
 @onready var placement_status: Label = %PlacementStatus
 @onready var end_turn_button: Button = %EndTurnButton
 
@@ -29,11 +38,15 @@ var _selected := NO_SELECTION
 func _ready() -> void:
 	_terrains = TerrainLibrary.load_all()
 	_shapes = PieceShapeLibrary.load_all()
+	_buildings = BuildingData.load_all()
 	_resource_types = ResourceTypeData.load_all()
+	var units := UnitData.load_all()
 	_build_resource_labels()
+	for i in TAB_TITLES.size():
+		tabs.set_tab_title(i, TAB_TITLES[i])
 
 	var board := BoardData.create_starting_board(board_size)
-	board_view.setup(board, _terrains)
+	board_view.setup(board, _terrains, _buildings)
 	board_view.cell_hovered.connect(_on_cell_hovered)
 	board_view.cell_clicked.connect(_on_cell_clicked)
 	# Container sizes are only sorted next frame, so use the top bar's minimum height.
@@ -41,10 +54,17 @@ func _ready() -> void:
 
 	var seed_value := piece_seed if piece_seed != 0 else randi()
 	var hand := PieceHand.new(PieceGenerator.new(_shapes, _terrains, seed_value))
-	state = KingdomState.new(board, hand, _terrains)
+	state = KingdomState.new(board, hand, _terrains, _buildings, units)
 	state.hand.changed.connect(_rebuild_piece_cards)
-	state.stockpile.changed.connect(_refresh_resource_bar)
+	state.stockpile.changed.connect(_refresh_economy)
+	state.army.changed.connect(_refresh_economy)
 	state.turn_started.connect(_on_turn_started)
+
+	build_panel.setup(_buildings, _resource_types)
+	build_panel.building_toggled.connect(_toggle_building)
+	army_panel.setup(units, _resource_types)
+	army_panel.recruit_requested.connect(_on_recruit_requested)
+	tabs.tab_changed.connect(func(_tab: int) -> void: _clear_selection())
 	end_turn_button.pressed.connect(_on_end_turn_pressed)
 	state.start()
 	_on_cell_hovered(BoardView.OFF_BOARD)
@@ -57,8 +77,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		KEY_G:
 			board_view.show_coords = not board_view.show_coords
 		KEY_ESCAPE:
-			_select(NO_SELECTION)
+			_clear_selection()
 		KEY_1, KEY_2, KEY_3:
+			tabs.current_tab = 0
 			_toggle_selection(event.keycode - KEY_1)
 		KEY_ENTER, KEY_KP_ENTER:
 			_on_end_turn_pressed()
@@ -73,30 +94,67 @@ func _on_cell_hovered(coord: Vector2i) -> void:
 
 
 func _on_cell_clicked(coord: Vector2i) -> void:
-	if _selected == NO_SELECTION:
+	if _selected != NO_SELECTION:
+		_place_selected_piece(coord)
+	elif _selected_building != NO_BUILDING:
+		_build_selected(coord)
+	else:
 		print(_describe_cell(state.board.get_cell(coord)).replace("\n", " | "))
-		return
+
+
+func _place_selected_piece(coord: Vector2i) -> void:
 	var piece := state.hand.pieces[_selected]
 	var result := state.place_piece(_selected, coord - piece.get_anchor())
 	if result != PlacementRules.Result.OK:
 		placement_status.text = PlacementRules.describe(result)
 		return
 	_select(NO_SELECTION)
-	_refresh_resource_bar()
+	_refresh_economy()
 	placement_status.text = "Đã đặt mảnh đất."
 	_on_cell_hovered(coord)
 
 
+func _build_selected(coord: Vector2i) -> void:
+	var building := _buildings[_selected_building]
+	var result := state.build(_selected_building, coord - _building_anchor(building))
+	if result != BuildRules.Result.OK:
+		placement_status.text = BuildRules.describe(result)
+		return
+	_toggle_building(NO_BUILDING)
+	placement_status.text = "Đã xây %s." % building.display_name
+	_on_cell_hovered(coord)
+
+
+func _on_recruit_requested(unit_id: StringName) -> void:
+	var unit := state.units[unit_id]
+	var result := state.recruit(unit_id)
+	placement_status.text = "Đã tuyển 1 %s." % unit.display_name if result == RecruitmentRules.Result.OK \
+			else RecruitmentRules.describe(result, unit, _buildings, _terrains)
+
+
 func _on_end_turn_pressed() -> void:
-	_select(NO_SELECTION)
-	var collected := state.end_turn()
-	var text := _format_amounts(collected, false)
-	placement_status.text = "Đã thu: %s." % text if not text.is_empty() else "Lượt trước không thu được tài nguyên nào."
+	_clear_selection()
+	var report := state.end_turn()
+	var lines: Array[String] = []
+	var collected := UiFormat.amounts(report.collected, _resource_types)
+	lines.append("Đã thu: %s." % collected if not collected.is_empty() else "Lượt trước không thu được tài nguyên nào.")
+	var upkeep := UiFormat.amounts(report.upkeep, _resource_types)
+	if not upkeep.is_empty():
+		lines.append("Nuôi quân: %s." % upkeep)
+	for unit_id: StringName in report.deserted:
+		lines.append("%d %s bỏ đi vì thiếu lương thực!" % [report.deserted[unit_id], state.units[unit_id].display_name])
+	placement_status.text = "\n".join(lines)
 
 
 func _on_turn_started(turn: int) -> void:
 	turn_label.text = "Lượt %d" % turn
-	_refresh_resource_bar()
+	_refresh_economy()
+
+
+func _clear_selection() -> void:
+	_select(NO_SELECTION)
+	if _selected_building != NO_BUILDING:
+		_toggle_building(NO_BUILDING)
 
 
 func _toggle_selection(index: int) -> void:
@@ -107,9 +165,23 @@ func _select(index: int) -> void:
 	if index >= state.hand.pieces.size():
 		return
 	_selected = index
+	if index != NO_SELECTION and _selected_building != NO_BUILDING:
+		_selected_building = NO_BUILDING
+		build_panel.set_selected(NO_BUILDING)
 	for i in piece_list.get_child_count():
 		(piece_list.get_child(i) as PieceCard).set_pressed_no_signal(i == _selected)
 	placement_status.text = "" if _selected == NO_SELECTION else "Nhấn chuột trái lên bản đồ để đặt. Esc: bỏ chọn."
+	_update_ghost()
+
+
+## Selecting the already-selected building (or NO_BUILDING) leaves build mode.
+func _toggle_building(building_id: StringName) -> void:
+	_selected_building = NO_BUILDING if building_id == _selected_building else building_id
+	if _selected_building != NO_BUILDING and _selected != NO_SELECTION:
+		_select(NO_SELECTION)
+	build_panel.set_selected(_selected_building)
+	placement_status.text = "" if _selected_building == NO_BUILDING \
+			else "Nhấn chuột trái lên bản đồ để xây. Esc: bỏ chọn."
 	_update_ghost()
 
 
@@ -129,18 +201,30 @@ func _rebuild_piece_cards() -> void:
 
 func _update_ghost() -> void:
 	var coord := board_view.get_hovered_cell()
-	if _selected == NO_SELECTION or coord == BoardView.OFF_BOARD:
+	if coord == BoardView.OFF_BOARD or (_selected == NO_SELECTION and _selected_building == NO_BUILDING):
 		board_view.hide_ghost()
 		return
-	var piece := state.hand.pieces[_selected]
-	var origin := coord - piece.get_anchor()
-	var result := PlacementRules.check(state.board, piece, origin)
-	board_view.show_ghost(piece, origin, result == PlacementRules.Result.OK)
-	if result != PlacementRules.Result.OK:
-		placement_status.text = PlacementRules.describe(result)
+	if _selected_building != NO_BUILDING:
+		var building := _buildings[_selected_building]
+		var origin := coord - _building_anchor(building)
+		var result := BuildRules.check(state.board, state.stockpile, building, origin)
+		board_view.show_building_ghost(building, origin, result == BuildRules.Result.OK)
+		placement_status.text = BuildRules.describe(result)
 		return
-	var delta := _format_amounts(Economy.placement_delta(state.board, piece, origin, _terrains), true)
+	var piece := state.hand.pieces[_selected]
+	var piece_origin := coord - piece.get_anchor()
+	var placement := PlacementRules.check(state.board, piece, piece_origin)
+	board_view.show_ghost(piece, piece_origin, placement == PlacementRules.Result.OK)
+	if placement != PlacementRules.Result.OK:
+		placement_status.text = PlacementRules.describe(placement)
+		return
+	var delta := UiFormat.amounts(Economy.placement_delta(state.board, piece, piece_origin, _terrains), _resource_types, true)
 	placement_status.text = "Có thể đặt. Sản lượng mỗi lượt: %s." % (delta if not delta.is_empty() else "không đổi")
+
+
+## The cell of a building that sits under the mouse cursor.
+func _building_anchor(building: BuildingData) -> Vector2i:
+	return (building.size - Vector2i.ONE) / 2
 
 
 func _build_resource_labels() -> void:
@@ -150,21 +234,13 @@ func _build_resource_labels() -> void:
 		_resource_labels[type.resource_id] = label
 
 
-func _refresh_resource_bar() -> void:
-	var income := state.get_turn_yield()
+## Resource bar (stock and net income per turn) and the army tab depend on stock, army and territory.
+func _refresh_economy() -> void:
+	var net := state.get_net_income()
 	for type in _resource_types:
-		_resource_labels[type.resource_id].text = "%s: %d (+%d)" % [
-			type.display_name, state.stockpile.get_amount(type.resource_id), income.get(type.resource_id, 0)]
-
-
-## "+2 Lương thực, -1 Gỗ" in resource-bar order; zero amounts are skipped.
-func _format_amounts(amounts: Dictionary[StringName, int], signed: bool) -> String:
-	var parts: Array[String] = []
-	for type in _resource_types:
-		var amount: int = amounts.get(type.resource_id, 0)
-		if amount != 0:
-			parts.append(("%+d %s" if signed else "%d %s") % [amount, type.display_name])
-	return ", ".join(parts)
+		_resource_labels[type.resource_id].text = "%s: %d (%+d)" % [
+			type.display_name, state.stockpile.get_amount(type.resource_id), net.get(type.resource_id, 0)]
+	army_panel.refresh(state)
 
 
 func _describe_cell(cell: CellData) -> String:
@@ -176,10 +252,13 @@ func _describe_cell(cell: CellData) -> String:
 		terrain += " ◆ (ô quan trọng, x%d sản lượng)" % Economy.KEY_CELL_MULTIPLIER
 	var production := "Không"
 	if cell.owned:
-		var amounts := _format_amounts(Economy.cell_yield(_terrains.get(cell.terrain_id), cell.is_key), true)
+		var amounts := UiFormat.amounts(Economy.cell_yield(_terrains.get(cell.terrain_id), cell.is_key), _resource_types, true)
 		production = amounts if not amounts.is_empty() else "Không"
 	var building := "Không"
-	if cell.has_building():
-		building = "%s (gốc %d,%d)" % [cell.building_id, cell.building_origin.x, cell.building_origin.y]
+	if cell.building_id == BoardData.CASTLE_ID:
+		building = "Thành chính"
+	elif cell.has_building():
+		var data: BuildingData = _buildings.get(cell.building_id)
+		building = data.display_name if data != null else String(cell.building_id)
 	return "Ô (%d, %d)\nĐịa hình: %s\nSở hữu: %s\nSản lượng mỗi lượt: %s\nCông trình: %s" % [
 		cell.coord.x, cell.coord.y, terrain, "Có" if cell.owned else "Không", production, building]
