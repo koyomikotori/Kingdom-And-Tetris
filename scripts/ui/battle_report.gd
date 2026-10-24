@@ -42,8 +42,9 @@ func show_raid(raid: Dictionary, resource_types: Array[ResourceTypeData], units:
 	title.add_theme_font_size_override("font_size", 24)
 	title.add_theme_color_override("font_color", WIN_COLOR if won else LOSS_COLOR)
 	box.add_child(title)
-	box.add_child(_label("Quân cướp tấn công đầu lượt. Phe %s: %s." % [
-			record.sides[record.loser()].display_name.to_lower(), _end_reason_text(record.end_reason)]))
+	box.add_child(_label("Quân cướp tấn công đầu lượt. Phe %s %s (sau %d giây)." % [
+			record.sides[record.loser()].display_name.to_lower(), _end_reason_text(record.end_reason),
+			roundi(record.duration)]))
 
 	for side in [record.sides[BattleRecord.DEFENDER], record.sides[BattleRecord.ATTACKER]]:
 		box.add_child(_side_table(side))
@@ -51,8 +52,10 @@ func show_raid(raid: Dictionary, resource_types: Array[ResourceTypeData], units:
 	var outcome: Array[String] = []
 	if not raid.casualties.is_empty():
 		outcome.append("Tử trận: %s." % _unit_counts(raid.casualties, units))
-	if not raid.fled.is_empty():
-		outcome.append("Bỏ chạy: %s." % _unit_counts(raid.fled, units))
+	if not raid.scattered.is_empty():
+		outcome.append("Tan rã (đơn vị bị vỡ): %s." % _unit_counts(raid.scattered, units))
+	if not raid.retreat_losses.is_empty():
+		outcome.append("Mất khi rút lui (50%%): %s." % _unit_counts(raid.retreat_losses, units))
 	var lost := UiFormat.amounts(raid.resources_lost, resource_types)
 	if not lost.is_empty():
 		outcome.append("Bị cướp mất: %s." % lost)
@@ -73,11 +76,11 @@ static func _end_reason_text(reason: BattleRecord.EndReason) -> String:
 	match reason:
 		BattleRecord.EndReason.NO_ARMY:
 			return "không có quân để chiến đấu"
-		BattleRecord.EndReason.WIPED_OUT:
-			return "bị tiêu diệt"
-		BattleRecord.EndReason.ROUTED:
-			return "tan vỡ và bỏ chạy"
-	return "hết %d hiệp, phe còn ít quân hơn rút lui" % BattleSimulator.MAX_MELEE_ROUNDS
+		BattleRecord.EndReason.ALL_BROKEN:
+			return "bị vỡ hoặc tiêu diệt toàn bộ"
+		BattleRecord.EndReason.RETREAT:
+			return "rút lui"
+	return "rút lui khi hết giờ vì còn ít quân hơn"
 
 
 func close() -> void:
@@ -90,20 +93,21 @@ func _side_table(side: BattleSide) -> Control:
 	var header := _label("%s — còn %d/%d" % [side.display_name, side.alive_total(), side.start_total()])
 	header.add_theme_font_size_override("font_size", 17)
 	box.add_child(header)
-	if side.groups.is_empty():
+	if side.units.is_empty():
 		box.add_child(_label("(không có quân)"))
 		return box
 	var grid := GridContainer.new()
-	grid.columns = 5
+	grid.columns = 6
 	grid.add_theme_constant_override("h_separation", 18)
 	box.add_child(grid)
-	for text in ["Loại lính", "Đầu trận", "Tử trận", "Còn lại", "Sát thương gây ra"]:
+	for text in ["Đơn vị", "Đầu trận", "Tử trận", "Còn lại", "Hạ được", "Trạng thái"]:
 		var cell := _label(text, false)
 		cell.add_theme_color_override("font_color", Color(1, 1, 1, 0.6))
 		grid.add_child(cell)
-	for group in side.groups:
-		for text in [group.unit.display_name, str(group.start_count), str(group.lost()), str(group.alive()),
-				str(roundi(group.damage_dealt))]:
+	for unit in side.units:
+		var status := "Bị vỡ" if unit.broken else ("Tử trận hết" if unit.alive() == 0 else "Giữ vững")
+		for text in [unit.data.display_name, str(unit.start_soldiers), str(unit.lost()), str(unit.alive()),
+				str(roundi(unit.kills)), status]:
 			grid.add_child(_label(text, false))
 	return box
 

@@ -1,11 +1,12 @@
 class_name UnitData
 extends Resource
 ## Static definition of a soldier type. Player units live in data/units/, enemy-only units
-## (bandits, …) in data/enemy_units/. Combat rules: GDD §7.4.
+## (bandits, …) in data/enemy_units/. Combat rules: GDD §7.6.
+## One recruitment gives one squad of `squad_size` soldiers.
 
 ## Formation row. Melee and gun fire hit the front-most row that still has soldiers.
 enum Row { FRONT, MIDDLE, BACK }
-## Which battle phase the unit acts in.
+## How the unit fights at range. MELEE units have no ranged attack.
 enum AttackKind { MELEE, BOW, GUN }
 
 const ROW_NAMES: Array[String] = ["Hàng trước", "Hàng giữa", "Hàng sau"]
@@ -15,23 +16,39 @@ const ATTACK_KIND_NAMES: Array[String] = ["Cận chiến", "Cung", "Súng"]
 @export var display_name: String
 ## Position in the army list, lowest first.
 @export var sort_order: int = 0
+## Soldiers per recruited squad (HP / Number at full strength).
+@export var squad_size: int = 20
 
 @export_group("Combat")
-@export var max_hp: int = 100
-@export var attack: int = 10
-## Subtracted from each soldier's attack against this unit (minimum 1 damage per soldier).
-@export var defense: int = 0
 @export var row: Row = Row.FRONT
 @export var attack_kind: AttackKind = AttackKind.MELEE
+@export var melee_attack: int = 5
+## Reduces casualties taken in melee.
+@export var melee_defense: int = 5
+## Reduces casualties taken from bullets and arrows.
+@export var armor: int = 0
+## Extra melee damage on the first clash only.
+@export var charge_attack: int = 0
+## Starting morale. Drops as the squad takes losses; at 0 the squad breaks.
+@export var morale: int = 6
+## Ranged damage. Only BOW and GUN units use it.
+@export var range_attack: int = 0
+## Seconds between arrow volleys. Guns fire a single volley and ignore this.
+@export var reload_time: float = 5.0
 
 @export_group("Recruitment")
+## Paid per squad.
 @export var recruit_cost: Dictionary[StringName, int] = {}
-## Paid every turn per soldier.
+## Paid every turn per squad.
 @export var upkeep: Dictionary[StringName, int] = {}
 ## The kingdom needs at least one of this building. Empty = no building needed.
 @export var required_building: StringName
 ## Minimum owned cells per terrain, e.g. {&"forest": 3} for archers.
 @export var required_terrain: Dictionary[StringName, int] = {}
+
+
+func is_ranged() -> bool:
+	return attack_kind != AttackKind.MELEE
 
 
 ## Player unit types, sorted by sort_order.

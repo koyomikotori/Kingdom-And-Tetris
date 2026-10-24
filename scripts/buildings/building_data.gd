@@ -18,6 +18,10 @@ extends Resource
 @export var upkeep: Dictionary[StringName, int] = {}
 ## Subtracted from the per-turn bandit raid chance (0.04 = 4 percentage points).
 @export var raid_chance_reduction: float = 0.0
+## Extra army squads the kingdom may have per building of this type.
+@export var squad_capacity: int = 0
+## Squads below full strength regain soldiers each turn while the kingdom has this building.
+@export var enables_replenishment: bool = false
 
 
 static func load_all() -> Dictionary[StringName, BuildingData]:

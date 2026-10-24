@@ -6,9 +6,8 @@
 script = ExtResource("1_raid")
 first_turn = 6
 base_chance = 0.15
-base_size = 2
-size_per_turn = 0.34
+base_squads = 1
+squads_per_turn = 0.15
 unit_weights = Dictionary[StringName, float]({&"bandit_thug": 3.0, &"bandit_archer": 1.0})
 resource_loss_on_defeat = 0.3
-soldier_loss_on_defeat = 0.3
-reward_per_bandit = Dictionary[StringName, int]({&"food": 1, &"wood": 1})
+reward_per_squad = Dictionary[StringName, int]({&"food": 3, &"wood": 3})

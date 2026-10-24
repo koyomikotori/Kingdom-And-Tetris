@@ -1,156 +1,258 @@
 class_name BattleSimulator
 extends RefCounted
-## Phase-based auto-battle (GDD §7.4). Pure logic: no nodes, no animation.
-## Order: gun volley -> arrow volley -> melee rounds (archers and guns keep supporting).
-## Both sides strike at the same time in every step. Same seed + same armies = same result.
+## Time-based auto-battle (GDD §7.6). Pure logic: no nodes, no animation.
+## Call step() repeatedly (the battle screen does this every frame, more often when sped up),
+## or simulate() to run a whole battle at once. retreat() ends the battle immediately.
+##
+## Timeline: guns fire one volley at GUN_TIME; archers fire at FIRST_ARROW_TIME and then every
+## reload_time; melee lines clash at CONTACT_TIME with a one-off charge, then fight continuously.
+## Casualties use attack / (attack + defense), so stats compare as ratios and never hit zero.
+## Same seed + same armies (+ same retreat time) = same result.
 
-const PHASE_GUNS: StringName = &"guns"
-const PHASE_ARROWS: StringName = &"arrows"
-const PHASE_MELEE: StringName = &"melee"
+const TICK := 0.1
+const SNAPSHOT_INTERVAL := 0.5
+const GUN_TIME := 0.5
+const FIRST_ARROW_TIME := 1.5
+const CONTACT_TIME := 3.0
+const TIME_LIMIT := 120.0
 
-const MAX_MELEE_ROUNDS := 8
-## A side whose alive soldiers fall below this fraction of its starting count breaks and loses.
-const ROUT_FRACTION := 0.4
-## Ranged units keep shooting during melee rounds at this strength.
-const RANGED_SUPPORT_MULTIPLIER := 0.5
+# Each factor is multiplied by attack / (attack + defense), which is 0.5 when the stats are equal.
+## Casualties caused per engaged soldier per second.
+const MELEE_RATE := 0.035
+## Casualties caused per soldier by the one-off charge.
+const CHARGE_FACTOR := 0.12
+## Casualties caused per archer per volley.
+const ARROW_FACTOR := 0.15
+## Casualties caused per gunner by the single gun volley.
+const GUN_FACTOR := 0.4
+## Morale lost each time a unit loses another 25% of its starting soldiers.
+const MORALE_LOSS_PER_QUARTER := 3.0
 ## Each hit is scaled by a random factor in [1 - VARIANCE, 1 + VARIANCE].
 const VARIANCE := 0.1
 
+var record: BattleRecord
+var time := 0.0
+var finished := false
+
+var _sides: Array[BattleSide] = []
 var _rng := RandomNumberGenerator.new()
+var _ticks := 0
+## _hits[side][unit_index] = Array of [source Unit, casualties] collected during one tick.
+var _hits: Array = []
 
 
-static func run(attacker: BattleSide, defender: BattleSide, seed_value: int) -> BattleRecord:
-	return BattleSimulator.new()._run(attacker, defender, seed_value)
-
-
-func _run(attacker: BattleSide, defender: BattleSide, seed_value: int) -> BattleRecord:
+func _init(attacker: BattleSide, defender: BattleSide, seed_value: int) -> void:
+	_sides = [attacker, defender]
 	_rng.seed = seed_value
-	var record := BattleRecord.new(attacker, defender)
+	record = BattleRecord.new(attacker, defender)
+	for side in _sides:
+		for unit in side.units:
+			unit.next_volley_at = FIRST_ARROW_TIME
+	_snapshot()
 	if attacker.alive_total() == 0 or defender.alive_total() == 0:
-		record.winner = BattleRecord.ATTACKER if defender.alive_total() == 0 else BattleRecord.DEFENDER
-		record.end_reason = BattleRecord.EndReason.NO_ARMY
-		return record
-	if attacker.has_attack_kind(UnitData.AttackKind.GUN) or defender.has_attack_kind(UnitData.AttackKind.GUN):
-		if _step_and_check(record, PHASE_GUNS, 0):
-			return record
-	if attacker.has_attack_kind(UnitData.AttackKind.BOW) or defender.has_attack_kind(UnitData.AttackKind.BOW):
-		if _step_and_check(record, PHASE_ARROWS, 0):
-			return record
-	for round_number in range(1, MAX_MELEE_ROUNDS + 1):
-		if _step_and_check(record, PHASE_MELEE, round_number):
-			return record
-	record.end_reason = BattleRecord.EndReason.ROUND_LIMIT
-	record.winner = _better_side(record)
-	return record
+		var winner := BattleRecord.ATTACKER if defender.alive_total() == 0 else BattleRecord.DEFENDER
+		_finish(winner, BattleRecord.EndReason.NO_ARMY)
 
 
-## Runs one step and records it. Returns true when the battle is over.
-func _step_and_check(record: BattleRecord, phase: StringName, round_number: int) -> bool:
-	_strike(record.sides, phase)
-	record.steps.append(_snapshot(record.sides, phase, round_number))
-	var lost := [_has_lost(record.sides[0]), _has_lost(record.sides[1])]
-	if not lost[0] and not lost[1]:
-		return false
-	if lost[0] and lost[1]:
-		record.winner = _better_side(record)
-	else:
-		record.winner = BattleRecord.DEFENDER if lost[0] else BattleRecord.ATTACKER
-	var loser_side := record.sides[record.loser()]
-	record.end_reason = BattleRecord.EndReason.WIPED_OUT if loser_side.alive_total() == 0 else BattleRecord.EndReason.ROUTED
-	return true
+## Runs a whole battle with nobody retreating.
+static func simulate(attacker: BattleSide, defender: BattleSide, seed_value: int) -> BattleRecord:
+	var simulator := BattleSimulator.new(attacker, defender, seed_value)
+	while not simulator.finished:
+		simulator.step()
+	return simulator.record
 
 
-## Both sides deal damage based on the state before the step, then all damage is applied.
-func _strike(sides: Array[BattleSide], phase: StringName) -> void:
-	# hits[target_side][target_group] = Array of [source_group, damage]
-	var hits: Array = [[], []]
-	for s in 2:
-		for group in sides[1 - s].groups:
-			hits[1 - s].append([])
-	for s in 2:
-		var target_side := sides[1 - s]
-		for source in sides[s].groups:
-			var multiplier := _phase_multiplier(phase, source.unit.attack_kind)
-			if multiplier <= 0.0 or source.alive() == 0:
-				continue
-			var targets := _pick_targets(target_side, source.unit.attack_kind)
-			for target_index in targets:
-				var target := target_side.groups[target_index]
-				var per_soldier := maxi(1, source.unit.attack - target.unit.defense)
-				var damage: float = source.alive() * per_soldier * multiplier * targets[target_index] \
-						* _rng.randf_range(1.0 - VARIANCE, 1.0 + VARIANCE)
-				hits[1 - s][target_index].append([source, damage])
-	for s in 2:
-		for target_index in sides[s].groups.size():
-			_apply_hits(sides[s].groups[target_index], hits[s][target_index])
-
-
-## Damage beyond the target's remaining HP is not counted as damage dealt.
-func _apply_hits(target: BattleSide.Group, group_hits: Array) -> void:
-	var total := 0.0
-	for hit in group_hits:
-		total += hit[1]
-	if total <= 0.0:
+## Advances the battle by one TICK.
+func step() -> void:
+	if finished:
 		return
-	var effective := minf(1.0, target.hp / total)
-	for hit in group_hits:
-		hit[0].damage_dealt += hit[1] * effective
-	target.hp = maxf(0.0, target.hp - total)
+	_hits = [[], []]
+	for s in 2:
+		for unit in _sides[s].units:
+			_hits[s].append([])
+	for s in 2:
+		_fire_guns(s)
+		_fire_arrows(s)
+		_fight_melee(s)
+	for s in 2:
+		for i in _sides[s].units.size():
+			_apply_hits(_sides[s].units[i], _hits[s][i])
+	for s in 2:
+		for i in _sides[s].units.size():
+			_update_morale(s, i)
+	time += TICK
+	_ticks += 1
+	if _ticks % roundi(SNAPSHOT_INTERVAL / TICK) == 0:
+		_snapshot()
+	_check_end()
 
 
-func _phase_multiplier(phase: StringName, kind: UnitData.AttackKind) -> float:
-	match phase:
-		PHASE_GUNS:
-			return 1.0 if kind == UnitData.AttackKind.GUN else 0.0
-		PHASE_ARROWS:
-			return 1.0 if kind == UnitData.AttackKind.BOW else 0.0
-		PHASE_MELEE:
-			return 1.0 if kind == UnitData.AttackKind.MELEE else RANGED_SUPPORT_MULTIPLIER
-	return 0.0
+## The given side gives up: it loses, and its unbroken units escape (GDD §7.6).
+func retreat(side: int) -> void:
+	if finished:
+		return
+	record.retreated_side = side
+	record.events.append({"time": time, "type": &"retreat", "side": side, "unit": -1})
+	_finish(1 - side, BattleRecord.EndReason.RETREAT)
 
 
-## Returns {group_index: share of the attack}, shares summing to 1.
-## Arrows rain on every row equally; bullets and melee hit the front-most row still standing.
-## Within a row, damage is split by how many soldiers each group has.
-func _pick_targets(side: BattleSide, kind: UnitData.AttackKind) -> Dictionary:
-	var rows := {}  # row -> Array of group indices with soldiers
-	for i in side.groups.size():
-		if side.groups[i].alive() > 0:
-			var row: int = side.groups[i].unit.row
-			if not rows.has(row):
-				rows[row] = []
-			rows[row].append(i)
+func is_melee_started() -> bool:
+	return time >= CONTACT_TIME
+
+
+## A ranged unit stops shooting once its row is the front line in melee.
+func _is_in_melee(side: int, unit: BattleSide.Unit) -> bool:
+	return is_melee_started() and unit.data.row == _sides[side].front_row()
+
+
+func _fire_guns(s: int) -> void:
+	if time < GUN_TIME:
+		return
+	for i in _sides[s].units.size():
+		var unit := _sides[s].units[i]
+		if unit.is_active() and unit.data.attack_kind == UnitData.AttackKind.GUN and not unit.has_fired:
+			unit.has_fired = true
+			_ranged_attack(s, unit, GUN_FACTOR, false)
+			record.events.append({"time": time, "type": &"gun_volley", "side": s, "unit": i})
+
+
+func _fire_arrows(s: int) -> void:
+	for i in _sides[s].units.size():
+		var unit := _sides[s].units[i]
+		if not unit.is_active() or unit.data.attack_kind != UnitData.AttackKind.BOW:
+			continue
+		if time + 0.0001 < unit.next_volley_at or _is_in_melee(s, unit):
+			continue
+		unit.next_volley_at += unit.data.reload_time
+		_ranged_attack(s, unit, ARROW_FACTOR, true)
+		record.events.append({"time": time, "type": &"arrow_volley", "side": s, "unit": i})
+
+
+## Arrows rain on every row; bullets hit the front row. Damage within a row is split by soldiers.
+func _ranged_attack(s: int, source: BattleSide.Unit, factor: float, spread_over_rows: bool) -> void:
+	var targets := _pick_targets(1 - s, spread_over_rows)
+	for target_index in targets:
+		var target := _sides[1 - s].units[target_index]
+		var ratio := _ratio(source.data.range_attack, target.data.armor)
+		_hit(1 - s, target_index, source, source.alive() * ratio * factor * targets[target_index])
+
+
+## Every unit on the front line plus every melee unit behind it fights the enemy's front row.
+func _fight_melee(s: int) -> void:
+	if not is_melee_started():
+		return
+	var targets := _pick_targets(1 - s, false)
+	if targets.is_empty():
+		return
+	for i in _sides[s].units.size():
+		var unit := _sides[s].units[i]
+		if not unit.is_active():
+			continue
+		if unit.data.is_ranged() and not _is_in_melee(s, unit):
+			continue
+		var charging := not unit.has_charged
+		unit.has_charged = true
+		if charging:
+			record.events.append({"time": time, "type": &"charge", "side": s, "unit": i})
+		for target_index in targets:
+			var target := _sides[1 - s].units[target_index]
+			var share: float = targets[target_index]
+			var casualties := unit.alive() * _ratio(unit.data.melee_attack, target.data.melee_defense) * MELEE_RATE * TICK
+			if charging:
+				casualties += unit.alive() * _ratio(unit.data.charge_attack, target.data.melee_defense) * CHARGE_FACTOR
+			_hit(1 - s, target_index, unit, casualties * share)
+
+
+## Returns {unit_index: share}, shares summing to 1, over the enemy's active units.
+func _pick_targets(side: int, all_rows: bool) -> Dictionary:
+	var front := _sides[side].front_row()
+	var rows := {}
+	for i in _sides[side].units.size():
+		var unit := _sides[side].units[i]
+		if unit.is_active() and (all_rows or unit.data.row == front):
+			if not rows.has(unit.data.row):
+				rows[unit.data.row] = []
+			rows[unit.data.row].append(i)
 	var result := {}
-	if rows.is_empty():
-		return result
-	var row_keys := rows.keys()
-	row_keys.sort()
-	var chosen_rows: Array = row_keys if kind == UnitData.AttackKind.BOW else [row_keys[0]]
-	for row in chosen_rows:
+	for row in rows:
 		var row_alive := 0
 		for i in rows[row]:
-			row_alive += side.groups[i].alive()
+			row_alive += _sides[side].units[i].alive()
 		for i in rows[row]:
-			result[i] = float(side.groups[i].alive()) / row_alive / chosen_rows.size()
+			result[i] = float(_sides[side].units[i].alive()) / row_alive / rows.size()
 	return result
 
 
-func _has_lost(side: BattleSide) -> bool:
-	return side.alive_total() == 0 or side.fraction_alive() < ROUT_FRACTION
+func _ratio(attack: int, defense: int) -> float:
+	var total := attack + defense
+	return float(attack) / total if total > 0 else 0.0
+
+
+func _hit(side: int, unit_index: int, source: BattleSide.Unit, casualties: float) -> void:
+	if casualties > 0.0:
+		_hits[side][unit_index].append([source, casualties * _rng.randf_range(1.0 - VARIANCE, 1.0 + VARIANCE)])
+
+
+## Casualties beyond the target's remaining soldiers are not credited as kills.
+func _apply_hits(target: BattleSide.Unit, unit_hits: Array) -> void:
+	var total := 0.0
+	for hit in unit_hits:
+		total += hit[1]
+	if total <= 0.0:
+		return
+	var effective := minf(1.0, target.soldiers / total)
+	for hit in unit_hits:
+		hit[0].kills += hit[1] * effective
+	target.soldiers = maxf(0.0, target.soldiers - total)
+
+
+func _update_morale(s: int, i: int) -> void:
+	var unit := _sides[s].units[i]
+	if unit.broken:
+		return
+	var quarters_lost := floori(4.0 * unit.lost() / unit.start_soldiers)
+	if quarters_lost > unit.morale_steps:
+		unit.morale -= (quarters_lost - unit.morale_steps) * MORALE_LOSS_PER_QUARTER
+		unit.morale_steps = quarters_lost
+	if unit.alive() > 0 and unit.morale <= 0.0:
+		unit.broken = true
+		record.events.append({"time": time, "type": &"broken", "side": s, "unit": i})
+
+
+func _check_end() -> void:
+	var out := [_sides[0].active_units().is_empty(), _sides[1].active_units().is_empty()]
+	if out[0] or out[1]:
+		var winner: int
+		if out[0] and out[1]:
+			winner = _better_side()
+		else:
+			winner = BattleRecord.DEFENDER if out[0] else BattleRecord.ATTACKER
+		_finish(winner, BattleRecord.EndReason.ALL_BROKEN)
+	elif time >= TIME_LIMIT - 0.0001:
+		_finish(_better_side(), BattleRecord.EndReason.TIME_LIMIT)
 
 
 ## Higher fraction of soldiers left wins; ties go to the defender.
-func _better_side(record: BattleRecord) -> int:
-	if record.sides[0].fraction_alive() > record.sides[1].fraction_alive():
+func _better_side() -> int:
+	if _sides[0].fraction_alive() > _sides[1].fraction_alive():
 		return BattleRecord.ATTACKER
 	return BattleRecord.DEFENDER
 
 
-func _snapshot(sides: Array[BattleSide], phase: StringName, round_number: int) -> Dictionary:
-	var alive := [[], []]
-	var hp := [[], []]
+func _finish(winner: int, reason: BattleRecord.EndReason) -> void:
+	finished = true
+	record.winner = winner
+	record.end_reason = reason
+	record.duration = time
+	if record.snapshots.is_empty() or record.snapshots.back().time < time:
+		_snapshot()
+
+
+func _snapshot() -> void:
+	var soldiers := [[], []]
+	var morale := [[], []]
 	for s in 2:
-		for group in sides[s].groups:
-			alive[s].append(group.alive())
-			hp[s].append(group.hp)
-	return {"phase": phase, "round": round_number, "alive": alive, "hp": hp}
+		for unit in _sides[s].units:
+			soldiers[s].append(unit.alive())
+			morale[s].append(unit.morale)
+	record.snapshots.append({"time": time, "soldiers": soldiers, "morale": morale})

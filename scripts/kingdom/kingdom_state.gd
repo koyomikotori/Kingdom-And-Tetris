@@ -5,6 +5,11 @@ extends RefCounted
 
 signal turn_started(turn: int)
 
+## Squads allowed without any barracks (the castle garrison).
+const BASE_SQUAD_CAPACITY := 2
+## Each turn, squads below full strength regain this fraction of their full size (rounded up).
+const REPLENISH_FRACTION := 0.25
+
 var board: BoardData
 var hand: PieceHand
 var stockpile := Stockpile.new()
@@ -52,7 +57,27 @@ func build(building_id: StringName, origin: Vector2i) -> BuildRules.Result:
 
 
 func recruit(unit_id: StringName) -> RecruitmentRules.Result:
-	return RecruitmentRules.apply(board, stockpile, army, units[unit_id])
+	return RecruitmentRules.apply(board, stockpile, army, get_squad_capacity(), units[unit_id])
+
+
+## Removes a squad for good. Nothing is refunded.
+func disband(squad: Army.Squad) -> void:
+	army.remove_squad(squad)
+
+
+## Most squads the kingdom may have: castle garrison plus every building's squad_capacity.
+func get_squad_capacity() -> int:
+	var capacity := BASE_SQUAD_CAPACITY
+	for building_id in buildings:
+		capacity += buildings[building_id].squad_capacity * board.count_buildings(building_id)
+	return capacity
+
+
+func can_replenish() -> bool:
+	for building_id in buildings:
+		if buildings[building_id].enables_replenishment and board.count_buildings(building_id) > 0:
+			return true
+	return false
 
 
 func get_turn_yield() -> Dictionary[StringName, int]:
@@ -86,32 +111,48 @@ func get_net_income() -> Dictionary[StringName, int]:
 
 ## Ends the turn:
 ## 1. collect yield;
-## 2. pay army upkeep; soldiers desert (largest group first) until it can be paid;
+## 2. pay army upkeep; squads desert (most recently recruited first) until it can be paid;
 ## 3. pay building upkeep if possible, otherwise building effects pause next turn;
-## 4. advance the turn and deal a fresh hand (unplaced pieces are discarded);
-## 5. bandits may raid at the start of the new turn.
-## Returns {"collected", "upkeep", "deserted", "buildings_supplied"} plus "raid" when a raid happened
-## (see RaidSystem.resolve).
+## 4. squads below full strength regain soldiers for free (needs a barracks);
+## 5. advance the turn and deal a fresh hand (unplaced pieces are discarded);
+## 6. bandits may raid at the start of the new turn.
+## Returns {"collected", "upkeep", "deserted", "buildings_supplied", "replenished"} plus "raid"
+## when a raid happened (see RaidSystem.resolve).
 func end_turn() -> Dictionary:
 	var collected := get_turn_yield()
 	stockpile.add(collected)
-	var deserted: Dictionary[StringName, int] = {}
-	while army.get_total() > 0 and not stockpile.can_afford(get_army_upkeep()):
-		var unit_id := army.get_largest_group()
-		army.remove(unit_id)
-		deserted[unit_id] = deserted.get(unit_id, 0) + 1
+	var deserted: Dictionary[StringName, int] = {}  # unit_id -> soldiers
+	while army.count_squads() > 0 and not stockpile.can_afford(get_army_upkeep()):
+		var squad: Army.Squad = army.squads.back()
+		deserted[squad.unit_id] = deserted.get(squad.unit_id, 0) + squad.soldiers
+		army.remove_squad(squad)
 	var upkeep := get_army_upkeep()
 	stockpile.spend(upkeep)
 	var building_upkeep := get_building_upkeep()
 	buildings_supplied = stockpile.spend(building_upkeep)
 	if buildings_supplied:
 		Economy.add_into(upkeep, building_upkeep)
+	var replenished := _replenish()
 	turn += 1
 	hand.deal_new_hand()
 	var report := {"collected": collected, "upkeep": upkeep, "deserted": deserted,
-			"buildings_supplied": buildings_supplied}
+			"buildings_supplied": buildings_supplied, "replenished": replenished}
 	if raid != null and rng.randf() < RaidSystem.get_raid_chance(self, raid):
 		var bandits := RaidSystem.create_bandit_side(raid, enemy_units, turn, rng)
 		report["raid"] = RaidSystem.resolve(self, raid, bandits, rng.randi())
 	turn_started.emit(turn)
 	return report
+
+
+## Returns unit_id -> soldiers added.
+func _replenish() -> Dictionary[StringName, int]:
+	var added: Dictionary[StringName, int] = {}
+	if not can_replenish():
+		return added
+	for squad in army.squads.duplicate():
+		var full := units[squad.unit_id].squad_size
+		var gain := mini(ceili(full * REPLENISH_FRACTION), full - squad.soldiers)
+		if gain > 0:
+			army.set_soldiers(squad, squad.soldiers + gain)
+			added[squad.unit_id] = added.get(squad.unit_id, 0) + gain
+	return added

@@ -66,6 +66,7 @@ func _ready() -> void:
 	build_panel.building_toggled.connect(_toggle_building)
 	army_panel.setup(units, _resource_types)
 	army_panel.recruit_requested.connect(_on_recruit_requested)
+	army_panel.disband_requested.connect(_on_disband_requested)
 	tabs.tab_changed.connect(func(_tab: int) -> void: _clear_selection())
 	end_turn_button.pressed.connect(_on_end_turn_pressed)
 	state.start()
@@ -135,8 +136,16 @@ func _build_selected(coord: Vector2i) -> void:
 func _on_recruit_requested(unit_id: StringName) -> void:
 	var unit := state.units[unit_id]
 	var result := state.recruit(unit_id)
-	placement_status.text = "Đã tuyển 1 %s." % unit.display_name if result == RecruitmentRules.Result.OK \
+	placement_status.text = "Đã tuyển 1 đơn vị %s (+%d lính)." % [unit.display_name, unit.squad_size] \
+			if result == RecruitmentRules.Result.OK \
 			else RecruitmentRules.describe(result, unit, _buildings, _terrains)
+
+
+func _on_disband_requested(squad: Army.Squad) -> void:
+	var unit_name := state.units[squad.unit_id].display_name
+	var soldiers := squad.soldiers
+	state.disband(squad)
+	placement_status.text = "Đã giải tán đơn vị %s (%d lính)." % [unit_name, soldiers]
 
 
 func _on_end_turn_pressed() -> void:
@@ -150,12 +159,23 @@ func _on_end_turn_pressed() -> void:
 		lines.append("Nuôi quân: %s." % upkeep)
 	for unit_id: StringName in report.deserted:
 		lines.append("%d %s bỏ đi vì thiếu lương thực!" % [report.deserted[unit_id], state.units[unit_id].display_name])
+	var replenished := _unit_amounts(report.replenished)
+	if not replenished.is_empty():
+		lines.append("Bổ sung quân: %s." % replenished)
 	if not report.buildings_supplied:
 		lines.append("Không đủ phí duy trì công trình: công trình tạm ngưng tác dụng lượt này.")
 	if report.has("raid"):
 		lines.append("Quân cướp tấn công! %s" % ("Đã đánh lui." if report.raid.won else "Thất thủ."))
 		_show_battle_report(report.raid)
 	placement_status.text = "\n".join(lines)
+
+
+## "+5 Kiếm sĩ, +4 Cung thủ" from unit_id -> soldiers.
+func _unit_amounts(counts: Dictionary) -> String:
+	var parts: Array[String] = []
+	for unit_id: StringName in counts:
+		parts.append("+%d %s" % [counts[unit_id], state.units[unit_id].display_name])
+	return ", ".join(parts)
 
 
 func _show_battle_report(raid: Dictionary) -> void:
