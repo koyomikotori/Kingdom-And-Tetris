@@ -32,8 +32,8 @@ func setup(units: Array[UnitData], resource_types: Array[ResourceTypeData]) -> v
 		button.pressed.connect(func() -> void: recruit_requested.emit(unit.unit_id))
 		header.add_child(button)
 		_buttons[unit.unit_id] = button
-		add_child(_small_label("Máu %d · Công %d · Thủ %d · Tầm %s" % [
-				unit.max_hp, unit.attack, unit.defense, str(unit.attack_range)]))
+		add_child(_small_label("Máu %d · Công %d · Thủ %d · %s · %s" % [unit.max_hp, unit.attack, unit.defense,
+				UnitData.ROW_NAMES[unit.row], UnitData.ATTACK_KIND_NAMES[unit.attack_kind]]))
 		add_child(_small_label("Giá: %s · Nuôi: %s/lượt" % [
 				UiFormat.amounts(unit.recruit_cost, resource_types), UiFormat.amounts(unit.upkeep, resource_types)]))
 		var reason := _small_label("")
@@ -44,7 +44,7 @@ func setup(units: Array[UnitData], resource_types: Array[ResourceTypeData]) -> v
 
 ## Updates counts and enables only the units that can be recruited right now.
 func refresh(state: KingdomState) -> void:
-	var upkeep := UiFormat.amounts(state.get_upkeep(), _resource_types)
+	var upkeep := UiFormat.amounts(state.get_army_upkeep(), _resource_types)
 	_upkeep_label.text = "Quân số: %d · Nuôi quân: %s/lượt" % [
 			state.army.get_total(), upkeep if not upkeep.is_empty() else "0"]
 	for unit in _units:

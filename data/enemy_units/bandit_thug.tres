@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="UnitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/army/unit_data.gd" id="1_unit"]
+
+[resource]
+script = ExtResource("1_unit")
+unit_id = &"bandit_thug"
+display_name = "Cướp cầm dao"
+sort_order = 0
+max_hp = 70
+attack = 9
+defense = 1
+row = 0
+attack_kind = 0
