@@ -23,6 +23,12 @@ func refill() -> void:
 	changed.emit()
 
 
+## Discards any remaining pieces and draws a full new hand.
+func deal_new_hand() -> void:
+	pieces.clear()
+	refill()
+
+
 ## Removes and returns the piece at `index`. Call only after a successful placement.
 func take(index: int) -> LandPiece:
 	var piece := pieces[index]

@@ -11,14 +11,15 @@ var _bounds := Rect2()
 
 
 ## Centers the camera on `rect` and picks a zoom that fits it.
-## `reserved_right` is screen width covered by UI on the right side (e.g. the piece panel).
-func focus_on(rect: Rect2, reserved_right: float = 0.0) -> void:
+## `reserved_right` / `reserved_top` are screen pixels covered by UI on those sides
+## (piece panel, resource bar), so the board is centered in the visible area.
+func focus_on(rect: Rect2, reserved_right: float = 0.0, reserved_top: float = 0.0) -> void:
 	_bounds = rect
-	var view_size := get_viewport_rect().size - Vector2(reserved_right, 0)
+	var view_size := get_viewport_rect().size - Vector2(reserved_right, reserved_top)
 	var fit := minf(view_size.x / rect.size.x, view_size.y / rect.size.y) * 0.9
 	var z := clampf(fit, min_zoom, max_zoom)
 	zoom = Vector2(z, z)
-	position = rect.get_center() + Vector2(reserved_right * 0.5 / z, 0)
+	position = rect.get_center() + Vector2(reserved_right * 0.5, -reserved_top * 0.5) / z
 
 
 func _unhandled_input(event: InputEvent) -> void:
