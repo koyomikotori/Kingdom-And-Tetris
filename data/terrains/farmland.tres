@@ -8,3 +8,4 @@ terrain_id = &"farmland"
 display_name = "Ruộng"
 color = Color(0.85, 0.74, 0.35, 1)
 spawn_weight = 3.0
+yields = Dictionary[StringName, int]({&"food": 1})

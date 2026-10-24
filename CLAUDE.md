@@ -36,6 +36,8 @@ The user is a beginner-to-intermediate developer working with AI assistance. Tal
 ## Current milestone
 
 - **M1 — done:** 12×12 board, 2×2 castle, camera zoom/pan, hover cell info.
-- **M2 — done pending user playtest** (branch `m2/land-pieces`): shapes in `data/pieces/`, each rotation is its own draw (player cannot rotate), hand of 3, ghost preview, connection rule, overwrite replaces terrain and key cell, castle protected. See GDD §4.
-- Then a **playtest pause**: adjust shapes, weights and rules before M3.
-- Next: **M3** — per-turn yield (1 per cell by terrain, GDD §5), end turn, buildings.
+- **M2 — done:** shapes in `data/pieces/`, each rotation is its own draw (player cannot rotate), hand of 3, ghost preview, connection rule, overwrite replaces terrain and key cell, castle protected. See GDD §4. Playtested: OK.
+- **M3 — done pending user review** (branch `m3/turns-and-yield`): `KingdomState` owns board/hand/stockpile/turn; terrain `yields` + key cell ×2 (`Economy`), `Stockpile` with all-or-nothing `spend`, end turn collects yield and deals a fresh hand (unplaced pieces discarded), resource bar, yield-change preview. See GDD §5.
+- Next: **M4** — buildings (first use of `Stockpile.spend`), unit data, barracks, recruitment.
+
+Each milestone goes on its own branch (`mN/<topic>`); the user merges it into `main` on GitHub.

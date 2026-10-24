@@ -56,7 +56,7 @@ Mỗi ô lưu riêng: **địa hình**, **quyền sở hữu**, **công trình**
   - Ô có công trình khác: v0.1 **không cho đè** (xem câu hỏi mở).
 - **Ô quan trọng:** khoảng 20% số mảnh có một ô quan trọng (đánh dấu ◆). Đè lên ô quan trọng thì mất nó.
 - Đặt không hợp lệ thì không được thay đổi bản đồ và không tiêu thụ mảnh.
-- Mỗi lần nhận 3 mảnh. Ở M2, đặt hết 3 mảnh thì nhận 3 mảnh mới; từ M3 mảnh mới đến vào đầu lượt.
+- Mỗi lượt nhận 3 mảnh mới. Không bắt buộc đặt hết; mảnh chưa đặt **bị bỏ** khi kết thúc lượt.
 - Vì được phép đè lên lãnh thổ của mình, gần như luôn có chỗ đặt, nên v0.1 chưa cần cơ chế đổi mảnh.
 
 ## 5. Sản lượng
@@ -72,7 +72,11 @@ Mỗi lượt, mỗi ô thuộc lãnh thổ cho sản lượng theo địa hình
 
 Ví dụ: có 4 ô ruộng thì được 4 lương thực mỗi lượt. Đặt một ô rừng đè lên 1 trong 4 ô ruộng đó thì còn 3 lương thực + 1 gỗ mỗi lượt.
 
-Đề xuất cho ô quan trọng: sản lượng ×2 trên ô đó (chốt ở M3).
+**Ô quan trọng ◆ cho sản lượng ×2** trên ô đó (ô cỏ ◆ vẫn không cho gì).
+
+Tài nguyên được cộng vào kho khi bấm **Kết thúc lượt**, tính theo lãnh thổ lúc đó. Thanh trên cùng hiển thị kho và thu nhập mỗi lượt, ví dụ "Lương thực: 10 (+5)". Khi rê mảnh lên bản đồ, game cho biết thu nhập sẽ thay đổi thế nào nếu đặt ở đó.
+
+Loại tài nguyên nằm trong `data/resources/`, sản lượng của địa hình nằm trong trường `yields` của file địa hình.
 
 Các quy tắc kề nhau (cụm ruộng, trại gỗ cạnh rừng, mỏ cạnh đồi…) **tạm gác lại**; chỉ thử thêm nếu sau khi chơi thử thấy việc xếp đất còn thiếu chiều sâu.
 
@@ -117,10 +121,10 @@ Bản đồ ảnh hưởng chiến đấu trực tiếp chứ không chỉ qua t
 | Mốc | Nội dung | Trạng thái |
 |---|---|---|
 | M1 | Lưới 12×12, thành 2×2, zoom/pan, xem thông tin ô | Xong |
-| M2 | Mảnh đất (hướng cố định), xem trước, kết nối, đè thay thế, ô quan trọng | Đang làm |
-| ⏸ | **Chơi thử: xếp đất có vui không? Chỉnh trước khi đi tiếp** | |
-| M3 | Sản lượng mỗi lượt, công trình, kết thúc lượt | |
-| M4 | Dữ liệu đơn vị, doanh trại, tuyển quân, mở khóa theo địa hình | |
+| M2 | Mảnh đất (hướng cố định), xem trước, kết nối, đè thay thế, ô quan trọng | Xong |
+| ⏸ | **Chơi thử: xếp đất có vui không? Chỉnh trước khi đi tiếp** | Xong (ổn) |
+| M3 | Sản lượng mỗi lượt, kết thúc lượt, nhận mảnh đầu lượt, ô ◆ ×2 | Đang làm |
+| M4 | Công trình, dữ liệu đơn vị, doanh trại, tuyển quân, mở khóa theo địa hình | |
 | M5 | Auto-battle kiểu Ninja Village + đợt địch theo lượt | |
 | M6 | Sự kiện, tướng, điều kiện thắng/thua | |
 | M7 | Lưu/tải, thêm nội dung | |
