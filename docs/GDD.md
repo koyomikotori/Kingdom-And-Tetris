@@ -47,25 +47,34 @@ Mỗi ô lưu riêng: **địa hình**, **quyền sở hữu**, **công trình**
 
 ## 4. Cơ chế đặt đất
 
-- Mảnh đất là một nhóm ô có hình dạng (đơn, thanh, chữ L, vuông…), mỗi ô trong mảnh có địa hình riêng.
-- Xoay 4 hướng × 90°. (Lật mảnh: câu hỏi mở.)
+- Mảnh đất là một nhóm ô có hình dạng, mỗi ô trong mảnh có địa hình riêng (ngẫu nhiên theo trọng số của địa hình).
+- Hình dạng v0.1: ô đơn, thanh 2, thanh 3, vuông 2×2, **L trái** và **L phải** (hai hình khác nhau, là ảnh gương của nhau).
+- **Người chơi không xoay được mảnh.** Thay vào đó, mỗi hướng xoay của một hình là một mảnh riêng có thể được rút ra: L trái có 4 hướng, L phải có 4 hướng, thanh có ngang/dọc, vuông và ô đơn chỉ có 1. Mỗi hình được chia đều trọng số cho các hướng của nó, để hình nhiều hướng không bị rút ra nhiều hơn. (Thử nghiệm, có thể đổi sang cho xoay sau.)
 - **Kết nối:** mảnh phải chạm cạnh (không tính chéo) với lãnh thổ hiện có, hoặc đè lên lãnh thổ hiện có.
-- **Đè / thay thế:** mảnh mới được phép đặt đè lên đất đã đặt trước đó; địa hình cũ bị thay bằng địa hình mới. Đây là cách cải tạo lãnh thổ.
+- **Đè / thay thế:** mảnh mới được đặt đè lên đất đã đặt trước đó. Ô bị đè **mất địa hình cũ** (và mất sản lượng của nó), lấy địa hình của mảnh mới. Đây là cách cải tạo lãnh thổ.
   - Không được đè lên thành chính.
-  - Ô đang có công trình: v0.1 **không cho đè** (xem câu hỏi mở).
-- **Ô quan trọng:** một số ô trong mảnh mang đặc tính đặc biệt (đất màu mỡ, rừng cổ, mạch quặng…). Chúng cho sản lượng cao hơn hoặc mở khóa công trình/đơn vị. Đè lên ô quan trọng thì mất nó, nên người chơi phải cân nhắc.
+  - Ô có công trình khác: v0.1 **không cho đè** (xem câu hỏi mở).
+- **Ô quan trọng:** khoảng 20% số mảnh có một ô quan trọng (đánh dấu ◆). Đè lên ô quan trọng thì mất nó.
 - Đặt không hợp lệ thì không được thay đổi bản đồ và không tiêu thụ mảnh.
-- Chống kẹt: cho đổi một mảnh (có phí nhỏ) nếu không còn chỗ đặt.
+- Mỗi lần nhận 3 mảnh. Ở M2, đặt hết 3 mảnh thì nhận 3 mảnh mới; từ M3 mảnh mới đến vào đầu lượt.
+- Vì được phép đè lên lãnh thổ của mình, gần như luôn có chỗ đặt, nên v0.1 chưa cần cơ chế đổi mảnh.
 
-## 5. Quy tắc kề nhau (lõi câu đố)
+## 5. Sản lượng
 
-Kề nhau = chung cạnh (4 hướng). Các con số chỉ để thử, sẽ cân chỉnh sau M3.
+Mỗi lượt, mỗi ô thuộc lãnh thổ cho sản lượng theo địa hình của nó:
 
-1. **Ruộng theo cụm:** mỗi ruộng +1 lương thực; nếu nằm trong cụm ≥3 ruộng liền nhau thì mỗi ô +1 nữa.
-2. **Trại gỗ:** +1 gỗ cho mỗi ô rừng kề bên.
-3. **Mỏ:** đặt trên đồi đá, +1 đá cho mỗi đồi đá kề bên.
-4. **Ô quan trọng:** sản lượng ×2 trên ô đó, hoặc là điều kiện của công trình đặc biệt.
-5. **Ồn ào:** mỏ kề nhà dân / thành thì giảm sản lượng của ô bị kề (tạo áp lực phải quy hoạch).
+| Địa hình | Sản lượng mỗi lượt |
+|---|---|
+| Cỏ | không có (đất trống để xây) |
+| Ruộng | 1 lương thực |
+| Rừng | 1 gỗ |
+| Đồi đá | 1 đá |
+
+Ví dụ: có 4 ô ruộng thì được 4 lương thực mỗi lượt. Đặt một ô rừng đè lên 1 trong 4 ô ruộng đó thì còn 3 lương thực + 1 gỗ mỗi lượt.
+
+Đề xuất cho ô quan trọng: sản lượng ×2 trên ô đó (chốt ở M3).
+
+Các quy tắc kề nhau (cụm ruộng, trại gỗ cạnh rừng, mỏ cạnh đồi…) **tạm gác lại**; chỉ thử thêm nếu sau khi chơi thử thấy việc xếp đất còn thiếu chiều sâu.
 
 ## 6. Liên kết bản đồ ↔ chiến trường
 
@@ -107,10 +116,10 @@ Bản đồ ảnh hưởng chiến đấu trực tiếp chứ không chỉ qua t
 
 | Mốc | Nội dung | Trạng thái |
 |---|---|---|
-| M1 | Lưới 12×12, thành 2×2, zoom/pan, xem thông tin ô | Đang làm |
-| M2 | Mảnh đất, xoay, xem trước, kết nối, đè thay thế, ô quan trọng | |
+| M1 | Lưới 12×12, thành 2×2, zoom/pan, xem thông tin ô | Xong |
+| M2 | Mảnh đất (hướng cố định), xem trước, kết nối, đè thay thế, ô quan trọng | Đang làm |
 | ⏸ | **Chơi thử: xếp đất có vui không? Chỉnh trước khi đi tiếp** | |
-| M3 | Tài nguyên, quy tắc kề nhau, công trình, kết thúc lượt | |
+| M3 | Sản lượng mỗi lượt, công trình, kết thúc lượt | |
 | M4 | Dữ liệu đơn vị, doanh trại, tuyển quân, mở khóa theo địa hình | |
 | M5 | Auto-battle kiểu Ninja Village + đợt địch theo lượt | |
 | M6 | Sự kiện, tướng, điều kiện thắng/thua | |
@@ -119,8 +128,8 @@ Bản đồ ảnh hưởng chiến đấu trực tiếp chứ không chỉ qua t
 
 ## 11. Câu hỏi mở
 
-- Có cho lật (mirror) mảnh chữ L/S không?
-- Đè lên ô có công trình: cấm hẳn, hay cho phép phá công trình và hoàn lại một phần tài nguyên?
+- Đè lên ô có công trình (ngoài thành): cấm hẳn, hay cho phép phá công trình và hoàn lại một phần tài nguyên?
+- Sau khi chơi thử: có nên cho người chơi xoay mảnh không?
 - Số mảnh mỗi lượt và tỉ lệ xuất hiện ô quan trọng.
 - Bản đồ cố định 12×12, hay mở rộng biên khi nâng cấp thành?
 - Bộ asset pixel art sẽ dùng (Kenney, itch.io…).

@@ -35,5 +35,7 @@ The user is a beginner-to-intermediate developer working with AI assistance. Tal
 
 ## Current milestone
 
-**M1 — done pending user review:** 12×12 board, 2×2 castle, camera zoom/pan, hover cell info.
-Next: **M2** — land pieces (data, rotation, ghost preview, connection rule, overwrite rule, key cells). See GDD §4.
+- **M1 — done:** 12×12 board, 2×2 castle, camera zoom/pan, hover cell info.
+- **M2 — done pending user playtest** (branch `m2/land-pieces`): shapes in `data/pieces/`, each rotation is its own draw (player cannot rotate), hand of 3, ghost preview, connection rule, overwrite replaces terrain and key cell, castle protected. See GDD §4.
+- Then a **playtest pause**: adjust shapes, weights and rules before M3.
+- Next: **M3** — per-turn yield (1 per cell by terrain, GDD §5), end turn, buildings.
