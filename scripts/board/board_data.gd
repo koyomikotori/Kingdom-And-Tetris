@@ -133,6 +133,15 @@ func count_owned_cells() -> int:
 	return count
 
 
+## Owned cells that are not part of the castle (the land an invasion can still take).
+func count_land_outside_castle() -> int:
+	var count := 0
+	for cell in _cells:
+		if cell.owned and cell.building_id != CASTLE_ID:
+			count += 1
+	return count
+
+
 func count_owned_terrain(terrain_id: StringName) -> int:
 	var count := 0
 	for cell in _cells:

@@ -16,10 +16,14 @@ const WIDTH_SHARE := 0.5
 var _status: Label
 var _actions: HBoxContainer
 var _close_button: Button
+var _closable := true
 
 
 ## Builds the window and returns the body to fill (between the title and the status line).
-func build_frame(title_text: String, accent: Color, width_share: float = WIDTH_SHARE) -> VBoxContainer:
+## A window that is not `closable` has no close button and ignores Esc: one of its actions must
+## lead on (the end-of-game screen).
+func build_frame(title_text: String, accent: Color, width_share: float = WIDTH_SHARE, closable: bool = true) -> VBoxContainer:
+	_closable = closable
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var dim := ColorRect.new()
@@ -63,6 +67,7 @@ func build_frame(title_text: String, accent: Color, width_share: float = WIDTH_S
 	_actions.alignment = BoxContainer.ALIGNMENT_END
 	layout.add_child(_actions)
 	_close_button = _button("Đóng (Esc)", close)
+	_close_button.visible = closable
 	_actions.add_child(_close_button)
 	return body
 
@@ -100,7 +105,7 @@ func set_preview(label: Label, text: String, ok: bool) -> void:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+	if _closable and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		close()
 	# Whatever is underneath must not react to keys while the window is open.
 	get_viewport().set_input_as_handled()

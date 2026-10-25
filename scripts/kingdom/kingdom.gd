@@ -29,6 +29,8 @@ var _battle_screen: BattleScreen
 ## Open world map; it swallows input itself.
 var _world_map: WorldMapScreen
 var _save_system := SaveSystem.new()
+## Victory reached while a battle was still to be shown; the end screen waits for its report.
+var _pending_victory := Victory.NO_PATH
 
 @onready var board_view: BoardView = $BoardView
 @onready var camera: CameraController = $Camera
@@ -45,6 +47,7 @@ var _save_system := SaveSystem.new()
 @onready var end_turn_button: Button = %EndTurnButton
 @onready var diplomacy_button: Button = %DiplomacyButton
 @onready var game_menu_button: Button = %GameMenuButton
+@onready var objectives_button: Button = %ObjectivesButton
 
 
 func _ready() -> void:
@@ -88,11 +91,13 @@ func _ready() -> void:
 	end_turn_button.pressed.connect(_on_end_turn_pressed)
 	diplomacy_button.pressed.connect(_open_world_map)
 	game_menu_button.pressed.connect(_open_game_menu)
+	objectives_button.pressed.connect(_open_objectives)
 	if game.is_empty():
 		state.start()
 		_autosave()
 	else:
 		state.resume()
+		_show_end_game_if_any.call_deferred()
 	_on_cell_hovered(BoardView.OFF_BOARD)
 
 
@@ -193,6 +198,13 @@ func _on_end_turn_pressed() -> void:
 		lines.append(_describe_treaty_event(entry))
 	for clan_id: StringName in report.war_declared:
 		lines.append("%s đã tuyên chiến với vương quốc!" % _clan_name(clan_id))
+	var held: int = state.victory.holds[Victory.Path.PROSPERITY]
+	if held > 0 and state.victory.won_path == Victory.NO_PATH:
+		lines.append("Đang giữ điều kiện chiến thắng %s: %d/%d lượt." % [Victory.PATH_NAMES[Victory.Path.PROSPERITY],
+				held, Victory.HOLD_TURNS])
+	if report.castle_in_danger:
+		lines.append("Thành chính nguy hiểm: chỉ còn %d ô đất ngoài thành!" % state.board.count_land_outside_castle())
+	_pending_victory = report.victory
 	if report.has("pending_invasion"):
 		var invasion: Dictionary = report.pending_invasion
 		lines.append("%s kéo quân xâm lược!" % _clan_name(invasion.clan_id))
@@ -201,9 +213,10 @@ func _on_end_turn_pressed() -> void:
 		lines.append("Quân cướp tấn công!")
 		_play_raid(report.pending_raid)
 	placement_status.text = "\n".join(lines)
-	# With a battle at the start of the turn, the autosave waits until it is over.
+	# With a battle at the start of the turn, the autosave and the end screen wait until it is over.
 	if not report.has("pending_invasion") and not report.has("pending_raid"):
 		_autosave()
+		_show_end_game_if_any()
 
 
 ## "+5 Kiếm sĩ, +4 Cung thủ" from unit_id -> soldiers.
@@ -237,7 +250,9 @@ func _play_invasion(clan_id: StringName, simulator: BattleSimulator) -> void:
 	var title := "%s xâm lược vương quốc!" % _clan_name(clan_id)
 	_play_battle(simulator, BattleRecord.DEFENDER, title, func(record: BattleRecord) -> void:
 		var result := state.finish_invasion(clan_id, record)
-		_autosave()
+		# A lost game is not autosaved: Continue goes back to the turn before.
+		if not result.castle_fallen:
+			_autosave()
 		var report := BattleReport.new()
 		$UI.add_child(report)
 		var lines := report.army_loss_lines(result, state.units)
@@ -249,10 +264,14 @@ func _play_invasion(clan_id: StringName, simulator: BattleSimulator) -> void:
 		var plundered := UiFormat.amounts(result.resources_lost, _resource_types)
 		if not plundered.is_empty():
 			lines.append("Bị cướp phá: %s." % plundered)
-		report.show_battle("Đẩy lui quân xâm lược!" if result.won else "Thất thủ trước quân xâm lược!",
+		var title_text := "Đẩy lui quân xâm lược!" if result.won else "Thất thủ trước quân xâm lược!"
+		if result.castle_fallen:
+			title_text = "Thành chính thất thủ!"
+			lines.append("Không còn ô đất nào ngoài thành: quân %s chiếm thành chính." % _clan_name(clan_id))
+		report.show_battle(title_text,
 				result.won, "%s tấn công đầu lượt." % _clan_name(clan_id), record, BattleRecord.DEFENDER, lines)
 		_battle_report = report
-		report.closed.connect(func() -> void: _battle_report = null)
+		report.closed.connect(_on_battle_report_closed)
 		placement_status.text += " %s" % ("Đã đẩy lui." if result.won else "Thất thủ, mất đất."))
 
 
@@ -266,6 +285,7 @@ func _attack_clan(clan_id: StringName) -> void:
 	var title := "Tấn công %s!" % _clan_name(clan_id)
 	_play_battle(simulator, BattleRecord.ATTACKER, title, func(record: BattleRecord) -> void:
 		var result := state.finish_attack(clan_id, record)
+		_pending_victory = state.victory.check(state)
 		var report := BattleReport.new()
 		$UI.add_child(report)
 		var lines := report.army_loss_lines(result, state.units)
@@ -288,7 +308,7 @@ func _attack_clan(clan_id: StringName) -> void:
 		report.show_battle(title_text, result.won, "Vương quốc tấn công %s." % _clan_name(clan_id), record,
 				BattleRecord.ATTACKER, lines)
 		_battle_report = report
-		report.closed.connect(func() -> void: _battle_report = null))
+		report.closed.connect(_on_battle_report_closed))
 
 
 ## Report lines for the soldiers other clans lent to this battle (Alliances.apply_battle).
@@ -359,6 +379,30 @@ func _open_world_map() -> void:
 	_world_map.attack_requested.connect(_attack_clan)
 
 
+func _on_battle_report_closed() -> void:
+	_battle_report = null
+	_show_end_game_if_any()
+
+
+## Shows the defeat screen once the castle has fallen, or the victory screen for a path just won.
+func _show_end_game_if_any() -> void:
+	var path := _pending_victory
+	_pending_victory = Victory.NO_PATH
+	if not state.victory.lost and path == Victory.NO_PATH:
+		return
+	_clear_selection()
+	var window := EndGameWindow.new()
+	$UI.add_child(window)
+	window.open(state, Victory.NO_PATH if state.victory.lost else path, _save_system, $UI)
+
+
+func _open_objectives() -> void:
+	_clear_selection()
+	var window := ObjectivesWindow.new()
+	$UI.add_child(window)
+	window.open(state)
+
+
 ## Saves into the autosave slot (start of a game and of every turn).
 func _autosave() -> void:
 	if not autosave:
@@ -379,7 +423,7 @@ func _show_battle_report(raid: Dictionary, extra_lines: Array[String] = []) -> v
 	_battle_report = BattleReport.new()
 	$UI.add_child(_battle_report)
 	_battle_report.show_raid(raid, _resource_types, state.units, extra_lines)
-	_battle_report.closed.connect(func() -> void: _battle_report = null)
+	_battle_report.closed.connect(_on_battle_report_closed)
 
 
 func _on_turn_started(turn: int) -> void:

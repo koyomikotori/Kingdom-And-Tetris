@@ -24,6 +24,9 @@ var enemy_units: Dictionary[StringName, UnitData] = UnitData.load_enemies()
 var diplomacy := Diplomacy.new(ClanData.load_all(), ResourceTypeData.load_all())
 var wars := Wars.new(diplomacy)
 var alliances := Alliances.new(diplomacy, wars)
+var victory := Victory.new()
+## Counters for the end-of-game screen: {"battles_won", "battles_lost"}.
+var stats := {"battles_won": 0, "battles_lost": 0}
 ## False when building upkeep could not be paid last turn; building effects pause.
 var buildings_supplied := true
 var rng := RandomNumberGenerator.new()
@@ -55,12 +58,16 @@ func resume() -> void:
 
 # --- Save (GDD §10.1) ---------------------------------------------------------------------
 
+func _record_battle(won: bool) -> void:
+	stats["battles_won" if won else "battles_lost"] += 1
+
+
 ## The whole game as JSON-safe data. The board is restored separately (BoardData.from_save),
 ## because the state is built around it.
 func to_save() -> Dictionary:
 	return {"turn": turn, "buildings_supplied": buildings_supplied, "board": board.to_save(),
 			"hand": hand.to_save(), "stockpile": stockpile.to_save(), "army": army.to_save(),
-			"diplomacy": diplomacy.to_save(), "wars": wars.to_save()}
+			"diplomacy": diplomacy.to_save(), "wars": wars.to_save(), "victory": victory.to_save(), "stats": stats.duplicate()}
 
 
 ## Restores everything but the board from to_save() data. Random rolls are not saved: they come
@@ -73,6 +80,11 @@ func load_save(data: Dictionary) -> void:
 	army.load_save(data.army, units)
 	diplomacy.load_save(data.diplomacy)
 	wars.load_save(data.wars)
+	# Saves from before M11a have no victory state or stats.
+	if data.has("victory"):
+		victory.load_save(data.victory)
+	for key in stats:
+		stats[key] = int(data.get("stats", {}).get(key, 0))
 
 
 ## What a save slot shows: {"turn", "cells", "soldiers"}.
@@ -208,7 +220,8 @@ func get_net_income() -> Dictionary[StringName, int]:
 ## 5. advance the turn and deal a fresh hand (unplaced pieces are discarded);
 ## 6. bandits may raid at the start of the new turn.
 ## Returns {"collected", "upkeep", "deserted", "buildings_supplied", "replenished", "agreements"} plus
-## "treaties" (Alliances.end_turn events), "war_declared" (clan ids that declared war this turn) and,
+## "treaties" (Alliances.end_turn events), "war_declared" (clan ids that declared war this turn),
+## "victory" (Victory.Path won this turn, or Victory.NO_PATH), "castle_in_danger" and,
 ## at most one battle per turn (the kingdom's allies already on its side):
 ## "pending_invasion" ({"clan_id", "simulator"}, finish with finish_invasion()) or
 ## "pending_raid" (a BattleSimulator, not yet run) when bandits attack. Play it (battle screen or
@@ -239,6 +252,8 @@ func end_turn() -> Dictionary:
 			"buildings_supplied": buildings_supplied, "replenished": replenished, "agreements": agreements}
 	report["treaties"] = treaties
 	report["war_declared"] = declared
+	report["victory"] = victory.end_turn(self)
+	report["castle_in_danger"] = victory.castle_in_danger(self)
 	var invader := wars.pick_invader(rng)
 	if invader != &"":
 		var invaders := wars.create_clan_side(invader, wars.invasion_size(invader), units)
@@ -262,6 +277,7 @@ func create_kingdom_side(enemy_clan: StringName) -> BattleSide:
 ## report plus "allies" / "helpers" (Alliances.apply_battle).
 func finish_raid(record: BattleRecord) -> Dictionary:
 	var result := RaidSystem.apply_outcome(self, raid, record)
+	_record_battle(result.won)
 	result.merge(alliances.apply_battle(record, BattleRecord.DEFENDER))
 	return result
 
@@ -302,10 +318,16 @@ func get_threat() -> int:
 ## Applies a finished invasion battle: the kingdom defended. Losing costs squads (§7.6), up to
 ## Wars.LAND_LOST_PER_DEFEAT cells on the clan's edge and Wars.INVASION_RESOURCE_LOSS of every
 ## resource. The clan loses the soldiers it lost.
+## Losing with no land left outside the castle makes the castle fall: the game is lost (GDD §9b).
 ## Returns {"record", "won", "clan_id", "casualties", "scattered", "retreat_losses",
-##          "lost_cells": Array[Vector2i], "resources_lost", "enemy_lost": int, "allies", "helpers"}.
+##          "lost_cells": Array[Vector2i], "resources_lost", "enemy_lost": int, "allies", "helpers",
+##          "castle_fallen": bool}.
 func finish_invasion(clan_id: StringName, record: BattleRecord) -> Dictionary:
 	var won := record.winner == BattleRecord.DEFENDER
+	_record_battle(won)
+	var castle_fallen := not won and board.count_land_outside_castle() == 0
+	if castle_fallen:
+		victory.lost = true
 	var result := BattleOutcome.apply_to_army(army, record, BattleRecord.DEFENDER)
 	result.merge(alliances.apply_battle(record, BattleRecord.DEFENDER))
 	var enemy_lost := BattleOutcome.soldiers_lost(record, BattleRecord.ATTACKER)
@@ -321,7 +343,7 @@ func finish_invasion(clan_id: StringName, record: BattleRecord) -> Dictionary:
 				resources_lost[resource_id] = amount
 		stockpile.spend(resources_lost)
 	result.merge({"record": record, "won": won, "clan_id": clan_id, "lost_cells": lost_cells,
-			"resources_lost": resources_lost, "enemy_lost": enemy_lost})
+			"resources_lost": resources_lost, "enemy_lost": enemy_lost, "castle_fallen": castle_fallen})
 	return result
 
 
@@ -344,6 +366,7 @@ func start_attack(clan_id: StringName) -> BattleSimulator:
 ##          "loot", "compensation", "annexed": bool, "allies", "helpers"}.
 func finish_attack(clan_id: StringName, record: BattleRecord) -> Dictionary:
 	var won := record.winner == BattleRecord.ATTACKER
+	_record_battle(won)
 	var result := BattleOutcome.apply_to_army(army, record, BattleRecord.ATTACKER, true)
 	result.merge(alliances.apply_battle(record, BattleRecord.ATTACKER))
 	var enemy_lost := BattleOutcome.soldiers_lost(record, BattleRecord.DEFENDER)
