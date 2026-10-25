@@ -192,7 +192,7 @@ func _apply(state: KingdomState, outcome: EventOutcomeData, clan_id: StringName,
 			var full := state.units[squad.unit_id].squad_size
 			var gain := mini(ceili(full * outcome.replenish), full - squad.soldiers)
 			if gain > 0:
-				state.army.set_soldiers(squad, squad.soldiers + gain)
+				state.army.add_soldiers(squad, gain)
 				added += gain
 		if added > 0:
 			changes.append("Bổ sung %d lính" % added)

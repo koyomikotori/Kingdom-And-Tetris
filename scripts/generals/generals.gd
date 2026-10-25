@@ -130,6 +130,31 @@ func dismiss(general: General) -> void:
 	changed.emit()
 
 
+## Adds one of the general's level points to &"might" (Võ lực) or &"command" (Thống suất).
+## False (nothing changes) without points or when that stat is already at STAT_MAX.
+func spend_point(general: General, stat: StringName) -> bool:
+	if not can_spend_point(general, stat):
+		return false
+	general.points -= 1
+	if stat == &"might":
+		general.might += 1
+	else:
+		general.command += 1
+	changed.emit()
+	return true
+
+
+func can_spend_point(general: General, stat: StringName) -> bool:
+	if general == null or general.points <= 0:
+		return false
+	match stat:
+		&"might":
+			return general.might < STAT_MAX
+		&"command":
+			return general.command < STAT_MAX
+	return false
+
+
 func set_commander(general: General) -> void:
 	if generals.has(general):
 		commander = general
@@ -211,20 +236,29 @@ func _trait_applies(trait_data: GeneralTraitData, unit: BattleSide.Unit) -> bool
 
 
 ## After a battle the commander led on `side`: if they fell, DEATH_CHANCE they died, otherwise
-## they are wounded for WOUND_TURNS turns. Returns {"name", "fate": &"none" | &"dead" | &"wounded"}.
+## they are wounded for WOUND_TURNS turns. A commander who lives gains battle XP
+## (Experience.general_battle_xp, wounded or not).
+## Returns {"name", "fate": &"none" | &"dead" | &"wounded", "xp": int, "levels": int}.
 func after_battle(record: BattleRecord, side: int) -> Dictionary:
 	var battle_side := record.sides[side]
 	var general := commander
 	if battle_side.general_name.is_empty() or general == null:
-		return {"name": "", "fate": &"none"}
-	if not battle_side.general_fallen:
-		return {"name": general.name, "fate": &"none"}
-	if rng.randf() < DEATH_CHANCE:
-		dismiss(general)
-		return {"name": general.name, "fate": &"dead"}
-	general.wounded_turns = WOUND_TURNS
+		return {"name": "", "fate": &"none", "xp": 0, "levels": 0}
+	var fate := &"none"
+	if battle_side.general_fallen:
+		if rng.randf() < DEATH_CHANCE:
+			dismiss(general)
+			return {"name": general.name, "fate": &"dead", "xp": 0, "levels": 0}
+		general.wounded_turns = WOUND_TURNS
+		fate = &"wounded"
+	var guard_kills := 0.0
+	for unit in battle_side.units:
+		if unit.is_general_guard:
+			guard_kills += unit.kills
+	var xp := Experience.general_battle_xp(guard_kills, record.winner == side)
+	var levels := general.gain_xp(xp)
 	changed.emit()
-	return {"name": general.name, "fate": &"wounded"}
+	return {"name": general.name, "fate": fate, "xp": xp, "levels": levels}
 
 
 # --- Save (GDD §10.1) ---------------------------------------------------------------------

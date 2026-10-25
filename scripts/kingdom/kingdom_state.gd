@@ -8,7 +8,8 @@ signal castle_changed
 
 ## Squads allowed without any barracks (the castle garrison).
 const BASE_SQUAD_CAPACITY := 2
-## Each turn, squads below full strength regain this fraction of their full size (rounded up).
+## Each turn, squads below full strength regain this fraction of their full size (rounded up);
+## the new soldiers dilute the squad's XP (Army.add_soldiers).
 const REPLENISH_FRACTION := 0.25
 
 var board: BoardData
@@ -334,7 +335,8 @@ func get_net_income() -> Dictionary[StringName, int]:
 ## 2. pay army upkeep; squads desert (most recently recruited first) until it can be paid;
 ## 3. pay building upkeep if possible, otherwise building effects pause next turn;
 ## 4. trade agreements exchange goods (Diplomacy.run_agreements);
-##    squads below full strength regain soldiers for free (needs a barracks); clan relations drift;
+##    squads below full strength regain soldiers for free and squads train up to Veteran (both
+##    need a barracks); clan relations drift;
 ## 5. advance the turn and deal a fresh hand (unplaced pieces are discarded);
 ## 6. bandits may raid at the start of the new turn.
 ## Returns {"collected", "upkeep", "deserted", "buildings_supplied", "replenished", "agreements"} plus
@@ -361,6 +363,8 @@ func end_turn() -> Dictionary:
 		Economy.add_into(upkeep, building_upkeep)
 	var agreements := diplomacy.run_agreements(stockpile)
 	var replenished := _replenish()
+	if can_replenish():
+		army.train()
 	diplomacy.threat = get_threat()
 	diplomacy.end_turn()
 	var treaties := alliances.end_turn()
@@ -420,7 +424,7 @@ func _replenish() -> Dictionary[StringName, int]:
 		var full := units[squad.unit_id].squad_size
 		var gain := mini(ceili(full * REPLENISH_FRACTION), full - squad.soldiers)
 		if gain > 0:
-			army.set_soldiers(squad, squad.soldiers + gain)
+			army.add_soldiers(squad, gain)
 			added[squad.unit_id] = added.get(squad.unit_id, 0) + gain
 	return added
 

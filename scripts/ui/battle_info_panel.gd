@@ -1,7 +1,8 @@
 class_name BattleInfoPanel
 extends VBoxContainer
 ## One side's column on the battle screen: total soldiers, then per unit its name, soldier count,
-## a soldiers bar and a morale bar. Units lent by another clan carry its name and banner tint.
+## a soldiers bar and a morale bar. Units lent by another clan carry its name and banner tint;
+## experienced squads carry their level mark (Experience.SQUAD_LEVEL_MARKS).
 ## Always visible (no hover needed, for touch screens later).
 
 const MORALE_COLOR := Color(1.0, 0.85, 0.3)
@@ -31,6 +32,8 @@ func setup(side: BattleSide, screen_side: int) -> void:
 			unit_name += " · " + unit.ally.display_name
 		elif unit.is_general_guard:
 			unit_name += " · " + side.general_name
+		elif unit.level > 0:
+			unit_name += " " + Experience.SQUAD_LEVEL_MARKS[unit.level]
 		var name_label := _label(unit_name, 12)
 		if unit.ally != null:
 			name_label.add_theme_color_override("font_color", unit.ally.color.lightened(0.3))
@@ -39,7 +42,7 @@ func setup(side: BattleSide, screen_side: int) -> void:
 		box.add_child(count_label)
 		var soldiers := _bar(BattleView.unit_color(unit, screen_side), unit.start_soldiers)
 		box.add_child(soldiers)
-		var morale := _bar(MORALE_COLOR, unit.data.morale)
+		var morale := _bar(MORALE_COLOR, maxf(unit.data.morale, unit.morale))
 		box.add_child(morale)
 		_rows.append([name_label, count_label, soldiers, morale, box])
 	refresh()
