@@ -13,7 +13,7 @@ static func load_folder(folder: String, id_property: StringName) -> Dictionary:
 			continue
 		var resource := load(folder + file_name)
 		var id: Variant = resource.get(id_property) if resource != null else null
-		if id == null or String(id).is_empty():
+		if id == null or str(id).is_empty():
 			push_error("%s%s has no '%s'" % [folder, file_name, id_property])
 			continue
 		if result.has(id):

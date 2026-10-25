@@ -22,6 +22,10 @@ extends Resource
 @export var squad_capacity: int = 0
 ## Squads below full strength regain soldiers each turn while the kingdom has this building.
 @export var enables_replenishment: bool = false
+## Produced every turn while the building's upkeep is paid; doubled on a key cell (GDD §8, M11c).
+@export var yields: Dictionary[StringName, int] = {}
+## Castle level needed to build it.
+@export var required_castle_level: int = 1
 
 
 static func load_all() -> Dictionary[StringName, BuildingData]:

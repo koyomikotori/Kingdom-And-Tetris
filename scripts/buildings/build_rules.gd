@@ -2,10 +2,13 @@ class_name BuildRules
 extends RefCounted
 ## Decides whether a building may be constructed, and constructs it (paying its cost).
 
-enum Result { OK, OUT_OF_BOUNDS, NOT_OWNED, OCCUPIED, WRONG_TERRAIN, LIMIT_REACHED, CANNOT_AFFORD }
+enum Result { OK, OUT_OF_BOUNDS, NOT_OWNED, OCCUPIED, WRONG_TERRAIN, LIMIT_REACHED, CANNOT_AFFORD, CASTLE_TOO_LOW }
 
 
-static func check(board: BoardData, stockpile: Stockpile, building: BuildingData, origin: Vector2i) -> Result:
+static func check(board: BoardData, stockpile: Stockpile, building: BuildingData, origin: Vector2i,
+		castle_level: int = 1) -> Result:
+	if castle_level < building.required_castle_level:
+		return Result.CASTLE_TOO_LOW
 	for y in building.size.y:
 		for x in building.size.x:
 			var cell := board.get_cell(origin + Vector2i(x, y))
@@ -24,9 +27,29 @@ static func check(board: BoardData, stockpile: Stockpile, building: BuildingData
 	return Result.OK
 
 
+## Whether the building whose origin is `from_origin` may move to `to_origin`: the same rules as
+## building it there (but no cost), with its own current cells counting as free.
+static func check_move(board: BoardData, building: BuildingData, from_origin: Vector2i, to_origin: Vector2i) -> Result:
+	if to_origin == from_origin:
+		return Result.OCCUPIED
+	for y in building.size.y:
+		for x in building.size.x:
+			var cell := board.get_cell(to_origin + Vector2i(x, y))
+			if cell == null:
+				return Result.OUT_OF_BOUNDS
+			if not cell.owned:
+				return Result.NOT_OWNED
+			if cell.has_building() and cell.building_origin != from_origin:
+				return Result.OCCUPIED
+			if not building.allowed_terrains.is_empty() and not building.allowed_terrains.has(cell.terrain_id):
+				return Result.WRONG_TERRAIN
+	return Result.OK
+
+
 ## Builds only when check() is OK; otherwise nothing changes and nothing is paid.
-static func apply(board: BoardData, stockpile: Stockpile, building: BuildingData, origin: Vector2i) -> Result:
-	var result := check(board, stockpile, building, origin)
+static func apply(board: BoardData, stockpile: Stockpile, building: BuildingData, origin: Vector2i,
+		castle_level: int = 1) -> Result:
+	var result := check(board, stockpile, building, origin, castle_level)
 	if result != Result.OK:
 		return result
 	stockpile.spend(building.cost)
@@ -50,4 +73,6 @@ static func describe(result: Result) -> String:
 			return "Đã đạt số lượng tối đa của công trình này."
 		Result.CANNOT_AFFORD:
 			return "Không đủ tài nguyên."
+		Result.CASTLE_TOO_LOW:
+			return "Cần nâng cấp thành chính."
 	return ""

@@ -4,6 +4,7 @@ extends RefCounted
 ## All game actions go through here so the scene script only handles input and display.
 
 signal turn_started(turn: int)
+signal castle_changed
 
 ## Squads allowed without any barracks (the castle garrison).
 const BASE_SQUAD_CAPACITY := 2
@@ -30,6 +31,9 @@ var events := EventSystem.new()
 var stats := {"battles_won": 0, "battles_lost": 0}
 ## False when building upkeep could not be paid last turn; building effects pause.
 var buildings_supplied := true
+## Castle level, 1..castle_levels.size() (GDD §8, M11c).
+var castle_level := 1
+var castle_levels: Array[CastleLevelData] = CastleLevelData.load_all()
 var rng := RandomNumberGenerator.new()
 
 
@@ -66,7 +70,7 @@ func _record_battle(won: bool) -> void:
 ## The whole game as JSON-safe data. The board is restored separately (BoardData.from_save),
 ## because the state is built around it.
 func to_save() -> Dictionary:
-	return {"turn": turn, "buildings_supplied": buildings_supplied, "board": board.to_save(),
+	return {"turn": turn, "buildings_supplied": buildings_supplied, "castle_level": castle_level, "board": board.to_save(),
 			"hand": hand.to_save(), "stockpile": stockpile.to_save(), "army": army.to_save(),
 			"diplomacy": diplomacy.to_save(), "wars": wars.to_save(), "victory": victory.to_save(), "stats": stats.duplicate(),
 			"events": events.to_save()}
@@ -77,6 +81,8 @@ func to_save() -> Dictionary:
 func load_save(data: Dictionary) -> void:
 	turn = int(data.turn)
 	buildings_supplied = bool(data.buildings_supplied)
+	# Saves from before M11c have no castle level.
+	castle_level = clampi(int(data.get("castle_level", 1)), 1, castle_levels.size())
 	hand.load_save(data.hand)
 	stockpile.load_save(data.stockpile)
 	army.load_save(data.army, units)
@@ -105,7 +111,49 @@ func place_piece(index: int, origin: Vector2i) -> PlacementRules.Result:
 
 
 func build(building_id: StringName, origin: Vector2i) -> BuildRules.Result:
-	return BuildRules.apply(board, stockpile, buildings[building_id], origin)
+	return BuildRules.apply(board, stockpile, buildings[building_id], origin, castle_level)
+
+
+## Share of the building cost given back when a building is demolished.
+const DEMOLISH_REFUND := 0.5
+
+
+## What demolishing a building of this type gives back (half its cost, rounded down).
+func demolish_refund(building_id: StringName) -> Dictionary[StringName, int]:
+	var refund: Dictionary[StringName, int] = {}
+	var building: BuildingData = buildings.get(building_id)
+	if building != null:
+		for resource_id in building.cost:
+			var amount := floori(building.cost[resource_id] * DEMOLISH_REFUND)
+			if amount > 0:
+				refund[resource_id] = amount
+	return refund
+
+
+## Removes the building whose origin is `origin` and refunds half its cost. The castle cannot be
+## demolished. Returns the refund ({} when nothing was demolished).
+func demolish(origin: Vector2i) -> Dictionary[StringName, int]:
+	var cell := board.get_cell(origin)
+	if cell == null or not cell.has_building() or cell.building_id == BoardData.CASTLE_ID or cell.building_origin != origin:
+		return {}
+	var refund := demolish_refund(cell.building_id)
+	board.remove_building(origin)
+	stockpile.add(refund)
+	return refund
+
+
+## Moves the building whose origin is `from_origin` for free. Nothing changes unless
+## BuildRules.check_move() is OK; the castle never moves.
+func move_building(from_origin: Vector2i, to_origin: Vector2i) -> BuildRules.Result:
+	var cell := board.get_cell(from_origin)
+	if cell == null or not buildings.has(cell.building_id) or cell.building_origin != from_origin:
+		return BuildRules.Result.OCCUPIED
+	var building := buildings[cell.building_id]
+	var result := BuildRules.check_move(board, building, from_origin, to_origin)
+	if result == BuildRules.Result.OK:
+		board.remove_building(from_origin)
+		board.place_building(building.building_id, to_origin, building.size)
+	return result
 
 
 func recruit(unit_id: StringName) -> RecruitmentRules.Result:
@@ -117,12 +165,48 @@ func disband(squad: Army.Squad) -> void:
 	army.remove_squad(squad)
 
 
-## Most squads the kingdom may have: castle garrison plus every building's squad_capacity.
+## Most squads the kingdom may have: castle garrison, every castle level reached and every
+## building's squad_capacity.
 func get_squad_capacity() -> int:
 	var capacity := BASE_SQUAD_CAPACITY
+	for level in castle_levels:
+		if level.level <= castle_level:
+			capacity += level.squad_capacity
 	for building_id in buildings:
 		capacity += buildings[building_id].squad_capacity * board.count_buildings(building_id)
 	return capacity
+
+
+# --- Castle (GDD §8, M11c) ----------------------------------------------------------------
+
+enum CastleResult { OK, MAX_LEVEL, CANNOT_AFFORD }
+
+
+## The level the castle would reach next, or null at the top.
+func next_castle_level() -> CastleLevelData:
+	for level in castle_levels:
+		if level.level == castle_level + 1:
+			return level
+	return null
+
+
+func check_castle_upgrade() -> CastleResult:
+	var next := next_castle_level()
+	if next == null:
+		return CastleResult.MAX_LEVEL
+	if not stockpile.can_afford(next.cost):
+		return CastleResult.CANNOT_AFFORD
+	return CastleResult.OK
+
+
+## Pays and raises the castle one level, at once. Nothing changes unless check_castle_upgrade() is OK.
+func upgrade_castle() -> CastleResult:
+	var result := check_castle_upgrade()
+	if result == CastleResult.OK:
+		stockpile.spend(next_castle_level().cost)
+		castle_level += 1
+		castle_changed.emit()
+	return result
 
 
 func can_replenish() -> bool:
@@ -132,8 +216,12 @@ func can_replenish() -> bool:
 	return false
 
 
+## Land plus production buildings (only while their upkeep was paid last turn).
 func get_turn_yield() -> Dictionary[StringName, int]:
-	return Economy.board_yield(board, terrains)
+	var total := Economy.board_yield(board, terrains)
+	if buildings_supplied:
+		Economy.add_into(total, Economy.buildings_yield(board, buildings))
+	return total
 
 
 func get_army_upkeep() -> Dictionary[StringName, int]:
@@ -191,6 +279,17 @@ func get_income_breakdown() -> Dictionary[StringName, Array]:
 	for resource_id in army_upkeep:
 		add.call(resource_id, {"source": &"army", "id": &"", "amount": -army_upkeep[resource_id],
 				"count": army.count_squads()})
+	# Production buildings, per building type (paused while their upkeep is unpaid).
+	if buildings_supplied:
+		var produced := {}  # building_id -> amounts
+		for cell in board.get_all_cells():
+			if cell.has_building() and cell.coord == cell.building_origin and buildings.has(cell.building_id):
+				var amounts: Dictionary[StringName, int] = produced.get_or_add(cell.building_id, {} as Dictionary[StringName, int])
+				Economy.add_into(amounts, Economy.building_yield(buildings[cell.building_id], cell.is_key))
+		for building_id in produced:
+			for resource_id in produced[building_id]:
+				add.call(resource_id, {"source": &"production", "id": building_id,
+						"amount": produced[building_id][resource_id], "count": board.count_buildings(building_id)})
 	# Building upkeep, per building type.
 	for building_id in buildings:
 		var count := board.count_buildings(building_id)

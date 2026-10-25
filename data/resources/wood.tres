@@ -8,3 +8,4 @@ resource_id = &"wood"
 display_name = "Gỗ"
 sort_order = 1
 trade_value = 1
+basic = true

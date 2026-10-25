@@ -9,6 +9,8 @@ extends Resource
 @export var sort_order: int = 0
 ## Worth of one unit when trading or gifting to clans (GDD §9.4).
 @export var trade_value: int = 1
+## Food, wood and stone: the resources every kingdom lives on (the prosperity victory counts these).
+@export var basic: bool = false
 
 
 ## All resource types, sorted by sort_order.

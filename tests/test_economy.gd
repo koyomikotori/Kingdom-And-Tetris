@@ -32,7 +32,7 @@ func test_terrain_yields_from_data() -> void:
 
 func test_resource_types_loaded_in_order() -> void:
 	var ids := ResourceTypeData.load_all().map(func(t: ResourceTypeData) -> StringName: return t.resource_id)
-	check_eq(ids, [&"food", &"wood", &"stone"], "Resource bar order")
+	check_eq(ids, [&"food", &"wood", &"stone", &"ore", &"hardwood", &"horses"], "Resource bar order")
 
 
 func test_key_cell_doubles_yield() -> void:

@@ -3,6 +3,7 @@ extends Node2D
 
 const NO_SELECTION := -1
 const NO_BUILDING: StringName = &""
+const NO_MOVE := Vector2i(-1, -1)
 const TAB_TITLES: Array[String] = ["Mảnh đất", "Xây dựng", "Quân đội"]
 
 @export var board_size := 12
@@ -22,6 +23,8 @@ var _resource_labels: Dictionary[StringName, Label] = {}
 var _selected := NO_SELECTION
 ## Building chosen in the build tab, or NO_BUILDING. Never set together with _selected.
 var _selected_building := NO_BUILDING
+## Origin of the building being moved (picked in its BuildingWindow), or NO_MOVE.
+var _moving_from := NO_MOVE
 ## Open post-battle report; blocks kingdom input while shown.
 var _battle_report: BattleReport
 ## Battle being played; the battle screen swallows input itself.
@@ -84,6 +87,7 @@ func _ready() -> void:
 
 	build_panel.setup(_buildings, _resource_types)
 	build_panel.building_toggled.connect(_toggle_building)
+	state.castle_changed.connect(_refresh_economy)
 	army_panel.setup(units, _resource_types)
 	army_panel.recruit_requested.connect(_on_recruit_requested)
 	army_panel.disband_requested.connect(_on_disband_requested)
@@ -130,12 +134,46 @@ func _on_cell_hovered(coord: Vector2i) -> void:
 
 
 func _on_cell_clicked(coord: Vector2i) -> void:
-	if _selected != NO_SELECTION:
+	if _moving_from != NO_MOVE:
+		_move_building_to(coord)
+	elif _selected != NO_SELECTION:
 		_place_selected_piece(coord)
 	elif _selected_building != NO_BUILDING:
 		_build_selected(coord)
-	else:
-		print(_describe_cell(state.board.get_cell(coord)).replace("\n", " | "))
+	elif state.board.get_cell(coord).has_building():
+		_open_building(state.board.get_cell(coord).building_origin)
+
+
+## Tapping a building opens its window: information, upgrade, move, demolish.
+func _open_building(origin: Vector2i) -> void:
+	_clear_selection()
+	var window := BuildingWindow.new()
+	$UI.add_child(window)
+	window.open(state, origin)
+	window.move_requested.connect(func(from: Vector2i) -> void:
+		_moving_from = from
+		placement_status.text = "Chọn ô mới cho %s. Esc: hủy." % _moving_building().display_name)
+	window.demolished.connect(func(building_name: String, refund: Dictionary) -> void:
+		var amounts: Dictionary[StringName, int] = {}
+		amounts.assign(refund)
+		var back := UiFormat.amounts(amounts, _resource_types)
+		placement_status.text = "Đã phá hủy %s.%s" % [building_name, " Hoàn lại %s." % back if not back.is_empty() else ""])
+
+
+func _moving_building() -> BuildingData:
+	return _buildings[state.board.get_cell(_moving_from).building_id]
+
+
+func _move_building_to(coord: Vector2i) -> void:
+	var building := _moving_building()
+	var result := state.move_building(_moving_from, coord - _building_anchor(building))
+	if result != BuildRules.Result.OK:
+		placement_status.text = BuildRules.describe(result)
+		return
+	_moving_from = NO_MOVE
+	board_view.hide_ghost()
+	placement_status.text = "Đã di chuyển %s." % building.display_name
+	_refresh_economy()
 
 
 func _place_selected_piece(coord: Vector2i) -> void:
@@ -449,6 +487,9 @@ func _on_turn_started(turn: int) -> void:
 
 
 func _clear_selection() -> void:
+	if _moving_from != NO_MOVE:
+		_moving_from = NO_MOVE
+		placement_status.text = "Đã hủy di chuyển."
 	_select(NO_SELECTION)
 	if _selected_building != NO_BUILDING:
 		_toggle_building(NO_BUILDING)
@@ -498,13 +539,21 @@ func _rebuild_piece_cards() -> void:
 
 func _update_ghost() -> void:
 	var coord := board_view.get_hovered_cell()
-	if coord == BoardView.OFF_BOARD or (_selected == NO_SELECTION and _selected_building == NO_BUILDING):
+	if coord == BoardView.OFF_BOARD or (_selected == NO_SELECTION and _selected_building == NO_BUILDING and _moving_from == NO_MOVE):
 		board_view.hide_ghost()
+		return
+	if _moving_from != NO_MOVE:
+		var moving := _moving_building()
+		var target := coord - _building_anchor(moving)
+		var check := BuildRules.check_move(state.board, moving, _moving_from, target)
+		board_view.show_building_ghost(moving, target, check == BuildRules.Result.OK)
+		placement_status.text = "Di chuyển %s: %s Esc: hủy." % [moving.display_name,
+				"bấm để đặt ở đây." if check == BuildRules.Result.OK else BuildRules.describe(check)]
 		return
 	if _selected_building != NO_BUILDING:
 		var building := _buildings[_selected_building]
 		var origin := coord - _building_anchor(building)
-		var result := BuildRules.check(state.board, state.stockpile, building, origin)
+		var result := BuildRules.check(state.board, state.stockpile, building, origin, state.castle_level)
 		board_view.show_building_ghost(building, origin, result == BuildRules.Result.OK)
 		placement_status.text = BuildRules.describe(result)
 		return
@@ -550,6 +599,7 @@ func _refresh_economy() -> void:
 			lines.append("  Chưa có nguồn thu hay chi nào.")
 		label.tooltip_text = "\n".join(lines)
 	army_panel.refresh(state)
+	build_panel.refresh(state)
 
 
 func _income_source_text(entry: Dictionary) -> String:
@@ -560,6 +610,8 @@ func _income_source_text(entry: Dictionary) -> String:
 			return "%s (%d ô%s)" % [terrain, entry.count, keys]
 		&"army":
 			return "Nuôi quân (%d đơn vị)" % entry.count
+		&"production":
+			return "%s ×%d (khai thác)" % [_buildings[entry.id].display_name, entry.count]
 		&"building":
 			return "%s ×%d (phí duy trì)" % [_buildings[entry.id].display_name, entry.count]
 		&"agreement":
@@ -576,7 +628,11 @@ func _describe_cell(cell: CellData) -> String:
 		terrain += " ◆ (ô quan trọng, x%d sản lượng)" % Economy.KEY_CELL_MULTIPLIER
 	var production := "Không"
 	if cell.owned:
-		var amounts := UiFormat.amounts(Economy.cell_yield(_terrains.get(cell.terrain_id), cell.is_key), _resource_types, true)
+		var cell_amounts := Economy.cell_yield(_terrains.get(cell.terrain_id), cell.is_key)
+		# A production building counts once, on its origin cell.
+		if cell.has_building() and cell.coord == cell.building_origin and _buildings.has(cell.building_id):
+			Economy.add_into(cell_amounts, Economy.building_yield(_buildings[cell.building_id], cell.is_key))
+		var amounts := UiFormat.amounts(cell_amounts, _resource_types, true)
 		production = amounts if not amounts.is_empty() else "Không"
 	var building := "Không"
 	if cell.building_id == BoardData.CASTLE_ID:

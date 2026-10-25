@@ -227,6 +227,39 @@ Số đơn vị cướp = 1 + lượt × 0.15. Cân bằng hiện tại (mô ph�
 
 Sau này: lính khiên, kỵ binh, lính súng; tướng (1 tướng võ + 1 quân sư mẫu).
 
+### Công trình khai thác, tài nguyên mới, cấp thành chính (M11c, đã chốt)
+
+**Tài nguyên mới:** Khoáng sản (giá trị giao thương 3), Gỗ cứng (2), Ngựa (3). Dùng để nâng cấp thành và sau này tuyển tướng, kỵ binh, quân tinh nhuệ. Lương thực, gỗ, đá là **tài nguyên cơ bản**.
+
+**Công trình khai thác** (1 ô, xây trên ô đúng địa hình trong lãnh thổ). Phần sinh ra cộng thêm vào sản lượng sẵn có của ô; đặt trên ô ◆ thì sản lượng của công trình ×2. Không trả nổi phí duy trì thì công trình ngừng khai thác lượt sau, giống các công trình khác.
+
+| Công trình | Đặt trên | Cần thành | Mỗi lượt | Giá xây | Phí duy trì |
+|---|---|---|---|---|---|
+| Mỏ khai thác | Đồi | Cấp 2 | +2 Đá, +1 Khoáng sản | 8 Gỗ, 4 Đá | 1 Lương thực |
+| Xưởng gỗ | Rừng | Cấp 2 | +2 Gỗ, +1 Gỗ cứng | 6 Gỗ, 4 Đá | 1 Lương thực |
+| Trại ngựa | Ruộng | Cấp 3 | +1 Lương thực, +1 Ngựa | 8 Gỗ, 2 Đá | không |
+
+Giới hạn: Mỏ khai thác 3, Xưởng gỗ 3, Trại ngựa 2.
+
+**Thành chính 6 cấp** (nút "Nâng cấp thành chính" trong tab Xây dựng, có hiệu lực ngay). Mỗi cấp thêm **1 chỗ cho đơn vị lính**, mở khóa công trình, và sau này (M11d) cho tuyển **tướng tới N sao** ở cấp N.
+
+| Lên cấp | Giá |
+|---|---|
+| 2 | 20 Gỗ, 20 Đá |
+| 3 | 30 Gỗ, 30 Đá, 10 Khoáng sản |
+| 4 | 40 Đá, 20 Khoáng sản, 15 Gỗ cứng |
+| 5 | 60 Đá, 35 Khoáng sản, 30 Gỗ cứng |
+| 6 | 80 Đá, 50 Khoáng sản, 45 Gỗ cứng, 20 Ngựa |
+
+Các con số sẽ cân bằng lại sau. Chiến thắng Hòa bình thịnh vượng (§9b) chỉ tính thu nhập của 3 tài nguyên cơ bản.
+
+**Bảng công trình (kiểu Kairosoft, chốt sau khi chơi thử M11c):** tab Xây dựng chỉ để **xây mới** (mỗi công trình ghi số đang có / tối đa, khóa khi chưa đủ cấp thành hoặc đã đủ số). **Bấm vào công trình trên bản đồ** mở bảng của nó:
+- Tab **Thông tin** (mô tả, vị trí, sản lượng, phí duy trì, số đang có) và **Nâng cấp** (hiện chỉ thành chính có nâng cấp).
+- Thao tác bên dưới: **Nâng cấp** (thành chính) · **Di chuyển** · **Phá hủy**. Bấm thao tác thì bảng ghi rõ nó sẽ làm gì, rồi chờ **Xác nhận** / **Hủy**.
+- **Di chuyển:** miễn phí, chọn ô mới trên bản đồ (cùng luật như xây: trong lãnh thổ, đúng địa hình, ô trống), Esc để hủy.
+- **Phá hủy:** hoàn lại 50% giá xây, không hoàn tác được.
+- Thành chính không phá hủy hay di chuyển được.
+
 ## 9. Bản đồ thế giới & ngoại giao
 
 - Thêm tab/nút **Ngoại giao**. Bấm vào thì mở một màn hình bản đồ lớn: vương quốc của mình ở một vị trí, các gia tộc / vương quốc xung quanh hiển thị quanh đó.
@@ -393,7 +426,7 @@ Không giới hạn số lượt: chơi tới khi thắng hoặc thua.
 | Đường | Điều kiện |
 |---|---|
 | **Chinh phục** | Sáp nhập mọi gia tộc. Thắng ngay khi gia tộc cuối cùng đầu hàng. |
-| **Hòa bình thịnh vượng** | Cùng lúc: mọi gia tộc chưa bị sáp nhập đều đang là đồng minh (**ít nhất 1** đồng minh), **từ 120 ô lãnh thổ**, thu nhập ròng (sau nuôi quân, phí công trình, hợp đồng) **từ +50 mỗi loại tài nguyên mỗi lượt**; giữ như vậy **10 lượt liền**. |
+| **Hòa bình thịnh vượng** | Cùng lúc: mọi gia tộc chưa bị sáp nhập đều đang là đồng minh (**ít nhất 1** đồng minh), **từ 120 ô lãnh thổ**, thu nhập ròng (sau nuôi quân, phí công trình, hợp đồng) **từ +50 mỗi loại tài nguyên cơ bản (lương thực, gỗ, đá) mỗi lượt**; giữ như vậy **10 lượt liền**. |
 
 Các con số sẽ cân bằng lại sau.
 
@@ -478,10 +511,11 @@ Thống kê trận thắng/thua và trạng thái thắng/thua được lưu cù
 | M9b | Liên minh: hiệp ước, đồng minh gửi quân vào trận, bất tương xâm | Xong |
 | M10 | Lưu/tải (JSON có version), menu chính | Xong |
 | M11a | Điều kiện thắng/thua, bảng Mục tiêu, màn kết thúc | Xong |
-| M11b | Sự kiện ngẫu nhiên (dữ liệu .tres, có lựa chọn và hậu quả) | Đang làm |
-| M11c | Tướng võ: tuyển, dẫn quân, ra trận, tử trận | |
-| M11d | Kinh nghiệm và cấp cho đơn vị và tướng | |
-| M11e | Mưu sĩ: cộng kinh tế, ngoại giao | |
+| M11b | Sự kiện ngẫu nhiên (dữ liệu .tres, có lựa chọn và hậu quả) | Xong |
+| M11c | Kinh tế mới: cấp thành chính, công trình khai thác, Khoáng sản / Gỗ cứng / Ngựa | Đang làm |
+| M11d | Tướng: sao 1–6, Võ lực / Thống suất / đặc tính theo lãnh thổ, một tổng tướng + cận vệ kỵ binh trong trận, tử trận / bị thương, sự kiện chiêu mộ | |
+| M11e | Kinh nghiệm và cấp cho đơn vị và tướng | |
+| M11f | Mưu sĩ: cộng kinh tế, ngoại giao | |
 | M12 | **Hỗ trợ cảm ứng + xuất APK** (chạm để xem trước/xác nhận, vuốt để kéo, chụm để zoom, nút thay phím tắt) | |
 | M13 | Pixel art, âm thanh, cân bằng, build Windows + Android | |
 

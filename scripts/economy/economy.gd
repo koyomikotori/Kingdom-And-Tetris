@@ -1,7 +1,8 @@
 class_name Economy
 extends RefCounted
-## Per-turn production (GDD §5): every owned cell yields its terrain's `yields`;
-## key cells yield double. Amount dictionaries map resource_id -> int.
+## Per-turn production (GDD §5): every owned cell yields its terrain's `yields`, and production
+## buildings add their own `yields` (GDD §8, M11c); key cells double both. Amount dictionaries map
+## resource_id -> int.
 
 const KEY_CELL_MULTIPLIER := 2
 
@@ -22,6 +23,24 @@ static func board_yield(board: BoardData, terrains: Dictionary[StringName, Terra
 	for cell in board.get_all_cells():
 		if cell.owned:
 			add_into(total, cell_yield(terrains.get(cell.terrain_id), cell.is_key))
+	return total
+
+
+## What one building produces per turn: its yields, doubled when its origin cell is a key cell.
+static func building_yield(building: BuildingData, on_key_cell: bool) -> Dictionary[StringName, int]:
+	var result: Dictionary[StringName, int] = {}
+	var multiplier := KEY_CELL_MULTIPLIER if on_key_cell else 1
+	for resource_id in building.yields:
+		result[resource_id] = building.yields[resource_id] * multiplier
+	return result
+
+
+## Total produced by every production building in one turn (each counted once, at its origin).
+static func buildings_yield(board: BoardData, buildings: Dictionary[StringName, BuildingData]) -> Dictionary[StringName, int]:
+	var total: Dictionary[StringName, int] = {}
+	for cell in board.get_all_cells():
+		if cell.has_building() and cell.coord == cell.building_origin and buildings.has(cell.building_id):
+			add_into(total, building_yield(buildings[cell.building_id], cell.is_key))
 	return total
 
 
