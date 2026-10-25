@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="ResourceTypeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/economy/resource_type_data.gd" id="1_res"]
+
+[resource]
+script = ExtResource("1_res")
+resource_id = &"horses"
+display_name = "Ngựa"
+sort_order = 5
+trade_value = 3

@@ -66,6 +66,8 @@ func _conditions(state: KingdomState, path: Path) -> Array[Dictionary]:
 				_condition("Lãnh thổ (ô)", state.board.count_owned_cells(), PROSPERITY_CELLS)]
 			var income := state.get_net_income()
 			for type in _resource_types:
+				if not type.basic:
+					continue
 				conditions.append(_condition("Thu nhập %s mỗi lượt" % type.display_name.to_lower(),
 						income.get(type.resource_id, 0), PROSPERITY_INCOME))
 			return conditions

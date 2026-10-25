@@ -8,3 +8,4 @@ resource_id = &"food"
 display_name = "Lương thực"
 sort_order = 0
 trade_value = 1
+basic = true
