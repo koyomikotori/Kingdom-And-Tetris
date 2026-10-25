@@ -38,3 +38,17 @@ func spend(cost: Dictionary[StringName, int]) -> bool:
 		_amounts[resource_id] -= cost[resource_id]
 	changed.emit()
 	return true
+
+
+func to_save() -> Dictionary:
+	var result := {}
+	for resource_id in _amounts:
+		result[String(resource_id)] = _amounts[resource_id]
+	return result
+
+
+func load_save(data: Dictionary) -> void:
+	_amounts.clear()
+	for resource_name: String in data:
+		_amounts[StringName(resource_name)] = int(data[resource_name])
+	changed.emit()

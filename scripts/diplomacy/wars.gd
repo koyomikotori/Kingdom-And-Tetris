@@ -365,3 +365,34 @@ static func describe_peace(result: PeaceResult) -> String:
 		PeaceResult.CANNOT_AFFORD:
 			return "Không đủ tài nguyên để bồi thường."
 	return ""
+
+
+# --- Save (GDD §10.1) ---------------------------------------------------------------------
+
+## Front fields written as they are (ints, bools and the direction enum). max_strength comes
+## from the clan data so rebalancing applies to old saves.
+const SAVED_FRONT_FIELDS: Array[StringName] = [&"at_war", &"annexed", &"strength", &"truce_turns", &"direction",
+		&"turns_since_invasion", &"attacked_this_turn", &"peace_offered_this_turn"]
+
+
+func to_save() -> Dictionary:
+	var result := {}
+	for clan_id in fronts:
+		var entry := {}
+		for field in SAVED_FRONT_FIELDS:
+			entry[String(field)] = fronts[clan_id].get(field)
+		result[String(clan_id)] = entry
+	return result
+
+
+func load_save(data: Dictionary) -> void:
+	for clan_name: String in data:
+		var front: Front = fronts.get(StringName(clan_name))
+		if front == null:
+			continue
+		var entry: Dictionary = data[clan_name]
+		for field in SAVED_FRONT_FIELDS:
+			if entry.has(String(field)):
+				front.set(field, Diplomacy._plain(entry[String(field)], front.get(field)))
+		front.strength = mini(front.strength, front.max_strength)
+	changed.emit()

@@ -548,3 +548,68 @@ static func describe_proposal(result: ProposalResult) -> String:
 		ProposalResult.ASKED_THIS_TURN:
 			return "Họ cần thời gian cân nhắc. Hãy đề nghị lại vào lượt sau."
 	return ""
+
+
+# --- Save (GDD §10.1) ---------------------------------------------------------------------
+
+## ClanState fields written as they are (ints and bools); add new plain fields here.
+const SAVED_CLAN_FIELDS: Array[StringName] = [&"wariness", &"gift_gain_this_turn", &"trade_gain_this_turn",
+		&"traded_value_this_turn", &"proposed_this_turn", &"annexed", &"alliance_turns", &"pact_turns",
+		&"alliance_cooldown"]
+const SAVED_AGREEMENT_FIELDS: Array[StringName] = [&"give_amount", &"get_amount", &"total_turns", &"turns_left"]
+
+
+func to_save() -> Dictionary:
+	var saved_clans := {}
+	for clan_id in clans:
+		var clan := clans[clan_id]
+		var entry := {}
+		for field in SAVED_CLAN_FIELDS:
+			entry[String(field)] = clan.get(field)
+		var memories := {}
+		for source in clan.memories:
+			memories[String(source)] = clan.memories[source]
+		entry["memories"] = memories
+		if clan.agreement != null:
+			var agreement := {"give_id": String(clan.agreement.give_id), "get_id": String(clan.agreement.get_id)}
+			for field in SAVED_AGREEMENT_FIELDS:
+				agreement[String(field)] = clan.agreement.get(field)
+			entry["agreement"] = agreement
+		saved_clans[String(clan_id)] = entry
+	return {"threat": threat, "clans": saved_clans}
+
+
+## Clans missing from the save keep their starting state; saved clans no longer in the data are skipped.
+func load_save(data: Dictionary) -> void:
+	threat = int(data.threat)
+	for clan_name: String in data.clans:
+		var clan: ClanState = clans.get(StringName(clan_name))
+		if clan == null:
+			continue
+		var entry: Dictionary = data.clans[clan_name]
+		for field in SAVED_CLAN_FIELDS:
+			if entry.has(String(field)):
+				clan.set(field, _plain(entry[String(field)], clan.get(field)))
+		clan.memories.clear()
+		for source: String in entry.memories:
+			clan.memories[StringName(source)] = int(entry.memories[source])
+		clan.agreement = null
+		if entry.has("agreement"):
+			var saved: Dictionary = entry.agreement
+			var agreement := Agreement.new()
+			agreement.clan_id = clan.data.clan_id
+			agreement.give_id = StringName(saved.give_id)
+			agreement.get_id = StringName(saved.get_id)
+			for field in SAVED_AGREEMENT_FIELDS:
+				agreement.set(field, int(saved[String(field)]))
+			clan.agreement = agreement
+	changed.emit()
+
+
+## JSON numbers come back as floats: give a loaded value the type of the field it replaces.
+static func _plain(value: Variant, current: Variant) -> Variant:
+	if current is bool:
+		return bool(value)
+	if current is int:
+		return int(value)
+	return value

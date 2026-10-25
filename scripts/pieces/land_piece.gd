@@ -43,3 +43,23 @@ func get_board_coords(origin: Vector2i) -> Array[Vector2i]:
 
 func is_key_cell(index: int) -> bool:
 	return index == key_index
+
+
+func to_save() -> Dictionary:
+	var cells: Array = []
+	for offset in offsets:
+		cells.append([offset.x, offset.y])
+	var terrain_names: Array = []
+	for terrain_id in terrains:
+		terrain_names.append(String(terrain_id))
+	return {"shape": String(shape_id), "offsets": cells, "terrains": terrain_names, "key": key_index}
+
+
+static func from_save(data: Dictionary) -> LandPiece:
+	var cells: Array[Vector2i] = []
+	for cell: Array in data.offsets:
+		cells.append(Vector2i(int(cell[0]), int(cell[1])))
+	var terrain_ids: Array[StringName] = []
+	for terrain_name: String in data.terrains:
+		terrain_ids.append(StringName(terrain_name))
+	return LandPiece.new(StringName(data.shape), cells, terrain_ids, int(data.key))
