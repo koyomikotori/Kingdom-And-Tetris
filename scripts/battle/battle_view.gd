@@ -18,9 +18,15 @@ const MOVE_SPEED := 200.0
 const CHARGE_LEAD := 1.2
 ## Distance between the clash line and each unit's front figure.
 const CLASH_GAP := 14.0
+## Before the charge, the front row stands this much further forward than the row behind it.
+const FRONT_ROW_LEAD := 130.0
 ## How far each further rank stands behind the one in front.
 const RANK_GAP := 110.0
 const GRAVITY := 900.0
+## Pixels per battle-second when a figure steps forward to fill a gap in its unit.
+const STEP_UP_SPEED := 60.0
+## Pixels per battle-second when a unit shifts lanes to close a gap left by a fallen unit.
+const LANE_SPEED := 70.0
 ## Screen-left side, screen-right side.
 const SIDE_COLORS: Array[Color] = [Color(0.4, 0.6, 1.0), Color(0.95, 0.4, 0.35)]
 const SKY_COLOR := Color(0.16, 0.2, 0.3)
@@ -33,7 +39,10 @@ const ARROW_COLOR := Color(0.85, 0.75, 0.55)
 class Figure:
 	extends RefCounted
 	enum State { STAND, FLY, FLEE, GONE }
+	## Current place in the unit's block, moving toward `slot`.
 	var offset: Vector2
+	## Place the figure is walking to (figures step forward as the ones in front fall).
+	var slot: Vector2
 	var state := State.STAND
 	## Absolute position while flying or fleeing.
 	var pos: Vector2
@@ -50,6 +59,8 @@ class UnitView:
 	## 0 = drawn on the left, 1 = on the right.
 	var screen_side: int
 	var lane_y := 0.0
+	## Lane the unit is moving to; changes when units in the same group break or are wiped out.
+	var lane_target := 0.0
 	var pos := Vector2.ZERO
 	var figures: Array[Figure] = []
 
@@ -90,6 +101,7 @@ func setup(simulator: BattleSimulator, left_side: int) -> void:
 			for k in ceili(float(unit.start_soldiers) / SOLDIERS_PER_FIGURE):
 				var figure := Figure.new()
 				figure.offset = _figure_offset(k, view.screen_side)
+				figure.slot = figure.offset
 				figure.phase = _rng.randf() * TAU
 				view.figures.append(figure)
 			_views[s].append(view)
@@ -105,6 +117,7 @@ func update_view(battle_delta: float, new_events: Array[Dictionary]) -> void:
 	for event in new_events:
 		_spawn_effects(event)
 	for s in 2:
+		_assign_lanes()
 		for view: UnitView in _views[s]:
 			_move_unit(view, battle_delta)
 			_update_figures(view, battle_delta)
@@ -120,12 +133,17 @@ func snap_to_end() -> void:
 	for s in 2:
 		for view: UnitView in _views[s]:
 			view.pos.x = _target_x(view)
-			var keep := _figures_wanted(view)
-			for figure in view.figures:
-				if figure.state == Figure.State.STAND and keep > 0:
-					keep -= 1
-				elif figure.state == Figure.State.STAND:
+			view.lane_y = view.lane_target
+			view.pos.y = view.lane_y
+			var standing := view.figures.filter(func(f: Figure) -> bool: return f.state == Figure.State.STAND)
+			var fallen := maxi(0, standing.size() - _figures_wanted(view))
+			for i in standing.size():
+				var figure: Figure = standing[i]
+				if i < fallen:
 					figure.state = Figure.State.GONE
+				else:
+					figure.slot = _figure_offset(i - fallen, view.screen_side)
+					figure.offset = figure.slot
 			if view.unit.broken:
 				for figure in view.figures:
 					if figure.state == Figure.State.STAND:
@@ -155,16 +173,20 @@ func _layout() -> void:
 	_assign_lanes()
 	for s in 2:
 		for view: UnitView in _views[s]:
+			view.lane_y = view.lane_target
 			view.pos = Vector2(_target_x(view), view.lane_y)
 
 
-## Spreads each group (side zone / each field row) evenly over the ground band.
+## Spreads each group (side zone / each field row) evenly over the ground band. Only units still
+## fighting count, so the survivors close up when a unit breaks or is wiped out.
 func _assign_lanes() -> void:
 	var top := _ground_top() + 50.0
 	var bottom := size.y - 30.0
 	for s in 2:
 		var groups := {}
 		for view: UnitView in _views[s]:
+			if not view.unit.is_active():
+				continue
 			var key := -1 if _is_in_side_zone(view.unit) else int(view.unit.data.row)
 			if not groups.has(key):
 				groups[key] = []
@@ -172,7 +194,7 @@ func _assign_lanes() -> void:
 		for key in groups:
 			var members: Array = groups[key]
 			for i in members.size():
-				members[i].lane_y = top + (i + 0.5) * (bottom - top) / members.size()
+				members[i].lane_target = top + (i + 0.5) * (bottom - top) / members.size()
 
 
 func _home_x(view: UnitView) -> float:
@@ -181,7 +203,7 @@ func _home_x(view: UnitView) -> float:
 	if _is_in_side_zone(view.unit):
 		x = zone * 0.5 + FIGURE_SPACING.x * (FIGURES_PER_ROW - 1) * 0.5
 	else:
-		x = zone + (FIGURES_PER_ROW * FIGURE_SPACING.x + (90.0 if view.unit.data.row == UnitData.Row.FRONT else 0.0))
+		x = zone + (FIGURES_PER_ROW * FIGURE_SPACING.x + (FRONT_ROW_LEAD if view.unit.data.row == UnitData.Row.FRONT else 0.0))
 	return x if view.screen_side == 0 else size.x - x
 
 
@@ -215,6 +237,8 @@ func _figure_offset(index: int, screen_side: int) -> Vector2:
 
 func _move_unit(view: UnitView, delta: float) -> void:
 	view.pos.x = move_toward(view.pos.x, _target_x(view), MOVE_SPEED * delta)
+	view.lane_y = move_toward(view.lane_y, view.lane_target, LANE_SPEED * delta)
+	view.pos.y = view.lane_y
 
 
 func _figures_wanted(view: UnitView) -> int:
@@ -224,13 +248,17 @@ func _figures_wanted(view: UnitView) -> int:
 func _update_figures(view: UnitView, delta: float) -> void:
 	var standing := view.figures.filter(func(f: Figure) -> bool: return f.state == Figure.State.STAND)
 	var back := -_facing(view.screen_side)
-	# Fallen soldiers: knock figures backwards out of the formation.
-	for i in maxi(0, standing.size() - _figures_wanted(view)):
-		var figure: Figure = standing[standing.size() - 1 - i]
+	# Fallen soldiers: the front figures are knocked backwards out of the formation...
+	var fallen := maxi(0, standing.size() - _figures_wanted(view))
+	for i in fallen:
+		var figure: Figure = standing[i]
 		figure.state = Figure.State.FLY
 		figure.pos = view.pos + figure.offset
 		figure.velocity = Vector2(back * _rng.randf_range(120, 220), -_rng.randf_range(220, 360))
 		figure.spin = back * _rng.randf_range(6, 12)
+	# ...and the ones behind step forward into their places.
+	for i in range(fallen, standing.size()):
+		standing[i].slot = _figure_offset(i - fallen, view.screen_side)
 	# Broken unit: everyone left runs for their own edge.
 	if view.unit.broken:
 		for figure in view.figures:
@@ -240,6 +268,8 @@ func _update_figures(view: UnitView, delta: float) -> void:
 				figure.velocity = Vector2(back * _rng.randf_range(160, 220), 0)
 	for figure in view.figures:
 		match figure.state:
+			Figure.State.STAND:
+				figure.offset = figure.offset.move_toward(figure.slot, STEP_UP_SPEED * delta)
 			Figure.State.FLY:
 				figure.velocity.y += GRAVITY * delta
 				figure.pos += figure.velocity * delta

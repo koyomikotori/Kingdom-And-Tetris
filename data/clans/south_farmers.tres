@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ClanData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/diplomacy/clan_data.gd" id="1_clan"]
+
+[resource]
+script = ExtResource("1_clan")
+clan_id = &"south_farmers"
+display_name = "Điền Trang Nam Lâm"
+description = "Những làng nông nghiệp yên bình giữa rừng phương Nam. Hiền hòa, dư gỗ, thiếu đá xây dựng."
+color = Color(0.45, 0.75, 0.35, 1)
+map_position = Vector2(0.5, 0.83)
+direction = 3
+personality = 0
+military_strength = 30
+surplus = Array[StringName]([&"wood"])
+deficit = Array[StringName]([&"stone"])
+start_relation = 20
+base_relation = 30
+roads = Array[StringName]([&"kingdom", &"steppe_tribes"])

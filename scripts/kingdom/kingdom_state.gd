@@ -21,6 +21,7 @@ var units: Dictionary[StringName, UnitData] = {}
 ## Bandit raid tuning; null disables raids.
 var raid: RaidData = RaidData.load_bandits()
 var enemy_units: Dictionary[StringName, UnitData] = UnitData.load_enemies()
+var diplomacy := Diplomacy.new(ClanData.load_all(), ResourceTypeData.load_all())
 ## False when building upkeep could not be paid last turn; building effects pause.
 var buildings_supplied := true
 var rng := RandomNumberGenerator.new()
@@ -102,10 +103,64 @@ func get_upkeep() -> Dictionary[StringName, int]:
 	return total
 
 
-## Yield minus upkeep: how the stockpile changes at the end of this turn (if upkeep is affordable).
+## Where each resource's per-turn change comes from: resource_id -> Array of entries
+## {"source": &"terrain" | &"army" | &"building" | &"agreement", "id": StringName, "amount": int,
+##  "count": int (cells / squads / buildings), "key_count": int (terrain only)}.
+## Amounts are signed; they add up to get_net_income().
+func get_income_breakdown() -> Dictionary[StringName, Array]:
+	var breakdown: Dictionary[StringName, Array] = {}
+	var add := func(resource_id: StringName, entry: Dictionary) -> void:
+		if entry.amount == 0:
+			return
+		if not breakdown.has(resource_id):
+			breakdown[resource_id] = []
+		breakdown[resource_id].append(entry)
+	# Terrain: one entry per terrain type and resource.
+	var by_terrain := {}  # terrain_id -> {"cells", "key_count", "yield": amounts}
+	for cell in board.get_all_cells():
+		if not cell.owned or not terrains.has(cell.terrain_id):
+			continue
+		var cell_yield := Economy.cell_yield(terrains[cell.terrain_id], cell.is_key)
+		if cell_yield.is_empty():
+			continue
+		if not by_terrain.has(cell.terrain_id):
+			var empty: Dictionary[StringName, int] = {}
+			by_terrain[cell.terrain_id] = {"cells": 0, "key_count": 0, "yield": empty}
+		var info: Dictionary = by_terrain[cell.terrain_id]
+		info.cells += 1
+		info.key_count += 1 if cell.is_key else 0
+		Economy.add_into(info.yield, cell_yield)
+	for terrain_id in by_terrain:
+		var info: Dictionary = by_terrain[terrain_id]
+		for resource_id in info.yield:
+			add.call(resource_id, {"source": &"terrain", "id": terrain_id, "amount": info.yield[resource_id],
+					"count": info.cells, "key_count": info.key_count})
+	# Army upkeep, all squads together.
+	var army_upkeep := get_army_upkeep()
+	for resource_id in army_upkeep:
+		add.call(resource_id, {"source": &"army", "id": &"", "amount": -army_upkeep[resource_id],
+				"count": army.count_squads()})
+	# Building upkeep, per building type.
+	for building_id in buildings:
+		var count := board.count_buildings(building_id)
+		for resource_id in buildings[building_id].upkeep:
+			add.call(resource_id, {"source": &"building", "id": building_id,
+					"amount": -buildings[building_id].upkeep[resource_id] * count, "count": count})
+	# Trade agreements.
+	for agreement in diplomacy.agreements:
+		add.call(agreement.give_id, {"source": &"agreement", "id": agreement.clan_id, "amount": -agreement.give_amount, "count": 1})
+		add.call(agreement.get_id, {"source": &"agreement", "id": agreement.clan_id, "amount": agreement.get_amount, "count": 1})
+	return breakdown
+
+
+## How the stockpile changes at the end of this turn: yield, upkeep and trade agreements
+## (assuming upkeep and deliveries can be paid).
 func get_net_income() -> Dictionary[StringName, int]:
-	var net := get_turn_yield()
-	Economy.add_into(net, get_upkeep(), -1)
+	var net: Dictionary[StringName, int] = {}
+	var breakdown := get_income_breakdown()
+	for resource_id in breakdown:
+		for entry: Dictionary in breakdown[resource_id]:
+			net[resource_id] = net.get(resource_id, 0) + entry.amount
 	return net
 
 
@@ -113,10 +168,11 @@ func get_net_income() -> Dictionary[StringName, int]:
 ## 1. collect yield;
 ## 2. pay army upkeep; squads desert (most recently recruited first) until it can be paid;
 ## 3. pay building upkeep if possible, otherwise building effects pause next turn;
-## 4. squads below full strength regain soldiers for free (needs a barracks);
+## 4. trade agreements exchange goods (Diplomacy.run_agreements);
+##    squads below full strength regain soldiers for free (needs a barracks); clan relations drift;
 ## 5. advance the turn and deal a fresh hand (unplaced pieces are discarded);
 ## 6. bandits may raid at the start of the new turn.
-## Returns {"collected", "upkeep", "deserted", "buildings_supplied", "replenished"} plus
+## Returns {"collected", "upkeep", "deserted", "buildings_supplied", "replenished", "agreements"} plus
 ## "pending_raid" (a BattleSimulator, not yet run) when bandits attack. Play it (battle screen or
 ## BattleSimulator.step()) and then call finish_raid() with its record.
 func end_turn() -> Dictionary:
@@ -133,11 +189,13 @@ func end_turn() -> Dictionary:
 	buildings_supplied = stockpile.spend(building_upkeep)
 	if buildings_supplied:
 		Economy.add_into(upkeep, building_upkeep)
+	var agreements := diplomacy.run_agreements(stockpile)
 	var replenished := _replenish()
+	diplomacy.end_turn()
 	turn += 1
 	hand.deal_new_hand()
 	var report := {"collected": collected, "upkeep": upkeep, "deserted": deserted,
-			"buildings_supplied": buildings_supplied, "replenished": replenished}
+			"buildings_supplied": buildings_supplied, "replenished": replenished, "agreements": agreements}
 	if raid != null and rng.randf() < RaidSystem.get_raid_chance(self, raid):
 		var bandits := RaidSystem.create_bandit_side(raid, enemy_units, turn, rng)
 		report["pending_raid"] = BattleSimulator.new(bandits, RaidSystem.create_kingdom_side(self), rng.randi())

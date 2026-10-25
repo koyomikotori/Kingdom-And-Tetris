@@ -23,6 +23,8 @@ var _selected_building := NO_BUILDING
 var _battle_report: BattleReport
 ## Battle being played; the battle screen swallows input itself.
 var _battle_screen: BattleScreen
+## Open world map; it swallows input itself.
+var _world_map: WorldMapScreen
 
 @onready var board_view: BoardView = $BoardView
 @onready var camera: CameraController = $Camera
@@ -37,6 +39,7 @@ var _battle_screen: BattleScreen
 @onready var army_panel: ArmyPanel = %ArmyPanel
 @onready var placement_status: Label = %PlacementStatus
 @onready var end_turn_button: Button = %EndTurnButton
+@onready var diplomacy_button: Button = %DiplomacyButton
 
 
 func _ready() -> void:
@@ -62,6 +65,7 @@ func _ready() -> void:
 	state.hand.changed.connect(_rebuild_piece_cards)
 	state.stockpile.changed.connect(_refresh_economy)
 	state.army.changed.connect(_refresh_economy)
+	state.diplomacy.changed.connect(_refresh_economy)
 	state.turn_started.connect(_on_turn_started)
 
 	build_panel.setup(_buildings, _resource_types)
@@ -71,6 +75,7 @@ func _ready() -> void:
 	army_panel.disband_requested.connect(_on_disband_requested)
 	tabs.tab_changed.connect(func(_tab: int) -> void: _clear_selection())
 	end_turn_button.pressed.connect(_on_end_turn_pressed)
+	diplomacy_button.pressed.connect(_open_world_map)
 	state.start()
 	_on_cell_hovered(BoardView.OFF_BOARD)
 
@@ -164,6 +169,8 @@ func _on_end_turn_pressed() -> void:
 	var replenished := _unit_amounts(report.replenished)
 	if not replenished.is_empty():
 		lines.append("Bổ sung quân: %s." % replenished)
+	for entry: Dictionary in report.agreements:
+		lines.append(_describe_agreement_turn(entry))
 	if not report.buildings_supplied:
 		lines.append("Không đủ phí duy trì công trình: công trình tạm ngưng tác dụng lượt này.")
 	if report.has("pending_raid"):
@@ -190,6 +197,39 @@ func _play_raid(simulator: BattleSimulator) -> void:
 		var result := state.finish_raid(record)
 		placement_status.text += " %s" % ("Đã đánh lui." if result.won else "Thất thủ.")
 		_show_battle_report(result))
+
+
+func _describe_agreement_turn(entry: Dictionary) -> String:
+	var agreement: Diplomacy.Agreement = entry.agreement
+	var clan_name := state.diplomacy.clans[agreement.clan_id].data.display_name
+	var text: String
+	match entry.event:
+		&"delivered":
+			text = "Hợp đồng với %s: đưa %s, nhận %s." % [clan_name,
+					_amount_text(agreement.give_id, agreement.give_amount), _amount_text(agreement.get_id, agreement.get_amount)]
+		&"missed":
+			text = "Không đủ %s để giao cho %s (quan hệ -%d)." % [_amount_text(agreement.give_id, agreement.give_amount),
+					clan_name, Diplomacy.AGREEMENT_MISSED_PENALTY]
+		_:
+			text = "%s đã hủy hợp đồng vì quan hệ thù địch." % clan_name
+	if entry.completed:
+		text += " Hợp đồng đã hoàn thành."
+	return text
+
+
+func _amount_text(resource_id: StringName, amount: int) -> String:
+	var amounts: Dictionary[StringName, int] = {resource_id: amount}
+	return UiFormat.amounts(amounts, _resource_types)
+
+
+func _open_world_map() -> void:
+	if _world_map != null:
+		return
+	_clear_selection()
+	_world_map = WorldMapScreen.new()
+	$UI.add_child(_world_map)
+	_world_map.open(state, _resource_types)
+	_world_map.closed.connect(func() -> void: _world_map = null)
 
 
 func _show_battle_report(raid: Dictionary) -> void:
@@ -283,17 +323,44 @@ func _building_anchor(building: BuildingData) -> Vector2i:
 func _build_resource_labels() -> void:
 	for type in _resource_types:
 		var label := Label.new()
+		# Hovering shows where the per-turn change comes from (tooltip filled in _refresh_economy).
+		label.mouse_filter = Control.MOUSE_FILTER_PASS
 		resource_bar.add_child(label)
 		_resource_labels[type.resource_id] = label
 
 
-## Resource bar (stock and net income per turn) and the army tab depend on stock, army and territory.
+## Resource bar (stock, net income per turn and its breakdown) and the army tab depend on stock,
+## army, territory and trade agreements.
 func _refresh_economy() -> void:
 	var net := state.get_net_income()
+	var breakdown := state.get_income_breakdown()
 	for type in _resource_types:
-		_resource_labels[type.resource_id].text = "%s: %d (%+d)" % [
-			type.display_name, state.stockpile.get_amount(type.resource_id), net.get(type.resource_id, 0)]
+		var label := _resource_labels[type.resource_id]
+		var amount := state.stockpile.get_amount(type.resource_id)
+		var change: int = net.get(type.resource_id, 0)
+		label.text = "%s: %d (%+d)" % [type.display_name, amount, change]
+		var lines: Array[String] = ["%s: %d (%+d mỗi lượt)" % [type.display_name, amount, change]]
+		for entry: Dictionary in breakdown.get(type.resource_id, []):
+			lines.append("  %+d  %s" % [entry.amount, _income_source_text(entry)])
+		if lines.size() == 1:
+			lines.append("  Chưa có nguồn thu hay chi nào.")
+		label.tooltip_text = "\n".join(lines)
 	army_panel.refresh(state)
+
+
+func _income_source_text(entry: Dictionary) -> String:
+	match entry.source:
+		&"terrain":
+			var terrain := _terrains[entry.id].display_name
+			var keys := ", %d ô ◆" % entry.key_count if entry.key_count > 0 else ""
+			return "%s (%d ô%s)" % [terrain, entry.count, keys]
+		&"army":
+			return "Nuôi quân (%d đơn vị)" % entry.count
+		&"building":
+			return "%s ×%d (phí duy trì)" % [_buildings[entry.id].display_name, entry.count]
+		&"agreement":
+			return "Hợp đồng với %s" % state.diplomacy.clans[entry.id].data.display_name
+	return String(entry.source)
 
 
 func _describe_cell(cell: CellData) -> String:

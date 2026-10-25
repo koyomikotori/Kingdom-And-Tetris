@@ -7,3 +7,4 @@ script = ExtResource("1_res")
 resource_id = &"stone"
 display_name = "Đá"
 sort_order = 2
+trade_value = 2
