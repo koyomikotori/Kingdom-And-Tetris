@@ -16,6 +16,7 @@ const TEST_FILES := [
 	"res://tests/test_victory.gd",
 	"res://tests/test_events.gd",
 	"res://tests/test_production.gd",
+	"res://tests/test_generals.gd",
 ]
 
 

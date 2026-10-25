@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="GeneralTraitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/generals/general_trait_data.gd" id="1_trait"]
+
+[resource]
+script = ExtResource("1_trait")
+trait_id = &"vanguard"
+display_name = "Tiên phong"
+description = "Hàng đầu +15% tấn công cận chiến."
+building_id = &"barracks"
+min_buildings = 3
+target = 2
+melee_attack_bonus = 0.15

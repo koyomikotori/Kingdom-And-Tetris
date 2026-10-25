@@ -31,6 +31,10 @@ const CATEGORY_NAMES: Array[String] = ["Kinh tế", "Ngoại giao", "Quân sự"
 @export var needs_wounded_squad: bool = false
 ## The kingdom beat bandits at the start of the previous turn.
 @export var needs_raid_won_last_turn: bool = false
+## The kingdom annexed a clan during the previous turn.
+@export var needs_annexed_last_turn: bool = false
+## There is room for one more general.
+@export var needs_general_slot: bool = false
 
 @export_group("Clan")
 ## The event is about one clan, picked among those that match the filters below.

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="GeneralTraitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/generals/general_trait_data.gd" id="1_trait"]
+
+[resource]
+script = ExtResource("1_trait")
+trait_id = &"castle_keeper"
+display_name = "Giữ thành"
+description = "+2 sĩ khí, +10% phòng thủ."
+defending_only = true
+morale_bonus = 2.0
+defense_bonus = 0.1

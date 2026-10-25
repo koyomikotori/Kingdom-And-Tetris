@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="GeneralTraitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/generals/general_trait_data.gd" id="1_trait"]
+
+[resource]
+script = ExtResource("1_trait")
+trait_id = &"farmer_general"
+display_name = "Tướng đồn điền"
+description = "Quân no đủ: +1,5 sĩ khí."
+terrain_id = &"farmland"
+min_cells = 15
+morale_bonus = 1.5

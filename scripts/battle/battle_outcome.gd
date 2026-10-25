@@ -4,7 +4,8 @@ extends RefCounted
 ## - winning side: every survivor stays;
 ## - losing side: broken units are lost; unbroken units keep 50% (they retreat), unless
 ##   `lose_everything` (a failed attack on a clan, GDD §9.6) and the player did not retreat.
-## Units lent by other clans (BattleSide.Unit.ally) never count as the side's own losses.
+## Units lent by other clans (BattleSide.Unit.ally) and the commander's bodyguard never count as
+## the side's own losses.
 
 const RETREAT_KEEP_FRACTION := 0.5
 
@@ -22,7 +23,7 @@ static func soldiers_kept(unit: BattleSide.Unit, won: bool, retreated: bool, los
 static func soldiers_lost(record: BattleRecord, side: int, lose_everything: bool = false) -> int:
 	var lost := 0
 	for unit in record.sides[side].units:
-		if unit.ally == null:
+		if unit.ally == null and not unit.is_general_guard:
 			lost += unit_lost(record, side, unit, lose_everything)
 	return lost
 
@@ -56,7 +57,7 @@ static func apply_to_army(army: Army, record: BattleRecord, side: int, lose_ever
 	var scattered: Dictionary[StringName, int] = {}
 	var retreat_losses: Dictionary[StringName, int] = {}
 	for unit in record.sides[side].units:
-		if unit.ally != null:
+		if unit.ally != null or unit.is_general_guard:
 			continue
 		var unit_id := unit.data.unit_id
 		if unit.lost() > 0:
