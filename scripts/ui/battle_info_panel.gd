@@ -29,6 +29,8 @@ func setup(side: BattleSide, screen_side: int) -> void:
 		var unit_name := unit.data.display_name
 		if unit.ally != null:
 			unit_name += " · " + unit.ally.display_name
+		elif unit.is_general_guard:
+			unit_name += " · " + side.general_name
 		var name_label := _label(unit_name, 12)
 		if unit.ally != null:
 			name_label.add_theme_color_override("font_color", unit.ally.color.lightened(0.3))

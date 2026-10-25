@@ -88,6 +88,7 @@ func _ready() -> void:
 	build_panel.setup(_buildings, _resource_types)
 	build_panel.building_toggled.connect(_toggle_building)
 	state.castle_changed.connect(_refresh_economy)
+	state.generals.changed.connect(_refresh_economy)
 	army_panel.setup(units, _resource_types)
 	army_panel.recruit_requested.connect(_on_recruit_requested)
 	army_panel.disband_requested.connect(_on_disband_requested)
@@ -195,6 +196,8 @@ func _build_selected(coord: Vector2i) -> void:
 		placement_status.text = BuildRules.describe(result)
 		return
 	_toggle_building(NO_BUILDING)
+	# The cost is paid before the building is placed, so refresh again for the build tab's counts.
+	_refresh_economy()
 	placement_status.text = "Đã xây %s." % building.display_name
 	_on_cell_hovered(coord)
 
@@ -236,6 +239,10 @@ func _on_end_turn_pressed() -> void:
 		lines.append(_describe_treaty_event(entry))
 	for clan_id: StringName in report.war_declared:
 		lines.append("%s đã tuyên chiến với vương quốc!" % _clan_name(clan_id))
+	for general: General in report.generals_healed:
+		lines.append("Tướng %s đã lành vết thương." % general.name)
+	if state.generals.candidates_turn == state.turn:
+		lines.append("Có ứng viên tướng mới (thành chính, tab Chiêu hiền).")
 	var held: int = state.victory.holds[Victory.Path.PROSPERITY]
 	if held > 0 and state.victory.won_path == Victory.NO_PATH:
 		lines.append("Đang giữ điều kiện chiến thắng %s: %d/%d lượt." % [Victory.PATH_NAMES[Victory.Path.PROSPERITY],
@@ -351,9 +358,16 @@ func _attack_clan(clan_id: StringName) -> void:
 		report.closed.connect(_on_battle_report_closed))
 
 
-## Report lines for the soldiers other clans lent to this battle (Alliances.apply_battle).
+## Report lines for the soldiers other clans lent to this battle (Alliances.apply_battle) and for
+## the commander (Generals.after_battle).
 func _ally_lines(result: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
+	var general: Dictionary = result.get("general", {})
+	match general.get("fate", &"none"):
+		&"dead":
+			lines.append("Tổng tướng %s đã tử trận!" % general.name)
+		&"wounded":
+			lines.append("Tổng tướng %s ngã ngựa, bị thương, nghỉ %d lượt." % [general.name, Generals.WOUND_TURNS])
 	for clan_id: StringName in result.allies:
 		var entry: Dictionary = result.allies[clan_id]
 		lines.append("Đồng minh %s gửi %d lính, mất %d (quan hệ %+d)." % [_clan_name(clan_id), entry.sent,
@@ -610,6 +624,8 @@ func _income_source_text(entry: Dictionary) -> String:
 			return "%s (%d ô%s)" % [terrain, entry.count, keys]
 		&"army":
 			return "Nuôi quân (%d đơn vị)" % entry.count
+		&"generals":
+			return "Nuôi tướng (%d)" % entry.count
 		&"production":
 			return "%s ×%d (khai thác)" % [_buildings[entry.id].display_name, entry.count]
 		&"building":

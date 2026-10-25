@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="GeneralTraitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/generals/general_trait_data.gd" id="1_trait"]
+
+[resource]
+script = ExtResource("1_trait")
+trait_id = &"forest_hunter"
+display_name = "Thợ săn rừng"
+description = "Cung thủ +25% sát thương bắn."
+terrain_id = &"forest"
+min_cells = 12
+target = 1
+range_bonus = 0.25

@@ -67,9 +67,15 @@ func refresh(state: KingdomState) -> void:
 	var upkeep := UiFormat.amounts(state.get_army_upkeep(), _resource_types)
 	var replenish := "Tự bổ sung %d%% quân mỗi lượt." % roundi(KingdomState.REPLENISH_FRACTION * 100) \
 			if state.can_replenish() else "Cần doanh trại để bổ sung quân."
-	_summary_label.text = "Đơn vị: %d/%d · %d lính · Nuôi quân: %s/lượt\n%s" % [
+	var commander := state.generals.commander
+	var leader := "Tổng tướng: chưa có (tuyển ở thành chính, tab Chiêu hiền)."
+	if commander != null:
+		leader = "Tổng tướng: %s %s · Võ lực %d · Thống suất %d%s" % [commander.name, commander.star_text(),
+				commander.might, commander.command,
+				"" if commander.is_ready() else " · bị thương, còn %d lượt" % commander.wounded_turns]
+	_summary_label.text = "Đơn vị: %d/%d · %d lính · Nuôi quân và tướng: %s/lượt\n%s\n%s" % [
 			state.army.count_squads(), state.get_squad_capacity(), state.army.count_soldiers(),
-			upkeep if not upkeep.is_empty() else "0", replenish]
+			upkeep if not upkeep.is_empty() else "0", replenish, leader]
 	_rebuild_squad_list(state)
 	for unit in _units:
 		_count_labels[unit.unit_id].text = "Đang có: %d đơn vị · %d lính" % [

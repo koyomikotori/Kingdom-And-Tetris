@@ -1,0 +1,53 @@
+[gd_resource type="Resource" script_class="EventData" format=3]
+
+[ext_resource type="Script" path="res://scripts/events/event_data.gd" id="1_event"]
+[ext_resource type="Script" path="res://scripts/events/event_choice_data.gd" id="2_choice"]
+[ext_resource type="Script" path="res://scripts/events/event_outcome_data.gd" id="3_outcome"]
+
+[sub_resource type="Resource" id="outcome_0_0"]
+script = ExtResource("3_outcome")
+weight = 0.5
+text = "Viên tướng cúi đầu nhận ấn."
+general_min_stars = 3
+general_max_stars = 3
+[sub_resource type="Resource" id="outcome_0_1"]
+script = ExtResource("3_outcome")
+weight = 0.35
+text = "Một tướng giỏi của họ nay theo bạn."
+general_min_stars = 4
+general_max_stars = 4
+[sub_resource type="Resource" id="outcome_0_2"]
+script = ExtResource("3_outcome")
+weight = 0.15
+text = "Danh tướng lừng lẫy của họ nguyện quy thuận!"
+general_min_stars = 5
+general_max_stars = 5
+[sub_resource type="Resource" id="choice_0"]
+script = ExtResource("2_choice")
+text = "Thu nhận hàng tướng"
+hint = "Tướng giỏi của gia tộc vừa đầu hàng."
+outcomes = Array[ExtResource("3_outcome")]([SubResource("outcome_0_0"), SubResource("outcome_0_1"), SubResource("outcome_0_2")])
+
+[sub_resource type="Resource" id="outcome_1_0"]
+script = ExtResource("3_outcome")
+weight = 1.0
+text = "Họ được thả về quê, tiếng nhân từ lan xa."
+relation_all = 2
+[sub_resource type="Resource" id="choice_1"]
+script = ExtResource("2_choice")
+text = "Thả về quê"
+hint = "Tiếng nhân từ có thể lan xa."
+outcomes = Array[ExtResource("3_outcome")]([SubResource("outcome_1_0")])
+
+[resource]
+script = ExtResource("1_event")
+event_id = &"surrendered_general"
+title = "Hàng tướng xin quy thuận"
+text = "Sau khi gia tộc của họ sáp nhập vào vương quốc, một viên tướng cũ xin được phục vụ bạn."
+category = 2
+weight = 8.0
+cooldown = 0
+min_turn = 1
+needs_annexed_last_turn = true
+needs_general_slot = true
+choices = Array[ExtResource("2_choice")]([SubResource("choice_0"), SubResource("choice_1")])

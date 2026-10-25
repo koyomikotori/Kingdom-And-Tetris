@@ -14,6 +14,8 @@ var pending: Array[Dictionary] = []
 var last_turn: Dictionary[StringName, int] = {}
 ## Turn the kingdom last beat a bandit raid (KingdomState.finish_raid).
 var raid_won_turn := -100
+## Turn the kingdom last annexed a clan (KingdomState.finish_attack).
+var annexed_turn := -100
 var _resource_types: Array[ResourceTypeData] = ResourceTypeData.load_all()
 
 
@@ -61,6 +63,10 @@ func can_happen(state: KingdomState, event: EventData) -> bool:
 	if event.needs_wounded_squad and not _has_wounded_squad(state):
 		return false
 	if event.needs_raid_won_last_turn and raid_won_turn != state.turn - 1:
+		return false
+	if event.needs_annexed_last_turn and annexed_turn != state.turn - 1:
+		return false
+	if event.needs_general_slot and state.generals.generals.size() >= Generals.MAX_GENERALS:
 		return false
 	return not event.needs_clan or not _matching_clans(state, event).is_empty()
 
@@ -199,6 +205,14 @@ func _apply(state: KingdomState, outcome: EventOutcomeData, clan_id: StringName,
 		changes.append("Quân %s %+d lính" % [_clan_name(state, clan_id), outcome.clan_strength])
 	if clan_id != &"" and outcome.declare_war and state.wars.clan_declares_war(clan_id):
 		changes.append("%s tuyên chiến với vương quốc!" % _clan_name(state, clan_id))
+	if outcome.general_min_stars > 0:
+		var stars := state.generals.rng.randi_range(outcome.general_min_stars, maxi(outcome.general_min_stars, outcome.general_max_stars))
+		var general := state.generals.generate(stars)
+		if state.generals.add(general):
+			changes.append("Tướng %s %s gia nhập (Võ lực %d, Thống suất %d)" % [general.name, general.star_text(),
+					general.might, general.command])
+		else:
+			changes.append("Không còn chỗ cho thêm tướng")
 
 
 func _amounts(amounts: Dictionary[StringName, int]) -> String:
@@ -218,7 +232,7 @@ func to_save() -> Dictionary:
 	var waiting: Array = []
 	for entry in pending:
 		waiting.append({"event_id": String(entry.event_id), "clan_id": String(entry.clan_id)})
-	return {"last_turn": turns, "pending": waiting, "raid_won_turn": raid_won_turn}
+	return {"last_turn": turns, "pending": waiting, "raid_won_turn": raid_won_turn, "annexed_turn": annexed_turn}
 
 
 ## Pending events that no longer exist in the data are dropped.
@@ -231,3 +245,4 @@ func load_save(data: Dictionary) -> void:
 		if events.has(StringName(entry.event_id)):
 			pending.append({"event_id": StringName(entry.event_id), "clan_id": StringName(entry.clan_id)})
 	raid_won_turn = int(data.raid_won_turn)
+	annexed_turn = int(data.get("annexed_turn", -100))

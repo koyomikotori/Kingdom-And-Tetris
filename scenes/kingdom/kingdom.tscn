@@ -56,9 +56,15 @@ theme_override_font_sizes/font_size = 12
 text = "Chọn một mảnh (hoặc phím 1–3) rồi nhấn lên bản đồ. Mảnh không xoay được. Đặt đè lên đất cũ sẽ thay địa hình ô đó."
 autowrap_mode = 3
 
-[node name="PieceList" type="VBoxContainer" parent="UI/SidePanel/Margin/VBox/Tabs/PiecesTab"]
+[node name="PieceScroll" type="ScrollContainer" parent="UI/SidePanel/Margin/VBox/Tabs/PiecesTab"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="PieceList" type="VBoxContainer" parent="UI/SidePanel/Margin/VBox/Tabs/PiecesTab/PieceScroll"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
 [node name="BuildTab" type="ScrollContainer" parent="UI/SidePanel/Margin/VBox/Tabs"]

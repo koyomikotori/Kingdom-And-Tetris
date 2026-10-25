@@ -27,6 +27,7 @@ var wars := Wars.new(diplomacy)
 var alliances := Alliances.new(diplomacy, wars)
 var victory := Victory.new()
 var events := EventSystem.new()
+var generals := Generals.new()
 ## Counters for the end-of-game screen: {"battles_won", "battles_lost"}.
 var stats := {"battles_won": 0, "battles_lost": 0}
 ## False when building upkeep could not be paid last turn; building effects pause.
@@ -47,10 +48,12 @@ func _init(p_board: BoardData, p_hand: PieceHand, p_terrains: Dictionary[StringN
 	for unit in p_units:
 		units[unit.unit_id] = unit
 	rng.seed = seed_value
+	generals.rng.seed = seed_value + 1
 
 
 ## Deals the first hand. Call once after connecting signals.
 func start() -> void:
+	generals.refresh_candidates(castle_level, turn)
 	hand.deal_new_hand()
 	turn_started.emit(turn)
 
@@ -73,7 +76,7 @@ func to_save() -> Dictionary:
 	return {"turn": turn, "buildings_supplied": buildings_supplied, "castle_level": castle_level, "board": board.to_save(),
 			"hand": hand.to_save(), "stockpile": stockpile.to_save(), "army": army.to_save(),
 			"diplomacy": diplomacy.to_save(), "wars": wars.to_save(), "victory": victory.to_save(), "stats": stats.duplicate(),
-			"events": events.to_save()}
+			"events": events.to_save(), "generals": generals.to_save()}
 
 
 ## Restores everything but the board from to_save() data. Random rolls are not saved: they come
@@ -95,6 +98,11 @@ func load_save(data: Dictionary) -> void:
 		stats[key] = int(data.get("stats", {}).get(key, 0))
 	if data.has("events"):
 		events.load_save(data.events)
+	# Saves from before M11d have no generals; a new candidate list is made.
+	if data.has("generals"):
+		generals.load_save(data.generals)
+	else:
+		generals.refresh_candidates(castle_level, turn)
 
 
 ## What a save slot shows: {"turn", "cells", "soldiers"}.
@@ -224,8 +232,11 @@ func get_turn_yield() -> Dictionary[StringName, int]:
 	return total
 
 
+## Squads and generals together (both are paid before anything else at the end of a turn).
 func get_army_upkeep() -> Dictionary[StringName, int]:
-	return army.get_upkeep(units)
+	var total := army.get_upkeep(units)
+	Economy.add_into(total, generals.get_upkeep())
+	return total
 
 
 func get_building_upkeep() -> Dictionary[StringName, int]:
@@ -274,11 +285,15 @@ func get_income_breakdown() -> Dictionary[StringName, Array]:
 		for resource_id in info.yield:
 			add.call(resource_id, {"source": &"terrain", "id": terrain_id, "amount": info.yield[resource_id],
 					"count": info.cells, "key_count": info.key_count})
-	# Army upkeep, all squads together.
-	var army_upkeep := get_army_upkeep()
+	# Army upkeep, all squads together, then the generals.
+	var army_upkeep := army.get_upkeep(units)
 	for resource_id in army_upkeep:
 		add.call(resource_id, {"source": &"army", "id": &"", "amount": -army_upkeep[resource_id],
 				"count": army.count_squads()})
+	var general_upkeep := generals.get_upkeep()
+	for resource_id in general_upkeep:
+		add.call(resource_id, {"source": &"generals", "id": &"", "amount": -general_upkeep[resource_id],
+				"count": generals.generals.size()})
 	# Production buildings, per building type (paused while their upkeep is unpaid).
 	if buildings_supplied:
 		var produced := {}  # building_id -> amounts
@@ -351,11 +366,13 @@ func end_turn() -> Dictionary:
 	var treaties := alliances.end_turn()
 	var declared := wars.end_turn(rng)
 	turn += 1
+	var healed := generals.end_turn(castle_level, turn)
 	hand.deal_new_hand()
 	var report := {"collected": collected, "upkeep": upkeep, "deserted": deserted,
 			"buildings_supplied": buildings_supplied, "replenished": replenished, "agreements": agreements}
 	report["treaties"] = treaties
 	report["war_declared"] = declared
+	report["generals_healed"] = healed
 	report["victory"] = victory.end_turn(self)
 	report["castle_in_danger"] = victory.castle_in_danger(self)
 	var invader := wars.pick_invader(rng)
@@ -373,18 +390,21 @@ func end_turn() -> Dictionary:
 	return report
 
 
-## The kingdom's army plus the soldiers its allies send against `enemy_clan` (&"" for bandits).
-func create_kingdom_side(enemy_clan: StringName) -> BattleSide:
+## The kingdom's army led by its commander (with their bodyguard), plus the soldiers its allies
+## send against `enemy_clan` (&"" for bandits). `defending`: a raid or invasion, not an attack.
+func create_kingdom_side(enemy_clan: StringName, defending: bool = true) -> BattleSide:
 	var side := RaidSystem.create_kingdom_side(self)
+	generals.lead(side, board, defending)
 	alliances.add_allies(side, enemy_clan, units)
 	return side
 
 
 ## Applies a finished raid battle (see end_turn) to the kingdom. Returns RaidSystem.apply_outcome's
-## report plus "allies" / "helpers" (Alliances.apply_battle).
+## report plus "allies" / "helpers" (Alliances.apply_battle) and "general" (Generals.after_battle).
 func finish_raid(record: BattleRecord) -> Dictionary:
 	var result := RaidSystem.apply_outcome(self, raid, record)
 	_record_battle(result.won)
+	result["general"] = generals.after_battle(record, BattleRecord.DEFENDER)
 	if result.won:
 		events.raid_won_turn = turn
 	result.merge(alliances.apply_battle(record, BattleRecord.DEFENDER))
@@ -434,6 +454,7 @@ func get_threat() -> int:
 func finish_invasion(clan_id: StringName, record: BattleRecord) -> Dictionary:
 	var won := record.winner == BattleRecord.DEFENDER
 	_record_battle(won)
+	var general := generals.after_battle(record, BattleRecord.DEFENDER)
 	var castle_fallen := not won and board.count_land_outside_castle() == 0
 	if castle_fallen:
 		victory.lost = true
@@ -452,7 +473,8 @@ func finish_invasion(clan_id: StringName, record: BattleRecord) -> Dictionary:
 				resources_lost[resource_id] = amount
 		stockpile.spend(resources_lost)
 	result.merge({"record": record, "won": won, "clan_id": clan_id, "lost_cells": lost_cells,
-			"resources_lost": resources_lost, "enemy_lost": enemy_lost, "castle_fallen": castle_fallen})
+			"resources_lost": resources_lost, "enemy_lost": enemy_lost, "castle_fallen": castle_fallen,
+			"general": general})
 	return result
 
 
@@ -465,7 +487,7 @@ func start_attack(clan_id: StringName) -> BattleSimulator:
 	wars.mark_attacked(clan_id)
 	var defenders := wars.create_clan_side(clan_id, wars.fronts[clan_id].strength, units)
 	alliances.add_friends(defenders, clan_id, units)
-	return BattleSimulator.new(create_kingdom_side(clan_id), defenders, rng.randi())
+	return BattleSimulator.new(create_kingdom_side(clan_id, false), defenders, rng.randi())
 
 
 ## Applies a finished attack. Winning loots resources and may make the clan surrender: it is
@@ -476,6 +498,7 @@ func start_attack(clan_id: StringName) -> BattleSimulator:
 func finish_attack(clan_id: StringName, record: BattleRecord) -> Dictionary:
 	var won := record.winner == BattleRecord.ATTACKER
 	_record_battle(won)
+	var general := generals.after_battle(record, BattleRecord.ATTACKER)
 	var result := BattleOutcome.apply_to_army(army, record, BattleRecord.ATTACKER, true)
 	result.merge(alliances.apply_battle(record, BattleRecord.ATTACKER))
 	var enemy_lost := BattleOutcome.soldiers_lost(record, BattleRecord.DEFENDER)
@@ -490,6 +513,7 @@ func finish_attack(clan_id: StringName, record: BattleRecord) -> Dictionary:
 		if wars.should_annex(clan_id):
 			board.expand(wars.annex(clan_id), Wars.ANNEX_EXPANSION)
 			annexed = true
+			events.annexed_turn = turn
 	else:
 		for resource_id in stockpile.get_all():
 			var amount := floori(stockpile.get_amount(resource_id) * Wars.ATTACK_DEFEAT_COMPENSATION)
@@ -497,5 +521,5 @@ func finish_attack(clan_id: StringName, record: BattleRecord) -> Dictionary:
 				compensation[resource_id] = amount
 		stockpile.spend(compensation)
 	result.merge({"record": record, "won": won, "clan_id": clan_id, "enemy_lost": enemy_lost,
-			"loot": loot, "compensation": compensation, "annexed": annexed})
+			"loot": loot, "compensation": compensation, "annexed": annexed, "general": general})
 	return result

@@ -260,6 +260,43 @@ Các con số sẽ cân bằng lại sau. Chiến thắng Hòa bình thịnh vư
 - **Phá hủy:** hoàn lại 50% giá xây, không hoàn tác được.
 - Thành chính không phá hủy hay di chuyển được.
 
+### Tướng (M11d, đã chốt)
+
+**Một tổng tướng cho cả đạo quân.** Vương quốc giữ tối đa **3 tướng** (đều tốn phí nuôi): một người làm **tổng tướng**, những người khác dự bị (thay khi tổng tướng bị thương hoặc tử trận). Có thể sa thải tướng (có xác nhận).
+
+**Sao (1–6) và chỉ số:** mỗi tướng có **Võ lực** và **Thống suất** (mỗi chỉ số 1–10). Số sao quyết định **tổng điểm** hai chỉ số; tổng điểm và cách chia đều ngẫu nhiên (sao càng cao tổng càng cao, nhưng vẫn có may rủi).
+- **Võ lực:** mỗi điểm **+3% tấn công cận chiến và xung phong** cho cả đạo quân.
+- **Thống suất:** mỗi điểm **+0,4 sĩ khí** và **+2% phòng thủ** (cận chiến và giáp) cho cả đạo quân.
+- Chỉ cộng cho quân của vương quốc, không cộng cho quân đồng minh gửi đến.
+
+| Sao | Tổng Võ + Thống | Cận vệ | Giá tuyển | Phí nuôi/lượt |
+|---|---|---|---|---|
+| 1★ | 3–5 | 4 kỵ binh | 30 Lương thực, 20 Gỗ | 2 Lương thực |
+| 2★ | 6–8 | 6 | 40 Lương thực, 20 Gỗ, 5 Ngựa | 3 Lương thực |
+| 3★ | 9–11 | 7 | 60 Lương thực, 10 Khoáng sản, 10 Ngựa | 4 Lương thực |
+| 4★ | 12–14 | 9 | 80 Lương thực, 20 Khoáng sản, 10 Gỗ cứng, 15 Ngựa | 5 Lương thực, 1 Khoáng sản |
+| 5★ | 15–17 | 10 | 100 Lương thực, 35 Khoáng sản, 20 Gỗ cứng, 20 Ngựa | 6 Lương thực, 2 Khoáng sản |
+| 6★ | 18–20 | 12 | 140 Lương thực, 50 Khoáng sản, 30 Gỗ cứng, 30 Ngựa | 8 Lương thực, 3 Khoáng sản |
+
+**Đặc tính** (`data/traits/`): tướng từ **2★** có 1 đặc tính, **chỉ kích hoạt khi lãnh thổ đạt điều kiện**:
+
+| Đặc tính | Điều kiện | Hiệu ứng |
+|---|---|---|
+| Thợ săn rừng | Từ 12 ô rừng | Cung thủ +25% sát thương bắn |
+| Thiết kỵ | Từ 2 trại ngựa | Xung phong +30% |
+| Giữ thành | Khi phòng thủ (cướp, xâm lược) | +2 sĩ khí, +10% phòng thủ |
+| Sinh ra trên núi | Từ 10 ô đồi | +15% phòng thủ |
+| Tướng đồn điền | Từ 15 ô ruộng | +1,5 sĩ khí |
+| Tiên phong | Từ 3 doanh trại | Hàng đầu +15% tấn công cận chiến |
+
+**Chiêu hiền:** bấm vào thành chính → tab **Chiêu hiền**: 3 ứng viên (tên, sao, Võ lực, Thống suất, đặc tính, giá). Số sao không vượt **cấp thành**; sao càng cao càng hiếm. Danh sách đổi sau mỗi **5 lượt**, hoặc trả **20 Lương thực** để đổi ngay. Tab **Tướng**: xem tướng, chọn tổng tướng, sa thải. Phí nuôi tướng trả cùng phí nuôi quân; thiếu lương thực thì quân đào ngũ trước.
+
+**Trong trận:** tổng tướng ra trận cùng một **đơn vị cận vệ kỵ binh** riêng (cờ vàng), **đứng giữa, trước hàng đầu** của đội hình. Cận vệ mạnh như tướng trong Total War Three Kingdoms: chỉ số cao hơn hẳn lính thường, **mỗi cận vệ gây sát thương bằng 4 lính và cần 5 đòn mới ngã**, và còn mạnh thêm theo tướng (+5% tấn công mỗi điểm Võ lực, +5% phòng thủ mỗi điểm Thống suất, ngoài phần cộng cho cả quân). Loại lính có thêm 2 chỉ số chung cho việc này: sát thương mỗi lính và máu mỗi lính (lính thường = 1). Cận vệ **bị vỡ hoặc bị diệt → tướng ngã**: mọi đơn vị phe đó **−3 sĩ khí**. Sau trận: **30% tử trận, 70% bị thương nghỉ 3 lượt** (không ra trận; tướng dự bị không tự thay, người chơi chọn). Không có tổng tướng ra trận được thì quân đi đánh không tướng.
+
+**Sự kiện tướng:**
+- **Tướng lạc xin đầu quân:** tướng 1–3★, trả một ít lương thực để nhận (cần còn chỗ).
+- **Hàng tướng xin quy thuận:** đầu lượt ngay sau khi sáp nhập một gia tộc, khả năng cao; tướng 3–5★.
+
 ## 9. Bản đồ thế giới & ngoại giao
 
 - Thêm tab/nút **Ngoại giao**. Bấm vào thì mở một màn hình bản đồ lớn: vương quốc của mình ở một vị trí, các gia tộc / vương quốc xung quanh hiển thị quanh đó.
@@ -512,11 +549,11 @@ Thống kê trận thắng/thua và trạng thái thắng/thua được lưu cù
 | M10 | Lưu/tải (JSON có version), menu chính | Xong |
 | M11a | Điều kiện thắng/thua, bảng Mục tiêu, màn kết thúc | Xong |
 | M11b | Sự kiện ngẫu nhiên (dữ liệu .tres, có lựa chọn và hậu quả) | Xong |
-| M11c | Kinh tế mới: cấp thành chính, công trình khai thác, Khoáng sản / Gỗ cứng / Ngựa | Đang làm |
-| M11d | Tướng: sao 1–6, Võ lực / Thống suất / đặc tính theo lãnh thổ, một tổng tướng + cận vệ kỵ binh trong trận, tử trận / bị thương, sự kiện chiêu mộ | |
+| M11c | Kinh tế mới: cấp thành chính, công trình khai thác, Khoáng sản / Gỗ cứng / Ngựa | Xong |
+| M11d | Tướng: sao 1–6, Võ lực / Thống suất / đặc tính theo lãnh thổ, một tổng tướng + cận vệ kỵ binh trong trận, tử trận / bị thương, sự kiện chiêu mộ | Đang làm |
 | M11e | Kinh nghiệm và cấp cho đơn vị và tướng | |
 | M11f | Mưu sĩ: cộng kinh tế, ngoại giao | |
-| M12 | **Hỗ trợ cảm ứng + xuất APK** (chạm để xem trước/xác nhận, vuốt để kéo, chụm để zoom, nút thay phím tắt) | |
+| M12 | **Hỗ trợ cảm ứng + xuất APK** (chạm để xem trước/xác nhận, vuốt để kéo, chụm để zoom, nút thay phím tắt); **sắp xếp lại tab Quân đội và Xây dựng** cho gọn trên điện thoại (ít chữ, thông tin chi tiết mở khi chạm) | |
 | M13 | Pixel art, âm thanh, cân bằng, build Windows + Android | |
 
 Lưu/tải được đưa lên trước sự kiện và tướng, vì trạng thái game càng nhiều thì càng khó thêm lưu game về sau.

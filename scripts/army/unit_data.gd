@@ -35,6 +35,11 @@ const ATTACK_KIND_NAMES: Array[String] = ["Cận chiến", "Cung", "Súng"]
 @export var range_attack: int = 0
 ## Seconds between arrow volleys. Guns fire a single volley and ignore this.
 @export var reload_time: float = 5.0
+## Casualties one soldier deals compared with an ordinary soldier (heroes and their guards hit like
+## several men; GDD §8, M11d).
+@export var damage_per_soldier: float = 1.0
+## Casualties needed to bring one soldier down.
+@export var hit_points: float = 1.0
 
 @export_group("Recruitment")
 ## Paid per squad.

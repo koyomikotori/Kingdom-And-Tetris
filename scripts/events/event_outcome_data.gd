@@ -26,3 +26,6 @@ extends Resource
 @export var clan_strength: int = 0
 ## The event's clan declares war on the kingdom (when it can).
 @export var declare_war: bool = false
+## A general joins the kingdom, with a random star rank in this range (0 = none; GDD §8, M11d).
+@export var general_min_stars: int = 0
+@export var general_max_stars: int = 0

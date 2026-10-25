@@ -11,6 +11,13 @@ class Unit:
 	## The clan that lent this unit to the side (an ally of the kingdom, or a friend helping the
 	## defending clan), or null for the side's own army. Its losses come out of that clan's strength.
 	var ally: ClanData
+	## The commander's bodyguard (Generals.lead): when it breaks or dies, the general falls.
+	var is_general_guard := false
+	## Battle multipliers (1.0 = unit data as is), raised by the commander (Generals.lead).
+	var attack_mult := 1.0
+	var charge_mult := 1.0
+	var defense_mult := 1.0
+	var range_mult := 1.0
 	var start_soldiers: int
 	## Fractional while casualties accumulate; alive() rounds up.
 	var soldiers: float
@@ -44,6 +51,10 @@ class Unit:
 
 var display_name: String
 var units: Array[Unit] = []
+## The commander leading this side, or "" (Generals.lead).
+var general_name := ""
+## Set by the simulator when the commander's bodyguard broke or died.
+var general_fallen := false
 
 
 func _init(p_display_name: String) -> void:

@@ -29,6 +29,8 @@ const STEP_UP_SPEED := 60.0
 const LANE_SPEED := 70.0
 ## Screen-left side, screen-right side.
 const SIDE_COLORS: Array[Color] = [Color(0.4, 0.6, 1.0), Color(0.95, 0.4, 0.35)]
+## How far ahead of the front row the commander's guard stands.
+const GENERAL_LEAD := 60.0
 ## How far units lent by another clan lean toward that clan's banner color.
 const ALLY_COLOR_WEIGHT := 0.55
 const SKY_COLOR := Color(0.16, 0.2, 0.3)
@@ -189,6 +191,10 @@ func _assign_lanes() -> void:
 		for view: UnitView in _views[s]:
 			if not view.unit.is_active():
 				continue
+			# The commander's guard leads from the middle of the field.
+			if view.unit.is_general_guard:
+				view.lane_target = (top + bottom) * 0.5
+				continue
 			var key := -1 if _is_in_side_zone(view.unit) else int(view.unit.data.row)
 			if not groups.has(key):
 				groups[key] = []
@@ -206,6 +212,8 @@ func _home_x(view: UnitView) -> float:
 		x = zone * 0.5 + FIGURE_SPACING.x * (FIGURES_PER_ROW - 1) * 0.5
 	else:
 		x = zone + (FIGURES_PER_ROW * FIGURE_SPACING.x + (FRONT_ROW_LEAD if view.unit.data.row == UnitData.Row.FRONT else 0.0))
+		if view.unit.is_general_guard:
+			x += GENERAL_LEAD
 	return x if view.screen_side == 0 else size.x - x
 
 
@@ -219,6 +227,8 @@ func _target_x(view: UnitView) -> float:
 	if view.unit.data.is_ranged() and rank > 0:
 		return _home_x(view)
 	var offset := CLASH_GAP + rank * RANK_GAP
+	if view.unit.is_general_guard:
+		offset = maxf(0.0, offset - GENERAL_LEAD * 0.5)
 	return size.x * 0.5 - offset if view.screen_side == 0 else size.x * 0.5 + offset
 
 
@@ -360,6 +370,20 @@ func _draw_unit(view: UnitView) -> void:
 				_draw_figure(figure.pos + Vector2(0, bob), 0.0, -facing, color.darkened(0.45), view.unit.data)
 	if view.unit.ally != null:
 		_draw_ally_banner(view, facing)
+	if view.unit.is_general_guard:
+		_draw_general_banner(view, facing)
+
+
+## The commander's golden banner, taller than an ally's, above the bodyguard's first standing figure.
+func _draw_general_banner(view: UnitView, facing: float) -> void:
+	for figure in view.figures:
+		if figure.state == Figure.State.STAND:
+			draw_set_transform(view.pos + figure.offset, 0.0, Vector2.ONE * FIGURE_SCALE)
+			draw_line(Vector2(0, -20), Vector2(0, -36), Color(0.25, 0.2, 0.15), 1.2)
+			draw_colored_polygon(PackedVector2Array([Vector2(0, -36), Vector2(9 * facing, -33), Vector2(0, -29)]),
+					Color(1.0, 0.82, 0.25))
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+			return
 
 
 ## A small pennant in the lending clan's color above the unit's first standing figure.

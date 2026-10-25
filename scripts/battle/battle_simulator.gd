@@ -80,6 +80,7 @@ func step() -> void:
 	for s in 2:
 		for i in _sides[s].units.size():
 			_update_morale(s, i)
+		_check_general(s)
 	time += TICK
 	_ticks += 1
 	if _ticks % roundi(SNAPSHOT_INTERVAL / TICK) == 0:
@@ -133,8 +134,8 @@ func _ranged_attack(s: int, source: BattleSide.Unit, factor: float, spread_over_
 	var targets := _pick_targets(1 - s, spread_over_rows)
 	for target_index in targets:
 		var target := _sides[1 - s].units[target_index]
-		var ratio := _ratio(source.data.range_attack, target.data.armor)
-		_hit(1 - s, target_index, source, source.alive() * ratio * factor * targets[target_index])
+		var ratio := _ratio(source.data.range_attack * source.range_mult, target.data.armor * target.defense_mult)
+		_hit(1 - s, target_index, source, source.alive() * source.data.damage_per_soldier * ratio * factor * targets[target_index])
 
 
 ## Every unit on the front line plus every melee unit behind it fights the enemy's front row.
@@ -157,10 +158,11 @@ func _fight_melee(s: int) -> void:
 		for target_index in targets:
 			var target := _sides[1 - s].units[target_index]
 			var share: float = targets[target_index]
-			var casualties := unit.alive() * _ratio(unit.data.melee_attack, target.data.melee_defense) * MELEE_RATE * TICK
+			var defense := target.data.melee_defense * target.defense_mult
+			var casualties := unit.alive() * _ratio(unit.data.melee_attack * unit.attack_mult, defense) * MELEE_RATE * TICK
 			if charging:
-				casualties += unit.alive() * _ratio(unit.data.charge_attack, target.data.melee_defense) * CHARGE_FACTOR
-			_hit(1 - s, target_index, unit, casualties * share)
+				casualties += unit.alive() * _ratio(unit.data.charge_attack * unit.charge_mult, defense) * CHARGE_FACTOR
+			_hit(1 - s, target_index, unit, casualties * unit.data.damage_per_soldier * share)
 
 
 ## Returns {unit_index: share}, shares summing to 1, over the enemy's active units.
@@ -183,9 +185,9 @@ func _pick_targets(side: int, all_rows: bool) -> Dictionary:
 	return result
 
 
-func _ratio(attack: int, defense: int) -> float:
+func _ratio(attack: float, defense: float) -> float:
 	var total := attack + defense
-	return float(attack) / total if total > 0 else 0.0
+	return attack / total if total > 0.0 else 0.0
 
 
 func _hit(side: int, unit_index: int, source: BattleSide.Unit, casualties: float) -> void:
@@ -193,17 +195,19 @@ func _hit(side: int, unit_index: int, source: BattleSide.Unit, casualties: float
 		_hits[side][unit_index].append([source, casualties * _rng.randf_range(1.0 - VARIANCE, 1.0 + VARIANCE)])
 
 
-## Casualties beyond the target's remaining soldiers are not credited as kills.
+## Casualties beyond the target's remaining soldiers are not credited as kills. A target with
+## hit_points above 1 needs that many casualties per soldier.
 func _apply_hits(target: BattleSide.Unit, unit_hits: Array) -> void:
 	var total := 0.0
 	for hit in unit_hits:
 		total += hit[1]
 	if total <= 0.0:
 		return
-	var effective := minf(1.0, target.soldiers / total)
+	var killed := total / target.data.hit_points
+	var effective := minf(1.0, target.soldiers / killed)
 	for hit in unit_hits:
-		hit[0].kills += hit[1] * effective
-	target.soldiers = maxf(0.0, target.soldiers - total)
+		hit[0].kills += hit[1] / target.data.hit_points * effective
+	target.soldiers = maxf(0.0, target.soldiers - killed)
 
 
 func _update_morale(s: int, i: int) -> void:
@@ -217,6 +221,23 @@ func _update_morale(s: int, i: int) -> void:
 	if unit.alive() > 0 and unit.morale <= 0.0:
 		unit.broken = true
 		record.events.append({"time": time, "type": &"broken", "side": s, "unit": i})
+
+
+## The commander falls once their bodyguard breaks or dies: every other unit of the side loses
+## Generals.FALL_MORALE_LOSS morale (GDD §8, M11d).
+func _check_general(s: int) -> void:
+	var side := _sides[s]
+	if side.general_fallen:
+		return
+	for i in side.units.size():
+		var unit := side.units[i]
+		if unit.is_general_guard and (unit.broken or unit.alive() == 0):
+			side.general_fallen = true
+			record.events.append({"time": time, "type": &"general_fallen", "side": s, "unit": i})
+			for other in side.units:
+				if other != unit and other.is_active():
+					other.morale -= Generals.FALL_MORALE_LOSS
+			return
 
 
 func _check_end() -> void:
