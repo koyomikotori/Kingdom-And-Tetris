@@ -134,7 +134,7 @@ func _ranged_attack(s: int, source: BattleSide.Unit, factor: float, spread_over_
 	var targets := _pick_targets(1 - s, spread_over_rows)
 	for target_index in targets:
 		var target := _sides[1 - s].units[target_index]
-		var ratio := _ratio(source.data.range_attack * source.range_mult, target.data.armor * target.defense_mult)
+		var ratio := _ratio(source.range_attack(), target.data.armor * target.defense_mult)
 		_hit(1 - s, target_index, source, source.alive() * source.data.damage_per_soldier * ratio * factor * targets[target_index])
 
 
@@ -158,8 +158,8 @@ func _fight_melee(s: int) -> void:
 		for target_index in targets:
 			var target := _sides[1 - s].units[target_index]
 			var share: float = targets[target_index]
-			var defense := target.data.melee_defense * target.defense_mult
-			var casualties := unit.alive() * _ratio(unit.data.melee_attack * unit.attack_mult, defense) * MELEE_RATE * TICK
+			var defense := target.melee_defense()
+			var casualties := unit.alive() * _ratio(unit.melee_attack(), defense) * MELEE_RATE * TICK
 			if charging:
 				casualties += unit.alive() * _ratio(unit.data.charge_attack * unit.charge_mult, defense) * CHARGE_FACTOR
 			_hit(1 - s, target_index, unit, casualties * unit.data.damage_per_soldier * share)

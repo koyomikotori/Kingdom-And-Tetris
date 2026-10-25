@@ -8,6 +8,7 @@ signal disband_requested(squad: Army.Squad)
 
 const HEADER_COLOR := Color(1.0, 0.92, 0.55)
 const WARNING_COLOR := Color(1, 0.6, 0.5)
+const XP_COLOR := Color(0.55, 0.8, 1.0)
 
 var _units: Array[UnitData] = []
 var _resource_types: Array[ResourceTypeData] = []
@@ -98,11 +99,19 @@ func _rebuild_squad_list(state: KingdomState) -> void:
 		var unit := state.units[squad.unit_id]
 		var row := HBoxContainer.new()
 		_squad_list.add_child(row)
-		var label := _small_label("%s — %d/%d lính" % [unit.display_name, squad.soldiers, unit.squad_size])
-		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var info := VBoxContainer.new()
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		info.add_theme_constant_override("separation", 1)
+		row.add_child(info)
+		var level := squad.level()
+		var level_text := Experience.SQUAD_LEVEL_NAMES[level]
+		if level > 0:
+			level_text = Experience.SQUAD_LEVEL_MARKS[level] + " " + level_text
+		var label := _small_label("%s · %s — %d/%d lính" % [unit.display_name, level_text, squad.soldiers, unit.squad_size])
 		if squad.soldiers < unit.squad_size:
 			label.add_theme_color_override("font_color", WARNING_COLOR)
-		row.add_child(label)
+		info.add_child(label)
+		info.add_child(_xp_bar(Experience.squad_progress(squad.xp)))
 		var button := Button.new()
 		button.text = "Giải tán"
 		button.focus_mode = Control.FOCUS_NONE
@@ -114,6 +123,22 @@ func _rebuild_squad_list(state: KingdomState) -> void:
 			else:
 				disband_requested.emit(squad))
 		row.add_child(button)
+
+
+## A thin bar showing progress toward the squad's next level.
+func _xp_bar(progress: float) -> ProgressBar:
+	var bar := ProgressBar.new()
+	bar.max_value = 1.0
+	bar.value = progress
+	bar.show_percentage = false
+	bar.custom_minimum_size = Vector2(0, 4)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = XP_COLOR
+	var background := StyleBoxFlat.new()
+	background.bg_color = Color(0, 0, 0, 0.35)
+	bar.add_theme_stylebox_override("fill", fill)
+	bar.add_theme_stylebox_override("background", background)
+	return bar
 
 
 func _section_label(text: String) -> Label:

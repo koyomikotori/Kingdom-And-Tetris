@@ -297,6 +297,30 @@ Các con số sẽ cân bằng lại sau. Chiến thắng Hòa bình thịnh vư
 - **Tướng lạc xin đầu quân:** tướng 1–3★, trả một ít lương thực để nhận (cần còn chỗ).
 - **Hàng tướng xin quy thuận:** đầu lượt ngay sau khi sáp nhập một gia tộc, khả năng cao; tướng 3–5★.
 
+### Kinh nghiệm và cấp (M11e, đã chốt)
+
+**Đơn vị lính — 3 cấp:** **Tân binh** (0 XP) → **Cựu binh** (100 XP) → **Tinh nhuệ** (300 XP).
+
+| Cấp | Cộng thêm |
+|---|---|
+| Tân binh | — |
+| Cựu binh | +2 tấn công cận chiến (xạ thủ: +2 tấn công tầm xa), +2 phòng thủ cận chiến, +2 sĩ khí |
+| Tinh nhuệ | +4 / +4 / +4 |
+
+**Nhận XP:**
+- **Trận đánh:** mỗi đơn vị còn sống sau trận (không vỡ) nhận **+20**, thêm **+2 mỗi lính địch nó hạ**, thêm **+20 nếu phe mình thắng**.
+- **Huấn luyện:** có ít nhất 1 doanh trại thì mỗi lượt mọi đơn vị nhận **+10**, nhưng huấn luyện chỉ đưa tới **Cựu binh** (khoảng 10 lượt). **Tinh nhuệ** chỉ đạt được qua trận đánh. Miễn phí.
+
+**Lính bổ sung pha loãng kinh nghiệm:** XP là trung bình mỗi lính, lính mới có 0 XP, nên khi thêm lính (bổ sung cuối lượt, sự kiện): XP mới = XP cũ × lính cũ / tổng lính. Đơn vị mất một nửa quân rồi bổ sung đầy còn khoảng nửa XP và có thể tụt cấp.
+
+**Tướng:** bắt đầu ở **cấp 1**, cấp tối đa = **2 + số sao** (1★: cấp 3, 6★: cấp 8). Lên cấp tiếp theo cần **100 × cấp hiện tại** XP.
+- Chỉ **tổng tướng ra trận** nhận XP: **+30** mỗi trận, **+30 nếu thắng**, **+5 mỗi lính địch cận vệ hạ**. Tướng ngã trong trận vẫn nhận XP nếu sống sót (bị thương). Tướng dự bị không lên cấp.
+- Mỗi cấp được **1 điểm**; người chơi tự cộng vào **Võ lực** hoặc **Thống suất** trong tab Tướng. Điểm chưa dùng được giữ lại.
+
+**Hiển thị:** tab Quân đội (ký hiệu cấp + thanh XP mỗi đơn vị), màn hình trận (ký hiệu cấp cạnh tên đơn vị), tab Tướng (cấp, thanh XP, nút cộng điểm). Báo cáo sau trận chưa ghi lên cấp; bố cục các tab sẽ gọn lại ở M12.
+
+**Để sau:** quân gia tộc có cấp; **Thảo phạt đạo tặc** — icon đỏ hiện ở góc màn hình, cử 1 tướng, 1 mưu sĩ và vài đơn vị đi như một chuyến commission (kiểu mini game thảo phạt trong Dungeon Village của Kairosoft): cutscene màn hình ngang, một hàng quân xếp theo loại tiến từ trái sang phải, đánh qua từng ải tới khi chinh phục hết hoặc thua hết; nhận tài nguyên, kinh nghiệm, trang bị. Cách này cho tướng dự bị có việc làm.
+
 ## 9. Bản đồ thế giới & ngoại giao
 
 - Thêm tab/nút **Ngoại giao**. Bấm vào thì mở một màn hình bản đồ lớn: vương quốc của mình ở một vị trí, các gia tộc / vương quốc xung quanh hiển thị quanh đó.
@@ -550,8 +574,8 @@ Thống kê trận thắng/thua và trạng thái thắng/thua được lưu cù
 | M11a | Điều kiện thắng/thua, bảng Mục tiêu, màn kết thúc | Xong |
 | M11b | Sự kiện ngẫu nhiên (dữ liệu .tres, có lựa chọn và hậu quả) | Xong |
 | M11c | Kinh tế mới: cấp thành chính, công trình khai thác, Khoáng sản / Gỗ cứng / Ngựa | Xong |
-| M11d | Tướng: sao 1–6, Võ lực / Thống suất / đặc tính theo lãnh thổ, một tổng tướng + cận vệ kỵ binh trong trận, tử trận / bị thương, sự kiện chiêu mộ | Đang làm |
-| M11e | Kinh nghiệm và cấp cho đơn vị và tướng | |
+| M11d | Tướng: sao 1–6, Võ lực / Thống suất / đặc tính theo lãnh thổ, một tổng tướng + cận vệ kỵ binh trong trận, tử trận / bị thương, sự kiện chiêu mộ | Xong |
+| M11e | Kinh nghiệm và cấp: đơn vị 3 cấp (huấn luyện tới Cựu binh, pha loãng khi bổ sung), tướng lên cấp và tự cộng điểm | Đang làm |
 | M11f | Mưu sĩ: cộng kinh tế, ngoại giao | |
 | M12 | **Hỗ trợ cảm ứng + xuất APK** (chạm để xem trước/xác nhận, vuốt để kéo, chụm để zoom, nút thay phím tắt); **sắp xếp lại tab Quân đội và Xây dựng** cho gọn trên điện thoại (ít chữ, thông tin chi tiết mở khi chạm) | |
 | M13 | Pixel art, âm thanh, cân bằng, build Windows + Android | |

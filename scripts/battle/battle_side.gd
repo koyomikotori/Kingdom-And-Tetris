@@ -18,6 +18,12 @@ class Unit:
 	var charge_mult := 1.0
 	var defense_mult := 1.0
 	var range_mult := 1.0
+	## The squad's experience level (Experience.squad_level) and its flat stat bonuses: melee
+	## attack (range attack for ranged units), melee defense; morale is added directly.
+	var level := 0
+	var attack_bonus := 0
+	var defense_bonus := 0
+	var range_bonus := 0
 	var start_soldiers: int
 	## Fractional while casualties accumulate; alive() rounds up.
 	var soldiers: float
@@ -37,6 +43,24 @@ class Unit:
 		start_soldiers = count
 		soldiers = count
 		morale = p_data.morale
+		if squad != null:
+			level = squad.level()
+			var bonus := level * Experience.SQUAD_LEVEL_BONUS
+			if p_data.is_ranged():
+				range_bonus = bonus
+			else:
+				attack_bonus = bonus
+			defense_bonus = bonus
+			morale += bonus
+
+	func melee_attack() -> float:
+		return (data.melee_attack + attack_bonus) * attack_mult
+
+	func melee_defense() -> float:
+		return (data.melee_defense + defense_bonus) * defense_mult
+
+	func range_attack() -> float:
+		return (data.range_attack + range_bonus) * range_mult
 
 	func alive() -> int:
 		return ceili(soldiers - 0.0001) if soldiers > 0.0 else 0

@@ -47,7 +47,8 @@ static func ally_losses(record: BattleRecord, side: int) -> Dictionary[StringNam
 	return result
 
 
-## Applies the result to the kingdom squads that fought on `side` and returns what was lost,
+## Applies the result to the kingdom squads that fought on `side` (squads that are still there
+## gain battle XP, Experience.squad_battle_xp) and returns what was lost,
 ## each as unit_id -> soldiers: {"casualties" (died in battle), "scattered" (broken units, or the
 ## whole army after a failed attack), "retreat_losses" (half of the units that pulled back)}.
 static func apply_to_army(army: Army, record: BattleRecord, side: int, lose_everything: bool = false) -> Dictionary:
@@ -69,4 +70,6 @@ static func apply_to_army(army: Army, record: BattleRecord, side: int, lose_ever
 			bucket[unit_id] = bucket.get(unit_id, 0) + gone
 		if unit.squad != null:
 			army.set_soldiers(unit.squad, keep)
+			if keep > 0:
+				army.add_xp(unit.squad, Experience.squad_battle_xp(unit.kills, won))
 	return {"casualties": casualties, "scattered": scattered, "retreat_losses": retreat_losses}

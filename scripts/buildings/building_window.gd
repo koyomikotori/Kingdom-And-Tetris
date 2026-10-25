@@ -228,8 +228,35 @@ func _refresh_generals() -> void:
 				general.star_text()], generals.dismiss.bind(general)))
 		dismiss.add_theme_color_override("font_color", WARNING_COLOR)
 		buttons.append(dismiss)
-		_generals_box.add_child(_general_row(general, "%s. Phí nuôi: %s mỗi lượt." % [status,
+		_generals_box.add_child(_general_row(general, "%s. %s. Phí nuôi: %s mỗi lượt." % [status, _level_text(general),
 				UiFormat.amounts(generals.ranks[general.stars].upkeep, _resource_types)], buttons))
+		if general.points > 0:
+			_generals_box.add_child(_points_row(general))
+
+
+## Level, XP toward the next one, and the level cap from the general's stars (GDD §8, M11e).
+func _level_text(general: General) -> String:
+	if general.level >= general.max_level():
+		return "Cấp %d (tối đa)" % general.level
+	return "Cấp %d/%d · Kinh nghiệm %d/%d" % [general.level, general.max_level(), general.xp, general.xp_to_next()]
+
+
+## Buttons to add the general's unspent level points to Võ lực or Thống suất.
+func _points_row(general: General) -> Control:
+	var label := _label("Còn %d điểm cộng:" % general.points, 13)
+	label.add_theme_color_override("font_color", ACCENT)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var row := _row([label])
+	for stat: Array in [[&"might", "+1 Võ lực"], [&"command", "+1 Thống suất"]]:
+		var button := _button(stat[1], _spend_point.bind(general, stat[0]))
+		button.disabled = not _state.generals.can_spend_point(general, stat[0])
+		row.add_child(button)
+	return row
+
+
+func _spend_point(general: General, stat: StringName) -> void:
+	if _state.generals.spend_point(general, stat):
+		set_status("%s: %s." % [general.name, "Võ lực %d" % general.might if stat == &"might" else "Thống suất %d" % general.command])
 
 
 ## Name, stars, stats and trait (with whether its condition holds), plus a line and buttons.

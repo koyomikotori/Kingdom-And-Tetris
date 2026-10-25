@@ -5,7 +5,7 @@ extends RefCounted
 ## by step on load; newer ones are refused. Files are written to a temp file first and then
 ## renamed, so a crash never leaves a half-written save.
 
-const SAVE_VERSION := 1
+const SAVE_VERSION := 2
 const AUTO_SLOT := "auto"
 const MANUAL_SLOTS := 3
 const DEFAULT_FOLDER := "user://saves"
@@ -103,10 +103,20 @@ static func migrate(game: Dictionary, version: int) -> Dictionary:
 	var data := game.duplicate(true)
 	while version < SAVE_VERSION:
 		match version:
-			_:
-				pass  # No format changes yet.
+			1:
+				_migrate_from_1(data)
 		version += 1
 	return data
+
+
+## v2 (M11e): squads have XP; generals have a level, XP and unspent points.
+static func _migrate_from_1(data: Dictionary) -> void:
+	for squad: Dictionary in data.get("army", []):
+		squad["xp"] = 0.0
+	var generals: Dictionary = data.get("generals", {})
+	for key in ["generals", "candidates"]:
+		for general: Dictionary in generals.get(key, []):
+			general.merge({"level": 1, "xp": 0, "points": 0})
 
 
 func _read(slot: String) -> Dictionary:
