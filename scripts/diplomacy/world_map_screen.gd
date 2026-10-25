@@ -1,7 +1,8 @@
 class_name WorldMapScreen
 extends Control
-## Full-screen world map (GDD §9.1): the map on the left (70%), the selected clan's details and
-## trade/gift forms on the right (30%). Emits `closed` when the player goes back. Built in code.
+## Full-screen world map (GDD §9.1): the map on the left (70%), the selected clan's summary and
+## action buttons on the right (30%); actions open their dialog over this screen. Emits `closed`
+## when the player goes back. Built in code.
 
 signal closed
 ## Forwarded from the clan panel; the kingdom scene closes the map and runs the battle.
@@ -53,6 +54,7 @@ func open(state: KingdomState, resource_types: Array[ResourceTypeData]) -> void:
 	row.add_child(scroll)
 	_panel = ClanPanel.new()
 	_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_panel.dialog_host = self
 	_panel.setup(state, resource_types)
 	var panel_margin := _margin(_panel)
 	panel_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL

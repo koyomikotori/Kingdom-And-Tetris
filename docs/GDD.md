@@ -246,6 +246,8 @@ Biển, sông: chưa làm, để sau.
 - Nút **Ngoại giao** trên thanh trên cùng mở màn hình bản đồ thế giới (toàn màn hình).
 - Bản đồ dạng **điểm vùng nối đường**: vương quốc ở giữa, mỗi gia tộc là một điểm, có đường nối giữa các vùng giáp nhau.
 - Chạm vào một gia tộc → bảng bên phải: mô tả, tính cách, sức mạnh, hướng, quan hệ, tài nguyên dư/thiếu, và các hành động.
+- **Bảng lệnh kiểu Shogun 2** (chốt sau M9b): thanh bên phải chỉ có phần tóm tắt và **mỗi lệnh một nút** (Trao đổi · Tặng quà · Hợp đồng giao thương · Liên minh · Bất tương xâm · Tuyên chiến; khi đang chiến tranh: Tấn công · Nghị hòa · Tặng quà, các lệnh hòa bình bị ẩn). Nút không dùng được thì mờ đi, lý do ghi ngay dưới.
+- Bấm một nút → **bảng riêng giữa màn hình** (bản đồ mờ phía sau) để chỉnh chi tiết, xem trước kết quả / khả năng đồng ý rồi mới xác nhận. Bảng nào dùng tài nguyên (trao đổi, tặng quà, hợp đồng, nghị hòa) hiện luôn **kho tài nguyên hiện có**. Tuyên chiến liệt kê hết hậu quả; Tấn công cho xem trước quân hai bên (cả đồng minh và bạn của đối phương).
 
 ### 9.2 Gia tộc (tên tạm, sửa trong `data/clans/`)
 
