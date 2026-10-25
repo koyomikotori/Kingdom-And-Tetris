@@ -14,6 +14,11 @@ const DECLARE_RELATION := -60
 const DECLARE_RELATION_DROP := 40
 ## Every other clan's relation change when the player declares war.
 const DECLARE_OTHERS_PENALTY := -5
+## Instead of DECLARE_OTHERS_PENALTY for the target's friends (ClanData.friends).
+const DECLARE_FRIEND_PENALTY := -15
+## Added to every other clan's change when the player breaks a treaty by declaring war (GDD §9.7).
+const BETRAY_ALLY_PENALTY := -20
+const BREAK_PACT_PENALTY := -10
 ## Chance per turn that a hostile neighbour declares war, by personality:
 ## PEACEFUL, AGGRESSIVE, MERCHANT, ISOLATED.
 const AI_DECLARE_CHANCE: Array[float] = [0.02, 0.15, 0.05, 0.05]
@@ -101,27 +106,40 @@ func check_declare(clan_id: StringName) -> DeclareResult:
 	return DeclareResult.OK
 
 
-## The player declares war: the target turns hostile and every other clan trusts the kingdom less.
+## The player declares war: the target turns hostile and every other clan trusts the kingdom less,
+## its friends most. Breaking an alliance or a non-aggression pact costs extra with everyone.
 func declare_war(clan_id: StringName) -> DeclareResult:
 	var result := check_declare(clan_id)
 	if result != DeclareResult.OK:
 		return result
 	var clan := _diplomacy.clans[clan_id]
-	_diplomacy.change_relation(clan_id, mini(clan.relation - DECLARE_RELATION_DROP, DECLARE_RELATION) - clan.relation)
+	_diplomacy.change_relation(clan_id, mini(clan.relation - DECLARE_RELATION_DROP, DECLARE_RELATION) - clan.relation,
+			Diplomacy.MEMORY_WAR)
 	for other in _diplomacy.clans:
 		if other != clan_id:
-			_diplomacy.change_relation(other, DECLARE_OTHERS_PENALTY)
+			_diplomacy.change_relation(other, declare_penalty(clan_id, other), Diplomacy.MEMORY_AGGRESSION)
 	_start_war(clan_id)
 	return DeclareResult.OK
+
+
+## Relation change for `other` if the player declared war on `clan_id` now.
+func declare_penalty(clan_id: StringName, other: StringName) -> int:
+	var clan := _diplomacy.clans[clan_id]
+	var penalty := DECLARE_FRIEND_PENALTY if clan.data.friends.has(other) else DECLARE_OTHERS_PENALTY
+	if clan.is_allied():
+		penalty += BETRAY_ALLY_PENALTY
+	if clan.has_pact():
+		penalty += BREAK_PACT_PENALTY
+	return penalty
 
 
 func _start_war(clan_id: StringName) -> void:
 	var front := fronts[clan_id]
 	front.at_war = true
 	front.turns_since_invasion = 0
-	var agreement := _diplomacy.get_agreement(clan_id)
-	if agreement != null:
-		_diplomacy.agreements.erase(agreement)
+	_diplomacy.clans[clan_id].alliance_turns = 0
+	_diplomacy.clans[clan_id].pact_turns = 0
+	_diplomacy.remove_agreement(clan_id)
 	changed.emit()
 
 
@@ -141,7 +159,7 @@ func end_turn(rng: RandomNumberGenerator) -> Array[StringName]:
 		var clan := _diplomacy.clans[clan_id]
 		if front.at_war:
 			if clan.relation > DECLARE_RELATION:
-				_diplomacy.change_relation(clan_id, DECLARE_RELATION - clan.relation)
+				_diplomacy.change_relation(clan_id, DECLARE_RELATION - clan.relation, Diplomacy.MEMORY_WAR)
 		elif check_declare(clan_id) == DeclareResult.OK and _declare_chance(clan_id) > 0.0 \
 				and rng.randf() < _declare_chance(clan_id):
 			_start_war(clan_id)
@@ -150,8 +168,11 @@ func end_turn(rng: RandomNumberGenerator) -> Array[StringName]:
 	return declared
 
 
-## Chance this turn that the clan declares war on its own (0 unless Tense or Hostile).
+## Chance this turn that the clan declares war on its own (0 unless Tense or Hostile, and never
+## during a non-aggression pact).
 func _declare_chance(clan_id: StringName) -> float:
+	if _diplomacy.clans[clan_id].has_pact():
+		return 0.0
 	var personality := _diplomacy.clans[clan_id].data.personality
 	match _diplomacy.get_tier(clan_id):
 		Diplomacy.Tier.HOSTILE:
@@ -182,13 +203,21 @@ func invasion_size(clan_id: StringName) -> int:
 
 ## The clan's soldiers as battle units, split by its army_units weights into squads.
 func create_clan_side(clan_id: StringName, soldiers: int, units: Dictionary[StringName, UnitData]) -> BattleSide:
+	var side := BattleSide.new(_diplomacy.clans[clan_id].data.display_name)
+	add_clan_units(side, clan_id, soldiers, units)
+	return side
+
+
+## Adds `soldiers` of the clan to `side`. `lent` marks them as sent to help another army
+## (BattleSide.Unit.ally), so their losses come out of this clan's strength.
+func add_clan_units(side: BattleSide, clan_id: StringName, soldiers: int, units: Dictionary[StringName, UnitData],
+		lent: bool = false) -> void:
 	var data := _diplomacy.clans[clan_id].data
-	var side := BattleSide.new(data.display_name)
 	var total_weight := 0.0
 	for unit_id in data.army_units:
 		total_weight += data.army_units[unit_id]
 	if total_weight <= 0.0:
-		return side
+		return
 	var remaining := soldiers
 	var ids := data.army_units.keys()
 	for i in ids.size():
@@ -200,9 +229,8 @@ func create_clan_side(clan_id: StringName, soldiers: int, units: Dictionary[Stri
 		remaining -= share
 		while share > 0:
 			var squad := mini(share, unit.squad_size)
-			side.add_unit(unit, squad)
+			side.add_unit(unit, squad, null, data if lent else null)
 			share -= squad
-	return side
 
 
 func lose_soldiers(clan_id: StringName, amount: int) -> void:
@@ -244,9 +272,7 @@ func annex(clan_id: StringName) -> Vector2i:
 	front.annexed = true
 	front.at_war = false
 	_diplomacy.clans[clan_id].annexed = true
-	var agreement := _diplomacy.get_agreement(clan_id)
-	if agreement != null:
-		_diplomacy.agreements.erase(agreement)
+	_diplomacy.remove_agreement(clan_id)
 	for other in _diplomacy.clans[clan_id].data.roads:
 		if fronts.has(other) and not fronts[other].annexed and fronts[other].direction == ClanData.Direction.NONE:
 			fronts[other].direction = front.direction
@@ -291,7 +317,7 @@ func propose_peace(rng: RandomNumberGenerator, stockpile: Stockpile, clan_id: St
 	front.truce_turns = TRUCE_TURNS
 	var relation := _diplomacy.clans[clan_id].relation
 	if relation < PEACE_MIN_RELATION:
-		_diplomacy.change_relation(clan_id, PEACE_MIN_RELATION - relation)
+		_diplomacy.change_relation(clan_id, PEACE_MIN_RELATION - relation, Diplomacy.MEMORY_WAR)
 	changed.emit()
 	return PeaceResult.OK
 

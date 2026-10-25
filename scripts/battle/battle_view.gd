@@ -29,6 +29,8 @@ const STEP_UP_SPEED := 60.0
 const LANE_SPEED := 70.0
 ## Screen-left side, screen-right side.
 const SIDE_COLORS: Array[Color] = [Color(0.4, 0.6, 1.0), Color(0.95, 0.4, 0.35)]
+## How far units lent by another clan lean toward that clan's banner color.
+const ALLY_COLOR_WEIGHT := 0.55
 const SKY_COLOR := Color(0.16, 0.2, 0.3)
 const GROUND_COLOR := Color(0.26, 0.33, 0.2)
 const ZONE_LINE_COLOR := Color(1, 1, 1, 0.08)
@@ -337,7 +339,7 @@ func _draw() -> void:
 
 
 func _draw_unit(view: UnitView) -> void:
-	var color := SIDE_COLORS[view.screen_side]
+	var color := unit_color(view.unit, view.screen_side)
 	var facing := _facing(view.screen_side)
 	var fighting := _simulator.is_melee_started() and absf(view.pos.x - _target_x(view)) < 1.0 \
 			and not _is_in_side_zone(view.unit)
@@ -356,9 +358,30 @@ func _draw_unit(view: UnitView) -> void:
 			Figure.State.FLEE:
 				var bob := absf(sin(_clock * 16.0 + figure.phase)) * -3.0
 				_draw_figure(figure.pos + Vector2(0, bob), 0.0, -facing, color.darkened(0.45), view.unit.data)
+	if view.unit.ally != null:
+		_draw_ally_banner(view, facing)
+
+
+## A small pennant in the lending clan's color above the unit's first standing figure.
+func _draw_ally_banner(view: UnitView, facing: float) -> void:
+	for figure in view.figures:
+		if figure.state == Figure.State.STAND:
+			# In figure units, like _draw_figure: the head tops out at -19.
+			draw_set_transform(view.pos + figure.offset, 0.0, Vector2.ONE * FIGURE_SCALE)
+			draw_line(Vector2(0, -20), Vector2(0, -31), Color(0.25, 0.2, 0.15), 1.0)
+			draw_colored_polygon(PackedVector2Array([Vector2(0, -31), Vector2(7 * facing, -28.5), Vector2(0, -26)]),
+					view.unit.ally.color)
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+			return
 
 
 ## A stick soldier standing on `foot`, facing right when facing > 0.
+## Side color, tinted toward the lending clan's banner for allied units.
+static func unit_color(unit: BattleSide.Unit, screen_side: int) -> Color:
+	var color := SIDE_COLORS[screen_side]
+	return color.lerp(unit.ally.color, ALLY_COLOR_WEIGHT) if unit.ally != null else color
+
+
 func _draw_figure(foot: Vector2, rotation: float, facing: float, color: Color, data: UnitData) -> void:
 	draw_set_transform(foot, rotation, Vector2.ONE * FIGURE_SCALE)
 	draw_line(Vector2(-2, 0), Vector2(-1, -5), color.darkened(0.4), 1.5)

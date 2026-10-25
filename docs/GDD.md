@@ -272,12 +272,21 @@ Thang −100 → +100:
 | Thân thiện | 20 → 59 |
 | Thân thiết | ≥ 60 |
 
-- Mỗi lượt quan hệ nhích về **mức mục tiêu** của gia tộc (ôn hòa / thương nhân 2 điểm, hiếu chiến 3, cô lập 1).
-- **Mức mục tiêu = mức gốc − Uy hiếp × hệ số e dè** (hiếu chiến ×1.0, cô lập ×0.8, ôn hòa ×0.5, thương nhân ×0.4), +15 khi đang có hợp đồng dài hạn.
-- **Uy hiếp** của vương quốc = (số ô lãnh thổ − 16) / 4 + 15 × số gia tộc đã sáp nhập + số lính / 20. Vương quốc càng lớn mạnh, các gia tộc càng e dè: quan hệ tự trượt xuống thay vì hồi về như cũ.
+**Quan hệ = tổng các yếu tố** (kiểu Total War, đã chốt sau khi chơi thử M9b). Người chơi luôn xem được từng yếu tố, và chúng cộng lại đúng bằng con số trên thanh:
+- **Yếu tố lâu dài:**
+  - Thiện cảm gốc (mức gốc trong file gia tộc).
+  - E dè vương quốc lớn mạnh (trừ).
+  - Đang có hợp đồng dài hạn +15.
+  - Đang liên minh +30.
+  - Đang có hiệp ước bất tương xâm +10.
+- **Sự kiện gần đây**, ghi riêng theo nguồn: ấn tượng ban đầu (quan hệ đầu − mức gốc), quà tặng, giao thương, chuyện hợp đồng, chiến tranh với vương quốc, vương quốc gây chiến với gia tộc khác, trận đánh chung, bị hủy liên minh. Mỗi nguồn **mờ dần về 0** mỗi lượt (ôn hòa / thương nhân 2 điểm, hiếu chiến 3, cô lập 1).
+- **E dè** = Uy hiếp × hệ số (hiếu chiến ×1.0, cô lập ×0.8, ôn hòa ×0.5, thương nhân ×0.4). Không áp ngay mà **tăng dần** tới mức đó, mỗi lượt cùng số điểm như trên (giảm dần khi Uy hiếp giảm).
+- **Uy hiếp** của vương quốc = (số ô lãnh thổ − 16) / 4 + 15 × số gia tộc đã sáp nhập + số lính / 20. Vương quốc càng lớn mạnh, các gia tộc càng e dè.
+- Tổng bị giới hạn −100 → 100. Mỗi thay đổi dịch đúng con số đang hiển thị (phần vượt giới hạn bị bỏ, không nằm ẩn).
+- Bảng gia tộc hiện quan hệ, mức "về lâu dài" (khi mọi sự kiện đã mờ hết và e dè đã đủ), nút **Chi tiết quan hệ** (chạm để mở) liệt kê phần cộng và phần trừ; rê chuột vào thanh quan hệ cũng hiện bảng đó.
 - **Tặng quà:** mỗi 5 giá trị tài nguyên = +1 quan hệ, nhân theo tính cách (ôn hòa ×1.5, thương nhân ×1, hiếu chiến ×0.6, cô lập ×0.5); tối đa +15 mỗi lượt cho mỗi gia tộc.
 - Mỗi lần trao đổi: +1 quan hệ (tối đa +3 mỗi lượt).
-- "Đồng minh" là hiệp ước riêng ở M9, không phải một mức quan hệ.
+- "Đồng minh" là hiệp ước riêng (§9.7), không phải một mức quan hệ.
 
 ### 9.4 Trao đổi tài nguyên
 
@@ -294,9 +303,9 @@ Thang −100 → +100:
   - Khả năng = 1.5 − (Y đòi / Y công bằng) + quan hệ/200 + tính cách (thương nhân +0.15, ôn hòa +0.05, hiếu chiến −0.1, cô lập −0.2), giới hạn 0 → 95%. "Y công bằng" là số họ sẽ trả cho X theo giá trao đổi một lần (§9.4).
   - Mức: Rất có thể (≥80%), Có thể (≥55%), Khó (≥30%), Rất khó (>0), Không thể.
   - Gia tộc từ chối khi quan hệ Căng thẳng trở xuống. Bị từ chối → phải đợi lượt sau mới đề nghị lại với gia tộc đó.
-- **Ký:** quan hệ +8 ngay. Mỗi lượt (lúc kết thúc lượt): đưa X, nhận Y, quan hệ +1.
+- **Ký:** quan hệ +8 ngay (sự kiện, mờ dần), và +15 suốt thời gian hợp đồng còn chạy (§9.3). Mỗi lượt (lúc kết thúc lượt): đưa X, nhận Y, quan hệ +1.
 - **Thiếu hàng để giao:** lượt đó bỏ qua, quan hệ −3.
-- **Hết hạn:** quan hệ +3. **Người chơi hủy:** quan hệ −20. **Quan hệ xuống Thù địch:** gia tộc tự hủy.
+- **Hết hạn:** quan hệ +3 (và mất +15 của hợp đồng). **Người chơi hủy:** quan hệ −20. **Quan hệ xuống Thù địch:** gia tộc tự hủy.
 
 ### 9.6 Chiến tranh (M9)
 
@@ -326,15 +335,51 @@ Thang −100 → +100:
 - Khả năng = 0.1 + 0.8 × (tỉ lệ quân họ đã mất) + quan hệ/200 + giá trị bồi thường/100, tối đa 95%. Mỗi lượt đề nghị 1 lần.
 - Hòa xong: quan hệ ít nhất −30 (Căng thẳng), **đình chiến 10 lượt** (không bên nào tuyên chiến lại).
 
-### 9.7 Ý tưởng ngoại giao để sau
+### 9.7 Liên minh & bất tương xâm (M9b)
+
+**Bạn bè giữa các gia tộc** (cố định trong dữ liệu, `friends` trong `data/clans/`, luôn hai chiều):
+
+| Gia tộc | Bạn |
+|---|---|
+| Lang Tộc Phương Bắc | Vương Quốc Kim Ưng |
+| Vương Quốc Kim Ưng | Lang Tộc Phương Bắc, Thương Hội Đông Hải |
+| Thương Hội Đông Hải | Vương Quốc Kim Ưng |
+| Hắc Sơn Bảo | Bộ Lạc Thảo Nguyên |
+| Bộ Lạc Thảo Nguyên | Hắc Sơn Bảo, Điền Trang Nam Lâm |
+| Điền Trang Nam Lâm | Bộ Lạc Thảo Nguyên |
+
+**Liên minh:**
+- Chỉ đề nghị được khi quan hệ **Thân thiết (≥ 60)** và không chiến tranh. Hiện khả năng đồng ý trước khi gửi:
+  - Khả năng = 0.3 + (quan hệ − 60) / 80 + tính cách (như hợp đồng: thương nhân +0.15, ôn hòa +0.05, hiếu chiến −0.1, cô lập −0.2) − Uy hiếp / 200, giới hạn 0 → 95%.
+  - Bị từ chối → **3 lượt** sau mới đề nghị lại được.
+- Thời hạn **20 lượt**. Trong **5 lượt cuối** có thể **gia hạn** thêm 20 lượt (lại tính khả năng đồng ý). Hết hạn thì phải ký lại từ đầu.
+- Khi đang liên minh, **quan hệ +30** ngay (yếu tố lâu dài, §9.3); hết liên minh thì mất +30 ngay. Uy hiếp vẫn tác động.
+- Quan hệ tụt xuống dưới **Thân thiện (< 20)** → liên minh tự tan. Người chơi chủ động hủy → quan hệ **−30**.
+
+**Đồng minh gửi quân:**
+- Vào mọi trận của vương quốc: bị cướp, bị xâm lược, đi đánh. Mỗi đồng minh gửi **30% sức mạnh hiện có** (cùng loại lính theo `army_units`), đứng chung phe người chơi, vẽ màu cờ của họ.
+- Không gửi nếu sức mạnh của họ dưới 30% tối đa, hoặc kẻ địch là **bạn** của họ.
+- Lính đồng minh chết hay mất khi thua thì sức mạnh của đồng minh giảm thật (luật thua chung §7.6, không chịu luật "mất toàn bộ quân" khi đi đánh thua), rồi hồi dần như thường.
+- Thắng trận chung: quan hệ **+5**. Thua: **−10**.
+
+**Hiệp ước bất tương xâm:**
+- Ký được khi quan hệ **Thân thiện (≥ 20)** trở lên và không chiến tranh, luôn được đồng ý. Kéo dài **10 lượt**, hết hạn thì ký lại.
+- Đang có hiệp ước: **quan hệ +10** (yếu tố lâu dài, §9.3); hết hạn hoặc bị phá thì mất +10 ngay.
+- Trong thời gian đó gia tộc **không tuyên chiến** với vương quốc, dù quan hệ có tụt. Có thể ký cùng lúc với liên minh (đồng minh vẫn gửi quân như thường).
+
+**Khi bạn đánh một gia tộc:**
+- Bạn của họ gửi **30% quân** sang giúp họ phòng thủ (cùng điều kiện ≥ 30% sức mạnh), trừ khi người bạn đó là đồng minh của bạn hoặc đang có bất tương xâm với bạn. Lính họ mất cũng trừ vào sức mạnh của họ.
+- Người chơi tuyên chiến: bạn của mục tiêu **−15** quan hệ (thay cho −5 như các gia tộc khác).
+- **Phá hiệp ước:** tuyên chiến với đồng minh → liên minh tan, mọi gia tộc khác thêm **−20**. Tuyên chiến khi đang bất tương xâm → hiệp ước mất, mọi gia tộc khác thêm **−10**.
+- Chiến tranh nổ ra (bất kể bên nào tuyên chiến) thì liên minh và bất tương xâm với gia tộc đó mất.
+
+### 9.8 Ý tưởng ngoại giao để sau
 
 - Tăng độ khó: gia tộc hồi quân nhanh hơn / mạnh dần theo thời gian, quân xâm lược đông hơn ở giai đoạn sau.
 
-- Hiệp ước bất tương xâm (không tấn công nhau trong N lượt).
 - Kết thông gia (quan hệ tăng lâu dài, cần tướng/người trong gia đình — M11).
 - Yêu sách / cống nạp: gia tộc mạnh đòi nộp tài nguyên mỗi lượt, từ chối thì quan hệ giảm và dễ bị xâm lược; người chơi mạnh cũng có thể đòi lại.
 - Mượn đường quân sự (đánh gia tộc ở xa qua đất láng giềng — M9).
-- Liên minh cùng đánh một kẻ thù chung (M9).
 - Sự kiện ngoại giao ngẫu nhiên: sứ giả đến, gia tộc gặp nạn đói xin viện trợ, hai gia tộc gây chiến với nhau…
 
 ## 10. Quyết định kỹ thuật
@@ -363,8 +408,8 @@ Thang −100 → +100:
 | M6 | **Chiến đấu v2** (logic): chỉ số mới, sĩ khí, charge, súng 1 loạt, cung theo thời gian nạp, mô phỏng theo tick, rút lui + **quản lý đơn vị** (bổ sung quân, giới hạn theo doanh trại, giải tán) | Xong |
 | M7 | Màn hình trận đánh cinematic (10/18/44/18/10, hoạt ảnh, tạm dừng, tăng tốc, rút lui, bỏ qua) | Xong |
 | M8 | Bản đồ thế giới làm sẵn + gia tộc + quan hệ + giao thương + hợp đồng dài hạn | Xong |
-| M9 | Chiến tranh: tuyên chiến, quân xâm lược (mất đất theo hướng), đi xâm lược, nghị hòa, sáp nhập + mở rộng bản đồ | Đang làm |
-| M9b | Liên minh: hiệp ước, đồng minh gửi quân vào trận, bất tương xâm | |
+| M9 | Chiến tranh: tuyên chiến, quân xâm lược (mất đất theo hướng), đi xâm lược, nghị hòa, sáp nhập + mở rộng bản đồ | Xong |
+| M9b | Liên minh: hiệp ước, đồng minh gửi quân vào trận, bất tương xâm | Đang làm |
 | M10 | Lưu/tải (JSON có version) | |
 | M11 | Sự kiện, tướng, mưu sĩ, kinh nghiệm, điều kiện thắng/thua | |
 | M12 | **Hỗ trợ cảm ứng + xuất APK** (chạm để xem trước/xác nhận, vuốt để kéo, chụm để zoom, nút thay phím tắt) | |

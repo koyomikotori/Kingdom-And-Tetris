@@ -8,6 +8,9 @@ class Unit:
 	var data: UnitData
 	## The kingdom squad this unit came from, or null (bandits, test armies).
 	var squad: Army.Squad
+	## The clan that lent this unit to the side (an ally of the kingdom, or a friend helping the
+	## defending clan), or null for the side's own army. Its losses come out of that clan's strength.
+	var ally: ClanData
 	var start_soldiers: int
 	## Fractional while casualties accumulate; alive() rounds up.
 	var soldiers: float
@@ -48,9 +51,11 @@ func _init(p_display_name: String) -> void:
 
 
 ## Adds a unit; counts of 0 or less are ignored.
-func add_unit(data: UnitData, soldiers: int, squad: Army.Squad = null) -> void:
+func add_unit(data: UnitData, soldiers: int, squad: Army.Squad = null, ally: ClanData = null) -> void:
 	if soldiers > 0:
-		units.append(Unit.new(data, soldiers, squad))
+		var unit := Unit.new(data, soldiers, squad)
+		unit.ally = ally
+		units.append(unit)
 
 
 func active_units() -> Array[Unit]:

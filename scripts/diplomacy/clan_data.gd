@@ -32,6 +32,9 @@ const PERSONALITY_NAMES: Array[String] = ["Ôn hòa", "Hiếu chiến", "Thươn
 @export var base_relation: int = 0
 ## Other clans this one shares a road with; &"kingdom" is the player.
 @export var roads: Array[StringName] = []
+## Clans that send soldiers to defend this one when the kingdom attacks it (GDD §9.7).
+## Keep it mutual: list each pair in both files.
+@export var friends: Array[StringName] = []
 
 
 func is_neighbor() -> bool:

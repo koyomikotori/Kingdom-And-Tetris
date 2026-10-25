@@ -175,6 +175,8 @@ func _on_end_turn_pressed() -> void:
 		lines.append(_describe_agreement_turn(entry))
 	if not report.buildings_supplied:
 		lines.append("Không đủ phí duy trì công trình: công trình tạm ngưng tác dụng lượt này.")
+	for entry: Dictionary in report.treaties:
+		lines.append(_describe_treaty_event(entry))
 	for clan_id: StringName in report.war_declared:
 		lines.append("%s đã tuyên chiến với vương quốc!" % _clan_name(clan_id))
 	if report.has("pending_invasion"):
@@ -210,7 +212,7 @@ func _play_raid(simulator: BattleSimulator) -> void:
 	_play_battle(simulator, BattleRecord.DEFENDER, "Quân cướp tấn công vương quốc!", func(record: BattleRecord) -> void:
 		var result := state.finish_raid(record)
 		placement_status.text += " %s" % ("Đã đánh lui." if result.won else "Thất thủ.")
-		_show_battle_report(result))
+		_show_battle_report(result, _ally_lines(result)))
 
 
 func _play_invasion(clan_id: StringName, simulator: BattleSimulator) -> void:
@@ -221,6 +223,7 @@ func _play_invasion(clan_id: StringName, simulator: BattleSimulator) -> void:
 		$UI.add_child(report)
 		var lines := report.army_loss_lines(result, state.units)
 		lines.append("Quân %s mất %d lính." % [_clan_name(clan_id), result.enemy_lost])
+		lines.append_array(_ally_lines(result))
 		if not result.lost_cells.is_empty():
 			lines.append("Mất %d ô đất %s." % [result.lost_cells.size(),
 					ClanData.DIRECTION_NAMES[state.wars.fronts[clan_id].direction].to_lower()])
@@ -249,6 +252,7 @@ func _attack_clan(clan_id: StringName) -> void:
 		var lines := report.army_loss_lines(result, state.units)
 		lines.append("Quân %s mất %d lính, còn %d." % [_clan_name(clan_id), result.enemy_lost,
 				state.wars.fronts[clan_id].strength])
+		lines.append_array(_ally_lines(result))
 		var loot := UiFormat.amounts(result.loot, _resource_types)
 		if not loot.is_empty():
 			lines.append("Chiến lợi phẩm: %s." % loot)
@@ -266,6 +270,30 @@ func _attack_clan(clan_id: StringName) -> void:
 				BattleRecord.ATTACKER, lines)
 		_battle_report = report
 		report.closed.connect(func() -> void: _battle_report = null))
+
+
+## Report lines for the soldiers other clans lent to this battle (Alliances.apply_battle).
+func _ally_lines(result: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	for clan_id: StringName in result.allies:
+		var entry: Dictionary = result.allies[clan_id]
+		lines.append("Đồng minh %s gửi %d lính, mất %d (quan hệ %+d)." % [_clan_name(clan_id), entry.sent,
+				entry.lost, entry.relation])
+	for clan_id: StringName in result.helpers:
+		var entry: Dictionary = result.helpers[clan_id]
+		lines.append("%s gửi %d lính sang giúp đối phương, mất %d." % [_clan_name(clan_id), entry.sent, entry.lost])
+	return lines
+
+
+func _describe_treaty_event(entry: Dictionary) -> String:
+	var clan_name := _clan_name(entry.clan_id)
+	match entry.event:
+		&"alliance_expired":
+			return "Liên minh với %s đã hết hạn. Có thể ký lại trên bản đồ thế giới." % clan_name
+		&"alliance_broken":
+			return "%s rời bỏ liên minh vì quan hệ đi xuống." % clan_name
+		_:
+			return "Hiệp ước bất tương xâm với %s đã hết hạn." % clan_name
 
 
 func _clan_name(clan_id: StringName) -> String:
@@ -312,10 +340,10 @@ func _open_world_map() -> void:
 	_world_map.attack_requested.connect(_attack_clan)
 
 
-func _show_battle_report(raid: Dictionary) -> void:
+func _show_battle_report(raid: Dictionary, extra_lines: Array[String] = []) -> void:
 	_battle_report = BattleReport.new()
 	$UI.add_child(_battle_report)
-	_battle_report.show_raid(raid, _resource_types, state.units)
+	_battle_report.show_raid(raid, _resource_types, state.units, extra_lines)
 	_battle_report.closed.connect(func() -> void: _battle_report = null)
 
 

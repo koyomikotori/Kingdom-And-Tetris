@@ -95,7 +95,7 @@ func _build_middle(simulator: BattleSimulator) -> Control:
 	var sides := [_player_side, 1 - _player_side]  # left, right
 	for screen_side in 2:
 		var panel := BattleInfoPanel.new()
-		panel.setup(simulator.record.sides[sides[screen_side]], BattleView.SIDE_COLORS[screen_side])
+		panel.setup(simulator.record.sides[sides[screen_side]], screen_side)
 		_info_panels.append(panel)
 	row.add_child(_info_column(_info_panels[0]))
 	_view = BattleView.new()
