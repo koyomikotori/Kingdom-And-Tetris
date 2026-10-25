@@ -56,8 +56,7 @@ func _ready() -> void:
 	board_view.setup(board, _terrains, _buildings)
 	board_view.cell_hovered.connect(_on_cell_hovered)
 	board_view.cell_clicked.connect(_on_cell_clicked)
-	# Container sizes are only sorted next frame, so use the top bar's minimum height.
-	camera.focus_on(board_view.get_board_rect(), side_panel.size.x, top_bar.get_combined_minimum_size().y)
+	_focus_camera()
 
 	var seed_value := piece_seed if piece_seed != 0 else randi()
 	var hand := PieceHand.new(PieceGenerator.new(_shapes, _terrains, seed_value))
@@ -66,6 +65,9 @@ func _ready() -> void:
 	state.stockpile.changed.connect(_refresh_economy)
 	state.army.changed.connect(_refresh_economy)
 	state.diplomacy.changed.connect(_refresh_economy)
+	state.board.resized.connect(func(_shift: Vector2i) -> void:
+		board_view.queue_redraw()
+		_focus_camera())
 	state.turn_started.connect(_on_turn_started)
 
 	build_panel.setup(_buildings, _resource_types)
@@ -173,7 +175,13 @@ func _on_end_turn_pressed() -> void:
 		lines.append(_describe_agreement_turn(entry))
 	if not report.buildings_supplied:
 		lines.append("Không đủ phí duy trì công trình: công trình tạm ngưng tác dụng lượt này.")
-	if report.has("pending_raid"):
+	for clan_id: StringName in report.war_declared:
+		lines.append("%s đã tuyên chiến với vương quốc!" % _clan_name(clan_id))
+	if report.has("pending_invasion"):
+		var invasion: Dictionary = report.pending_invasion
+		lines.append("%s kéo quân xâm lược!" % _clan_name(invasion.clan_id))
+		_play_invasion(invasion.clan_id, invasion.simulator)
+	elif report.has("pending_raid"):
 		lines.append("Quân cướp tấn công!")
 		_play_raid(report.pending_raid)
 	placement_status.text = "\n".join(lines)
@@ -187,16 +195,87 @@ func _unit_amounts(counts: Dictionary) -> String:
 	return ", ".join(parts)
 
 
-## Shows the raid on the battle screen, then applies its outcome and opens the report.
-func _play_raid(simulator: BattleSimulator) -> void:
+## Plays a battle on the battle screen, then calls `on_finished` with its record.
+func _play_battle(simulator: BattleSimulator, player_side: int, title: String, on_finished: Callable) -> void:
 	_battle_screen = BattleScreen.new()
 	$UI.add_child(_battle_screen)
-	_battle_screen.start(simulator, BattleRecord.DEFENDER, "Quân cướp tấn công vương quốc!")
+	_battle_screen.start(simulator, player_side, title)
 	_battle_screen.finished.connect(func(record: BattleRecord) -> void:
 		_battle_screen = null
+		on_finished.call(record))
+
+
+## Shows the raid on the battle screen, then applies its outcome and opens the report.
+func _play_raid(simulator: BattleSimulator) -> void:
+	_play_battle(simulator, BattleRecord.DEFENDER, "Quân cướp tấn công vương quốc!", func(record: BattleRecord) -> void:
 		var result := state.finish_raid(record)
 		placement_status.text += " %s" % ("Đã đánh lui." if result.won else "Thất thủ.")
 		_show_battle_report(result))
+
+
+func _play_invasion(clan_id: StringName, simulator: BattleSimulator) -> void:
+	var title := "%s xâm lược vương quốc!" % _clan_name(clan_id)
+	_play_battle(simulator, BattleRecord.DEFENDER, title, func(record: BattleRecord) -> void:
+		var result := state.finish_invasion(clan_id, record)
+		var report := BattleReport.new()
+		$UI.add_child(report)
+		var lines := report.army_loss_lines(result, state.units)
+		lines.append("Quân %s mất %d lính." % [_clan_name(clan_id), result.enemy_lost])
+		if not result.lost_cells.is_empty():
+			lines.append("Mất %d ô đất %s." % [result.lost_cells.size(),
+					ClanData.DIRECTION_NAMES[state.wars.fronts[clan_id].direction].to_lower()])
+		var plundered := UiFormat.amounts(result.resources_lost, _resource_types)
+		if not plundered.is_empty():
+			lines.append("Bị cướp phá: %s." % plundered)
+		report.show_battle("Đẩy lui quân xâm lược!" if result.won else "Thất thủ trước quân xâm lược!",
+				result.won, "%s tấn công đầu lượt." % _clan_name(clan_id), record, BattleRecord.DEFENDER, lines)
+		_battle_report = report
+		report.closed.connect(func() -> void: _battle_report = null)
+		placement_status.text += " %s" % ("Đã đẩy lui." if result.won else "Thất thủ, mất đất."))
+
+
+## The player attacks a clan (from the world map): whole army against theirs.
+func _attack_clan(clan_id: StringName) -> void:
+	var simulator := state.start_attack(clan_id)
+	if simulator == null:
+		return
+	if _world_map != null:
+		_world_map.close()
+	var title := "Tấn công %s!" % _clan_name(clan_id)
+	_play_battle(simulator, BattleRecord.ATTACKER, title, func(record: BattleRecord) -> void:
+		var result := state.finish_attack(clan_id, record)
+		var report := BattleReport.new()
+		$UI.add_child(report)
+		var lines := report.army_loss_lines(result, state.units)
+		lines.append("Quân %s mất %d lính, còn %d." % [_clan_name(clan_id), result.enemy_lost,
+				state.wars.fronts[clan_id].strength])
+		var loot := UiFormat.amounts(result.loot, _resource_types)
+		if not loot.is_empty():
+			lines.append("Chiến lợi phẩm: %s." % loot)
+		var compensation := UiFormat.amounts(result.compensation, _resource_types)
+		if not compensation.is_empty():
+			lines.append("Bồi thường chiến phí: %s." % compensation)
+		if result.annexed:
+			lines.append("%s đầu hàng và sáp nhập vào vương quốc! Lãnh thổ mở rộng thêm %d hàng đất hoang %s." % [
+					_clan_name(clan_id), Wars.ANNEX_EXPANSION,
+					ClanData.DIRECTION_NAMES[state.wars.fronts[clan_id].direction].to_lower()])
+		var title_text := "Chiến thắng!" if result.won else "Thất bại!"
+		if result.annexed:
+			title_text = "%s đã bị sáp nhập!" % _clan_name(clan_id)
+		report.show_battle(title_text, result.won, "Vương quốc tấn công %s." % _clan_name(clan_id), record,
+				BattleRecord.ATTACKER, lines)
+		_battle_report = report
+		report.closed.connect(func() -> void: _battle_report = null))
+
+
+func _clan_name(clan_id: StringName) -> String:
+	return state.diplomacy.clans[clan_id].data.display_name
+
+
+## Fits the whole board in the free screen area (again after the board grows).
+func _focus_camera() -> void:
+	# Container sizes are only sorted next frame, so use the top bar's minimum height.
+	camera.focus_on(board_view.get_board_rect(), side_panel.size.x, top_bar.get_combined_minimum_size().y)
 
 
 func _describe_agreement_turn(entry: Dictionary) -> String:
@@ -230,6 +309,7 @@ func _open_world_map() -> void:
 	$UI.add_child(_world_map)
 	_world_map.open(state, _resource_types)
 	_world_map.closed.connect(func() -> void: _world_map = null)
+	_world_map.attack_requested.connect(_attack_clan)
 
 
 func _show_battle_report(raid: Dictionary) -> void:

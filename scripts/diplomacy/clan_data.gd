@@ -18,8 +18,10 @@ const PERSONALITY_NAMES: Array[String] = ["Ôn hòa", "Hiếu chiến", "Thươn
 @export var map_position: Vector2 = Vector2(0.5, 0.2)
 @export var direction: Direction = Direction.NONE
 @export var personality: Personality = Personality.PEACEFUL
-## Rough army size, shown to the player; used by invasions in M9.
+## Most soldiers the clan can field (its army regrows to this). GDD §9.6.
 @export var military_strength: int = 50
+## Player unit id -> relative weight of that unit type in the clan's army.
+@export var army_units: Dictionary[StringName, float] = {}
 ## Resources this clan has plenty of (sells them cheaply).
 @export var surplus: Array[StringName] = []
 ## Resources this clan lacks (pays more for them).
@@ -34,6 +36,20 @@ const PERSONALITY_NAMES: Array[String] = ["Ôn hòa", "Hiếu chiến", "Thươn
 
 func is_neighbor() -> bool:
 	return direction != Direction.NONE
+
+
+## Board side a clan in `direction` borders: NORTH = Vector2i.UP (top edge), … NONE = ZERO.
+static func direction_vector(dir: Direction) -> Vector2i:
+	match dir:
+		Direction.NORTH:
+			return Vector2i.UP
+		Direction.EAST:
+			return Vector2i.RIGHT
+		Direction.SOUTH:
+			return Vector2i.DOWN
+		Direction.WEST:
+			return Vector2i.LEFT
+	return Vector2i.ZERO
 
 
 ## All clans, sorted by clan_id.

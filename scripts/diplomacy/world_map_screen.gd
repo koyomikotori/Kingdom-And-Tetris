@@ -4,6 +4,8 @@ extends Control
 ## trade/gift forms on the right (30%). Emits `closed` when the player goes back. Built in code.
 
 signal closed
+## Forwarded from the clan panel; the kingdom scene closes the map and runs the battle.
+signal attack_requested(clan_id: StringName)
 
 const BACKGROUND_COLOR := Color(0.09, 0.1, 0.13)
 
@@ -51,11 +53,13 @@ func open(state: KingdomState, resource_types: Array[ResourceTypeData]) -> void:
 	row.add_child(scroll)
 	_panel = ClanPanel.new()
 	_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_panel.setup(state.diplomacy, state.stockpile, resource_types, state.rng)
+	_panel.setup(state, resource_types)
 	var panel_margin := _margin(_panel)
 	panel_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(panel_margin)
 	_map.clan_selected.connect(_panel.show_clan)
+	_panel.attack_requested.connect(func(clan_id: StringName) -> void: attack_requested.emit(clan_id))
+	_map.setup_wars(state.wars)
 
 
 ## Opens with this clan already selected (used by tests and previews).

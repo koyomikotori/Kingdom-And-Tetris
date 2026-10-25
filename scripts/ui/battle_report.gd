@@ -11,8 +11,23 @@ const LOSS_COLOR := Color(1.0, 0.5, 0.45)
 const PANEL_MARGIN := Vector2(0.15, 0.06)
 
 
-## `raid` is the dictionary returned by RaidSystem.resolve.
+## `raid` is the dictionary returned by RaidSystem.apply_outcome.
 func show_raid(raid: Dictionary, resource_types: Array[ResourceTypeData], units: Dictionary[StringName, UnitData]) -> void:
+	var lines := army_loss_lines(raid, units)
+	var lost := UiFormat.amounts(raid.resources_lost, resource_types)
+	if not lost.is_empty():
+		lines.append("Bị cướp mất: %s." % lost)
+	var reward := UiFormat.amounts(raid.reward, resource_types)
+	if not reward.is_empty():
+		lines.append("Chiến lợi phẩm: %s." % reward)
+	show_battle("Đánh lui quân cướp!" if raid.won else "Thất thủ trước quân cướp!", raid.won,
+			"Quân cướp tấn công đầu lượt.", raid.record, BattleRecord.DEFENDER, lines)
+
+
+## Generic report: `player_side` is the BattleRecord side the kingdom fought on (its table comes
+## first); `lines` describe what the kingdom gained or lost.
+func show_battle(title_text: String, won: bool, intro: String, record: BattleRecord, player_side: int,
+		lines: Array[String]) -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var dim := ColorRect.new()
@@ -38,10 +53,8 @@ func show_raid(raid: Dictionary, resource_types: Array[ResourceTypeData], units:
 	layout.add_theme_constant_override("separation", 12)
 	margin.add_child(layout)
 
-	var record: BattleRecord = raid.record
-	var won: bool = raid.won
 	var title := Label.new()
-	title.text = "Đánh lui quân cướp!" if won else "Thất thủ trước quân cướp!"
+	title.text = title_text
 	title.add_theme_font_size_override("font_size", 24)
 	title.add_theme_color_override("font_color", WIN_COLOR if won else LOSS_COLOR)
 	layout.add_child(title)
@@ -54,34 +67,32 @@ func show_raid(raid: Dictionary, resource_types: Array[ResourceTypeData], units:
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.add_theme_constant_override("separation", 12)
 	scroll.add_child(box)
-	box.add_child(_label("Quân cướp tấn công đầu lượt. Phe %s %s (sau %d giây)." % [
+	box.add_child(_label("%s Phe %s %s (sau %d giây)." % [intro,
 			record.sides[record.loser()].display_name.to_lower(), _end_reason_text(record.end_reason),
 			roundi(record.duration)]))
 
-	for side in [record.sides[BattleRecord.DEFENDER], record.sides[BattleRecord.ATTACKER]]:
+	for side in [record.sides[player_side], record.sides[1 - player_side]]:
 		box.add_child(_side_table(side))
-
-	var outcome: Array[String] = []
-	if not raid.casualties.is_empty():
-		outcome.append("Tử trận: %s." % _unit_counts(raid.casualties, units))
-	if not raid.scattered.is_empty():
-		outcome.append("Tan rã (đơn vị bị vỡ): %s." % _unit_counts(raid.scattered, units))
-	if not raid.retreat_losses.is_empty():
-		outcome.append("Mất khi rút lui (50%%): %s." % _unit_counts(raid.retreat_losses, units))
-	var lost := UiFormat.amounts(raid.resources_lost, resource_types)
-	if not lost.is_empty():
-		outcome.append("Bị cướp mất: %s." % lost)
-	var reward := UiFormat.amounts(raid.reward, resource_types)
-	if not reward.is_empty():
-		outcome.append("Chiến lợi phẩm: %s." % reward)
-	if not outcome.is_empty():
-		box.add_child(_label("\n".join(outcome)))
+	if not lines.is_empty():
+		box.add_child(_label("\n".join(lines)))
 
 	var button := Button.new()
 	button.text = "Tiếp tục (Enter)"
 	button.custom_minimum_size = Vector2(0, 40)
 	button.pressed.connect(close)
 	layout.add_child(button)
+
+
+## Lines for the kingdom's losses from a BattleOutcome.apply_to_army result.
+func army_loss_lines(losses: Dictionary, units: Dictionary[StringName, UnitData]) -> Array[String]:
+	var lines: Array[String] = []
+	if not losses.casualties.is_empty():
+		lines.append("Tử trận: %s." % _unit_counts(losses.casualties, units))
+	if not losses.scattered.is_empty():
+		lines.append("Mất (đơn vị bị vỡ hoặc tan rã): %s." % _unit_counts(losses.scattered, units))
+	if not losses.retreat_losses.is_empty():
+		lines.append("Mất khi rút lui (50%%): %s." % _unit_counts(losses.retreat_losses, units))
+	return lines
 
 
 static func _end_reason_text(reason: BattleRecord.EndReason) -> String:

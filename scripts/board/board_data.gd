@@ -4,6 +4,8 @@ extends RefCounted
 ## Coordinates: Vector2i(x, y), x grows right, y grows down, (0, 0) is the top-left cell.
 
 signal cell_changed(coord: Vector2i)
+## The board grew (see expand). `shift` is how far existing coordinates moved.
+signal resized(shift: Vector2i)
 
 const CASTLE_ID: StringName = &"castle"
 const NEIGHBOR_OFFSETS: Array[Vector2i] = [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
@@ -154,3 +156,73 @@ func _rect_coords(rect: Rect2i) -> Array[Vector2i]:
 		for x in range(rect.position.x, rect.end.x):
 			result.append(Vector2i(x, y))
 	return result
+
+
+## Removes a whole building (every cell it covers). The castle cannot be removed.
+func remove_building(origin: Vector2i) -> void:
+	for cell in get_building_cells(origin):
+		if cell.building_id == CASTLE_ID:
+			return
+		cell.building_id = CellData.NO_BUILDING
+		cell_changed.emit(cell.coord)
+
+
+## Loses up to `max_cells` owned cells closest to the board edge in `direction`
+## (Vector2i.UP = north edge, …): they turn back into wild land and any building on them is
+## destroyed. Castle cells are never lost. Returns the lost coordinates.
+func lose_edge_cells(direction: Vector2i, max_cells: int) -> Array[Vector2i]:
+	var candidates: Array[CellData] = []
+	for cell in _cells:
+		if cell.owned and cell.building_id != CASTLE_ID:
+			candidates.append(cell)
+	var distance := func(cell: CellData) -> int:
+		match direction:
+			Vector2i.UP:
+				return cell.coord.y
+			Vector2i.DOWN:
+				return height - 1 - cell.coord.y
+			Vector2i.LEFT:
+				return cell.coord.x
+			_:
+				return width - 1 - cell.coord.x
+	# Closest to the edge first; ties broken by position so the result is always the same.
+	candidates.sort_custom(func(a: CellData, b: CellData) -> bool:
+		var da: int = distance.call(a)
+		var db: int = distance.call(b)
+		if da != db:
+			return da < db
+		return a.coord.x + a.coord.y * width < b.coord.x + b.coord.y * width)
+	var lost: Array[Vector2i] = []
+	for cell in candidates.slice(0, max_cells):
+		if cell.has_building():
+			remove_building(cell.building_origin)
+		cell.owned = false
+		cell.terrain_id = CellData.NO_TERRAIN
+		cell.is_key = false
+		lost.append(cell.coord)
+		cell_changed.emit(cell.coord)
+	return lost
+
+
+## Grows the board by `amount` rows or columns of wild land on the `direction` side
+## (Vector2i.UP adds rows at the top, …). Existing cells keep their contents; when growing up or
+## left their coordinates shift, which `resized` reports.
+func expand(direction: Vector2i, amount: int) -> void:
+	var shift := Vector2i(amount if direction == Vector2i.LEFT else 0, amount if direction == Vector2i.UP else 0)
+	var new_width := width + (amount if direction.x != 0 else 0)
+	var new_height := height + (amount if direction.y != 0 else 0)
+	var old_cells := _cells
+	_cells = []
+	for y in new_height:
+		for x in new_width:
+			_cells.append(CellData.new(Vector2i(x, y)))
+	width = new_width
+	height = new_height
+	for old in old_cells:
+		var cell := get_cell(old.coord + shift)
+		cell.terrain_id = old.terrain_id
+		cell.owned = old.owned
+		cell.is_key = old.is_key
+		cell.building_id = old.building_id
+		cell.building_origin = old.building_origin + shift
+	resized.emit(shift)
