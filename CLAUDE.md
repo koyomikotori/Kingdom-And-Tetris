@@ -14,7 +14,7 @@ The user is a beginner-to-intermediate developer working with AI assistance. Tal
 
 ## Git
 
-- GitHub repo: `koyomikotori/Kingdom-And-Tetris`. Push as `koyomikotori` (the remote URL carries the username).
+- GitHub repo: `koyomikotori/KingdomTiles-RiseOfRealms`. Push as `koyomikotori` (the remote URL carries the username).
 - Commit author is set in this repo's `.git/config` (`koyomikotori`). Don't change the global git identity; it belongs to another account used for other projects.
 - One branch per milestone (`mN/<topic>`); the user merges it into `main` with a pull request.
 
