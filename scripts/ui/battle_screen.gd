@@ -117,12 +117,17 @@ func _build_middle(simulator: BattleSimulator) -> Control:
 	return row
 
 
+## The info column scrolls, so a long army list never pushes the controls bar off screen.
 func _info_column(panel: BattleInfoPanel) -> Control:
-	var column := _margin(panel, 8)
-	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	column.size_flags_stretch_ratio = 1.0
-	column.clip_contents = true
-	return column
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_stretch_ratio = 1.0
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var margin := _margin(panel, 8)
+	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(margin)
+	return scroll
 
 
 func _build_controls() -> Control:

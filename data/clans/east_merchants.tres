@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ClanData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/diplomacy/clan_data.gd" id="1_clan"]
+
+[resource]
+script = ExtResource("1_clan")
+clan_id = &"east_merchants"
+display_name = "Thương Hội Đông Hải"
+description = "Liên minh các thương cảng ven biển. Giàu có, thích buôn bán, luôn cần gỗ đóng thuyền."
+color = Color(0.3, 0.7, 0.85, 1)
+map_position = Vector2(0.83, 0.5)
+direction = 2
+personality = 2
+military_strength = 40
+surplus = Array[StringName]([&"food"])
+deficit = Array[StringName]([&"wood"])
+start_relation = 10
+base_relation = 20
+roads = Array[StringName]([&"kingdom", &"golden_eagle"])

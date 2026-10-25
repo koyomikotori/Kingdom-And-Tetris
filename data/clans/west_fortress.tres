@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ClanData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/diplomacy/clan_data.gd" id="1_clan"]
+
+[resource]
+script = ExtResource("1_clan")
+clan_id = &"west_fortress"
+display_name = "Hắc Sơn Bảo"
+description = "Pháo đài trên núi đen phía Tây. Khép kín, ít giao thiệp, giữ của nhưng thiếu lương thực."
+color = Color(0.45, 0.4, 0.5, 1)
+map_position = Vector2(0.17, 0.5)
+direction = 4
+personality = 3
+military_strength = 55
+surplus = Array[StringName]([&"stone"])
+deficit = Array[StringName]([&"food"])
+start_relation = -5
+base_relation = 0
+roads = Array[StringName]([&"kingdom", &"steppe_tribes"])

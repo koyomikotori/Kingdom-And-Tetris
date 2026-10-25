@@ -327,3 +327,41 @@ func test_playback_retreat() -> void:
 	playback.retreat(BattleRecord.DEFENDER)
 	check(playback.is_finished(), "Retreat ends the battle")
 	check_eq(playback.simulator.record.end_reason, BattleRecord.EndReason.RETREAT, "Recorded as a retreat")
+
+
+func test_battle_view_closes_lanes_and_steps_figures_forward() -> void:
+	var sword := unit_list[0]
+	var attacker := _side([[enemies[&"bandit_thug"], 16]])
+	var defender := _side([[sword, 20], [sword, 20], [sword, 20]])
+	var simulator := BattleSimulator.new(attacker, defender, 1)
+	var view := BattleView.new()
+	view.size = Vector2(1000, 600)
+	view.setup(simulator, BattleRecord.DEFENDER)
+	view.update_view(0.0, [])
+	var views: Array = view._views[BattleRecord.DEFENDER]
+	var lanes_before: Array = views.map(func(v: BattleView.UnitView) -> float: return v.lane_target)
+	defender.units[1].broken = true
+	view.update_view(0.1, [])
+	var top: float = views[0].lane_target
+	var bottom: float = views[2].lane_target
+	check(top > lanes_before[0] and bottom < lanes_before[2], "Both survivors moved toward the gap")
+	# Three lanes sit at 1/6, 3/6, 5/6 of the band; two lanes at 1/4 and 3/4 of it.
+	var band: float = (lanes_before[2] - lanes_before[0]) * 1.5
+	var band_top: float = lanes_before[0] - band / 6.0
+	check(is_equal_approx(top, band_top + band / 4.0) and is_equal_approx(bottom, band_top + band * 0.75),
+			"Survivors spread evenly over two lanes")
+	for i in 200:
+		view.update_view(0.1, [])
+	check(is_equal_approx(views[0].lane_y, top), "Lane change finishes")
+
+	# Figures: the front one falls, the rest step forward.
+	var unit_view: BattleView.UnitView = views[0]
+	var front_slot := unit_view.figures[0].slot
+	defender.units[0].soldiers = 16.0  # one figure (4 soldiers) lost
+	view.update_view(0.1, [])
+	check_eq(unit_view.figures[0].state, BattleView.Figure.State.FLY, "The front figure is knocked out")
+	check(unit_view.figures[1].slot.is_equal_approx(front_slot), "The next figure takes the front place")
+	for i in 50:
+		view.update_view(0.1, [])
+	check(unit_view.figures[1].offset.is_equal_approx(front_slot), "It walks there")
+	view.free()

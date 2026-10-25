@@ -7,6 +7,8 @@ extends Resource
 @export var display_name: String
 ## Position in the resource bar, lowest first.
 @export var sort_order: int = 0
+## Worth of one unit when trading or gifting to clans (GDD §9.4).
+@export var trade_value: int = 1
 
 
 ## All resource types, sorted by sort_order.

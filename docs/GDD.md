@@ -241,6 +241,70 @@ Sau này: lính khiên, kỵ binh, lính súng; tướng (1 tướng võ + 1 qu�
 
 Biển, sông: chưa làm, để sau.
 
+### 9.1 Bản đồ thế giới (M8)
+
+- Nút **Ngoại giao** trên thanh trên cùng mở màn hình bản đồ thế giới (toàn màn hình).
+- Bản đồ dạng **điểm vùng nối đường**: vương quốc ở giữa, mỗi gia tộc là một điểm, có đường nối giữa các vùng giáp nhau.
+- Chạm vào một gia tộc → bảng bên phải: mô tả, tính cách, sức mạnh, hướng, quan hệ, tài nguyên dư/thiếu, và các hành động.
+
+### 9.2 Gia tộc (tên tạm, sửa trong `data/clans/`)
+
+| Gia tộc | Vị trí | Tính cách | Dư | Thiếu | Quan hệ đầu / gốc |
+|---|---|---|---|---|---|
+| Lang Tộc Phương Bắc | Bắc (giáp biên) | Hiếu chiến | Đá | Lương thực | −10 / −15 |
+| Thương Hội Đông Hải | Đông (giáp biên) | Thương nhân | Lương thực | Gỗ | 10 / 20 |
+| Điền Trang Nam Lâm | Nam (giáp biên) | Ôn hòa | Gỗ | Đá | 20 / 30 |
+| Hắc Sơn Bảo | Tây (giáp biên) | Cô lập | Đá | Lương thực | −5 / 0 |
+| Vương Quốc Kim Ưng | Xa, Đông Bắc | Hiếu chiến | Đá | Gỗ | 0 / −5 |
+| Bộ Lạc Thảo Nguyên | Xa, Tây Nam | Ôn hòa | Lương thực | Đá | 0 / 10 |
+
+Gia tộc giáp biên có hướng (Bắc/Đông/Nam/Tây) để M9 biết mất đất ở cạnh nào. Gia tộc ở xa chỉ giao thương (giá kém hơn).
+
+### 9.3 Quan hệ
+
+Thang −100 → +100:
+
+| Mức | Khoảng |
+|---|---|
+| Thù địch | ≤ −60 |
+| Căng thẳng | −59 → −20 |
+| Trung lập | −19 → 19 |
+| Thân thiện | 20 → 59 |
+| Thân thiết | ≥ 60 |
+
+- Mỗi lượt quan hệ nhích về **mức gốc** của gia tộc (ôn hòa / thương nhân 2 điểm, hiếu chiến 3, cô lập 1).
+- **Tặng quà:** mỗi 5 giá trị tài nguyên = +1 quan hệ, nhân theo tính cách (ôn hòa ×1.5, thương nhân ×1, hiếu chiến ×0.6, cô lập ×0.5); tối đa +15 mỗi lượt cho mỗi gia tộc.
+- Mỗi lần trao đổi: +1 quan hệ (tối đa +3 mỗi lượt).
+- "Đồng minh" là hiệp ước riêng ở M9, không phải một mức quan hệ.
+
+### 9.4 Trao đổi tài nguyên
+
+- Giá trị: lương thực 1, gỗ 1, đá 2.
+- Đưa X, nhận Y: số nhận = số đưa × giá trị(X) / giá trị(Y) × hệ số giá.
+- Hệ số giá = 0.6 + quan hệ/100 × 0.2, +0.15 nếu là thương nhân, ×1.4 nếu X là thứ họ **thiếu**, ×1.3 nếu Y là thứ họ **dư**, ×0.85 nếu ở xa.
+- Mỗi gia tộc chỉ nhận tối đa 40 giá trị hàng mỗi lượt (chống mua đi bán lại vô hạn).
+- Quan hệ Căng thẳng trở xuống: từ chối giao thương.
+
+### 9.5 Hợp đồng giao thương dài hạn
+
+- Người chơi đề nghị: **đưa** X mỗi lượt, **nhận** Y mỗi lượt, trong **N lượt** (5–30, người chơi chọn). Giá trị hàng đưa tối đa 30 mỗi lượt. Mỗi gia tộc tối đa 1 hợp đồng.
+- **Thương thảo (kiểu Shogun 2):** trước khi gửi, hiện khả năng đồng ý.
+  - Khả năng = 1.5 − (Y đòi / Y công bằng) + quan hệ/200 + tính cách (thương nhân +0.15, ôn hòa +0.05, hiếu chiến −0.1, cô lập −0.2), giới hạn 0 → 95%. "Y công bằng" là số họ sẽ trả cho X theo giá trao đổi một lần (§9.4).
+  - Mức: Rất có thể (≥80%), Có thể (≥55%), Khó (≥30%), Rất khó (>0), Không thể.
+  - Gia tộc từ chối khi quan hệ Căng thẳng trở xuống. Bị từ chối → phải đợi lượt sau mới đề nghị lại với gia tộc đó.
+- **Ký:** quan hệ +8 ngay. Mỗi lượt (lúc kết thúc lượt): đưa X, nhận Y, quan hệ +1.
+- **Thiếu hàng để giao:** lượt đó bỏ qua, quan hệ −3.
+- **Hết hạn:** quan hệ +3. **Người chơi hủy:** quan hệ −20. **Quan hệ xuống Thù địch:** gia tộc tự hủy.
+
+### 9.6 Ý tưởng ngoại giao để sau
+
+- Hiệp ước bất tương xâm (không tấn công nhau trong N lượt).
+- Kết thông gia (quan hệ tăng lâu dài, cần tướng/người trong gia đình — M11).
+- Yêu sách / cống nạp: gia tộc mạnh đòi nộp tài nguyên mỗi lượt, từ chối thì quan hệ giảm và dễ bị xâm lược; người chơi mạnh cũng có thể đòi lại.
+- Mượn đường quân sự (đánh gia tộc ở xa qua đất láng giềng — M9).
+- Liên minh cùng đánh một kẻ thù chung (M9).
+- Sự kiện ngoại giao ngẫu nhiên: sứ giả đến, gia tộc gặp nạn đói xin viện trợ, hai gia tộc gây chiến với nhau…
+
 ## 10. Quyết định kỹ thuật
 
 | Vấn đề | Quyết định |
@@ -265,8 +329,8 @@ Biển, sông: chưa làm, để sau.
 | M4 | Công trình, dữ liệu đơn vị, doanh trại, tuyển quân, nuôi quân, mở khóa theo địa hình | Xong |
 | M5 | Logic trận đánh theo pha + **cướp** (ngẫu nhiên, không báo trước) + trạm lính canh + bảng thống kê sau trận | Xong |
 | M6 | **Chiến đấu v2** (logic): chỉ số mới, sĩ khí, charge, súng 1 loạt, cung theo thời gian nạp, mô phỏng theo tick, rút lui + **quản lý đơn vị** (bổ sung quân, giới hạn theo doanh trại, giải tán) | Xong |
-| M7 | Màn hình trận đánh cinematic (10/18/44/18/10, hoạt ảnh, tạm dừng, tăng tốc, rút lui, bỏ qua) | Đang làm |
-| M8 | Bản đồ thế giới làm sẵn + gia tộc + quan hệ + giao thương | |
+| M7 | Màn hình trận đánh cinematic (10/18/44/18/10, hoạt ảnh, tạm dừng, tăng tốc, rút lui, bỏ qua) | Xong |
+| M8 | Bản đồ thế giới làm sẵn + gia tộc + quan hệ + giao thương | Đang làm |
 | M9 | Quân xâm lược (mất đất theo hướng) + đi xâm lược + liên minh | |
 | M10 | Lưu/tải (JSON có version) | |
 | M11 | Sự kiện, tướng, mưu sĩ, kinh nghiệm, điều kiện thắng/thua | |

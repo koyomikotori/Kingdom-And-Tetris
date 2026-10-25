@@ -1,0 +1,84 @@
+class_name WorldMapScreen
+extends Control
+## Full-screen world map (GDD §9.1): the map on the left (70%), the selected clan's details and
+## trade/gift forms on the right (30%). Emits `closed` when the player goes back. Built in code.
+
+signal closed
+
+const BACKGROUND_COLOR := Color(0.09, 0.1, 0.13)
+
+var _map: WorldMapView
+var _panel: ClanPanel
+
+
+func open(state: KingdomState, resource_types: Array[ResourceTypeData]) -> void:
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	var background := ColorRect.new()
+	background.color = BACKGROUND_COLOR
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(background)
+	var layout := VBoxContainer.new()
+	layout.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(layout)
+
+	var top := HBoxContainer.new()
+	var title := Label.new()
+	title.text = "Bản đồ thế giới — Ngoại giao (lượt %d)" % state.turn
+	title.add_theme_font_size_override("font_size", 20)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(title)
+	var back := Button.new()
+	back.text = "Quay lại (Esc)"
+	back.focus_mode = Control.FOCUS_NONE
+	back.custom_minimum_size = Vector2(0, 40)
+	back.pressed.connect(close)
+	top.add_child(back)
+	layout.add_child(_margin(top))
+
+	var row := HBoxContainer.new()
+	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	layout.add_child(row)
+	_map = WorldMapView.new()
+	_map.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_map.size_flags_stretch_ratio = 7.0
+	_map.setup(state.diplomacy)
+	row.add_child(_map)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_stretch_ratio = 3.0
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	row.add_child(scroll)
+	_panel = ClanPanel.new()
+	_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_panel.setup(state.diplomacy, state.stockpile, resource_types, state.rng)
+	var panel_margin := _margin(_panel)
+	panel_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(panel_margin)
+	_map.clan_selected.connect(_panel.show_clan)
+
+
+## Opens with this clan already selected (used by tests and previews).
+func select_clan(clan_id: StringName) -> void:
+	_map.select(clan_id)
+	_panel.show_clan(clan_id)
+
+
+func close() -> void:
+	closed.emit()
+	queue_free()
+
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+		close()
+	# The kingdom underneath must not react to keys while the map is open.
+	get_viewport().set_input_as_handled()
+
+
+func _margin(child: Control) -> MarginContainer:
+	var margin := MarginContainer.new()
+	for edge in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + edge, 10)
+	margin.add_child(child)
+	return margin

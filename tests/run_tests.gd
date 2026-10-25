@@ -9,6 +9,7 @@ const TEST_FILES := [
 	"res://tests/test_economy.gd",
 	"res://tests/test_army.gd",
 	"res://tests/test_battle.gd",
+	"res://tests/test_diplomacy.gd",
 ]
 
 
