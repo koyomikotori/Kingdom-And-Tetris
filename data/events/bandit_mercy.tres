@@ -1,0 +1,59 @@
+[gd_resource type="Resource" script_class="EventData" format=3]
+
+[ext_resource type="Script" path="res://scripts/events/event_data.gd" id="1_event"]
+[ext_resource type="Script" path="res://scripts/events/event_choice_data.gd" id="2_choice"]
+[ext_resource type="Script" path="res://scripts/events/event_outcome_data.gd" id="3_outcome"]
+
+[sub_resource type="Resource" id="outcome_0_0"]
+script = ExtResource("3_outcome")
+weight = 1.0
+text = "Tin bạn tha cho tù binh lan khắp vùng."
+relation_all = 2
+
+[sub_resource type="Resource" id="choice_0"]
+script = ExtResource("2_choice")
+text = "Tha cho về"
+hint = "Tiếng nhân từ có thể lan xa."
+outcomes = Array[ExtResource("3_outcome")]([SubResource("outcome_0_0")])
+
+[sub_resource type="Resource" id="outcome_1_0"]
+script = ExtResource("3_outcome")
+weight = 0.6
+text = "Chúng thề trung thành và cầm giáo theo bạn."
+add_unit = &"spearman"
+add_soldiers = 8
+
+[sub_resource type="Resource" id="outcome_1_1"]
+script = ExtResource("3_outcome")
+weight = 0.4
+text = "Đêm đầu tiên chúng đã trốn mất."
+
+[sub_resource type="Resource" id="choice_1"]
+script = ExtResource("2_choice")
+text = "Bắt sung quân"
+hint = "Thêm lính, nhưng chưa chắc trung thành."
+outcomes = Array[ExtResource("3_outcome")]([SubResource("outcome_1_0"), SubResource("outcome_1_1")])
+
+[sub_resource type="Resource" id="outcome_2_0"]
+script = ExtResource("3_outcome")
+weight = 1.0
+text = "Tù binh đập đá suốt cả mùa."
+resources = Dictionary[StringName, int]({&"stone": 20})
+
+[sub_resource type="Resource" id="choice_2"]
+script = ExtResource("2_choice")
+text = "Bắt làm phu đá"
+hint = "Thêm người khai đá."
+outcomes = Array[ExtResource("3_outcome")]([SubResource("outcome_2_0")])
+
+[resource]
+script = ExtResource("1_event")
+event_id = &"bandit_mercy"
+title = "Bọn cướp xin tha"
+text = "Mấy tên cướp bị bắt trong trận vừa rồi quỳ xin tha mạng."
+category = 2
+weight = 6.0
+cooldown = 0
+min_turn = 1
+needs_raid_won_last_turn = true
+choices = Array[ExtResource("2_choice")]([SubResource("choice_0"), SubResource("choice_1"), SubResource("choice_2")])

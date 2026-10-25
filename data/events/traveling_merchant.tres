@@ -1,0 +1,51 @@
+[gd_resource type="Resource" script_class="EventData" format=3]
+
+[ext_resource type="Script" path="res://scripts/events/event_data.gd" id="1_event"]
+[ext_resource type="Script" path="res://scripts/events/event_choice_data.gd" id="2_choice"]
+[ext_resource type="Script" path="res://scripts/events/event_outcome_data.gd" id="3_outcome"]
+
+[sub_resource type="Resource" id="outcome_0_0"]
+script = ExtResource("3_outcome")
+weight = 0.5
+text = "Hàng thật, giá hời!"
+resources = Dictionary[StringName, int]({&"stone": 25})
+
+[sub_resource type="Resource" id="outcome_0_1"]
+script = ExtResource("3_outcome")
+weight = 0.35
+text = "Giá vừa phải, không lời không lỗ."
+resources = Dictionary[StringName, int]({&"stone": 12})
+
+[sub_resource type="Resource" id="outcome_0_2"]
+script = ExtResource("3_outcome")
+weight = 0.15
+text = "Hàng giả! Bọn chúng đã cao chạy xa bay."
+
+[sub_resource type="Resource" id="choice_0"]
+script = ExtResource("2_choice")
+text = "Mua một chuyến"
+hint = "Có thể lời to, cũng có thể bị lừa."
+cost = Dictionary[StringName, int]({&"food": 20})
+outcomes = Array[ExtResource("3_outcome")]([SubResource("outcome_0_0"), SubResource("outcome_0_1"), SubResource("outcome_0_2")])
+
+[sub_resource type="Resource" id="outcome_1_0"]
+script = ExtResource("3_outcome")
+weight = 1.0
+text = "Đoàn thương nhân lặng lẽ rời đi."
+
+[sub_resource type="Resource" id="choice_1"]
+script = ExtResource("2_choice")
+text = "Đuổi đi"
+hint = "Không mất gì."
+outcomes = Array[ExtResource("3_outcome")]([SubResource("outcome_1_0")])
+
+[resource]
+script = ExtResource("1_event")
+event_id = &"traveling_merchant"
+title = "Thương nhân lạ"
+text = "Một đoàn thương nhân từ phương xa ghé qua, rao bán đá quý với giá lạ."
+category = 0
+weight = 2.0
+cooldown = 6
+min_stock = Dictionary[StringName, int]({&"food": 20})
+choices = Array[ExtResource("2_choice")]([SubResource("choice_0"), SubResource("choice_1")])

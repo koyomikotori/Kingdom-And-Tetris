@@ -29,6 +29,13 @@ func deal_new_hand() -> void:
 	refill()
 
 
+## Adds `count` pieces beyond the hand size (an event's gift); they go at the next deal like the rest.
+func draw_extra(count: int) -> void:
+	for i in count:
+		pieces.append(_generator.generate())
+	changed.emit()
+
+
 ## Removes and returns the piece at `index`. Call only after a successful placement.
 func take(index: int) -> LandPiece:
 	var piece := pieces[index]

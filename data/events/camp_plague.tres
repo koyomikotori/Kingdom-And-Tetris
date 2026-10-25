@@ -1,0 +1,48 @@
+[gd_resource type="Resource" script_class="EventData" format=3]
+
+[ext_resource type="Script" path="res://scripts/events/event_data.gd" id="1_event"]
+[ext_resource type="Script" path="res://scripts/events/event_choice_data.gd" id="2_choice"]
+[ext_resource type="Script" path="res://scripts/events/event_outcome_data.gd" id="3_outcome"]
+
+[sub_resource type="Resource" id="outcome_0_0"]
+script = ExtResource("3_outcome")
+weight = 0.8
+text = "Thầy thuốc dập dịch kịp thời."
+army_loss = 0.05
+
+[sub_resource type="Resource" id="outcome_0_1"]
+script = ExtResource("3_outcome")
+weight = 0.2
+text = "Dịch quá mạnh, vẫn có người chết."
+army_loss = 0.15
+
+[sub_resource type="Resource" id="choice_0"]
+script = ExtResource("2_choice")
+text = "Mời thầy thuốc"
+hint = "Thường chữa được."
+cost = Dictionary[StringName, int]({&"food": 15})
+outcomes = Array[ExtResource("3_outcome")]([SubResource("outcome_0_0"), SubResource("outcome_0_1")])
+
+[sub_resource type="Resource" id="outcome_1_0"]
+script = ExtResource("3_outcome")
+weight = 1.0
+text = "Dịch lan rộng, quân số hao hụt nặng."
+army_loss = 0.25
+
+[sub_resource type="Resource" id="choice_1"]
+script = ExtResource("2_choice")
+text = "Cách ly, chờ tự khỏi"
+hint = "Không tốn gì, nhưng rủi ro."
+outcomes = Array[ExtResource("3_outcome")]([SubResource("outcome_1_0")])
+
+[resource]
+script = ExtResource("1_event")
+event_id = &"camp_plague"
+title = "Dịch bệnh trong doanh trại"
+text = "Bệnh lạ lan trong doanh trại, nhiều lính lên cơn sốt."
+category = 2
+weight = 1.0
+cooldown = 12
+required_building = &"barracks"
+min_squads = 1
+choices = Array[ExtResource("2_choice")]([SubResource("choice_0"), SubResource("choice_1")])

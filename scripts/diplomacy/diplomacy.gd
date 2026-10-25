@@ -31,6 +31,7 @@ const MEMORY_WAR: StringName = &"war"
 const MEMORY_AGGRESSION: StringName = &"aggression"
 const MEMORY_BATTLE: StringName = &"battle"
 const MEMORY_TREATY: StringName = &"treaty"
+const MEMORY_EVENT: StringName = &"event"
 const MEMORY_OTHER: StringName = &"other"
 ## Lasting factors in relation_factors(), in display order.
 const LASTING_FACTORS: Array[StringName] = [&"base", &"wariness", &"agreement_bonus", &"alliance_bonus", &"pact_bonus"]
@@ -50,6 +51,7 @@ const FACTOR_NAMES: Dictionary[StringName, String] = {
 	&"aggression": "Vương quốc gây chiến với gia tộc khác",
 	&"battle": "Trận đánh chung",
 	&"treaty": "Bị hủy liên minh",
+	&"event": "Sự kiện",
 	&"other": "Khác",
 }
 ## Gift value per relation point before the personality multiplier.

@@ -1,0 +1,46 @@
+[gd_resource type="Resource" script_class="EventData" format=3]
+
+[ext_resource type="Script" path="res://scripts/events/event_data.gd" id="1_event"]
+[ext_resource type="Script" path="res://scripts/events/event_choice_data.gd" id="2_choice"]
+[ext_resource type="Script" path="res://scripts/events/event_outcome_data.gd" id="3_outcome"]
+
+[sub_resource type="Resource" id="outcome_0_0"]
+script = ExtResource("3_outcome")
+weight = 0.6
+text = "Mạch đá dày, đào mãi chưa hết."
+resources = Dictionary[StringName, int]({&"stone": 30})
+
+[sub_resource type="Resource" id="outcome_0_1"]
+script = ExtResource("3_outcome")
+weight = 0.4
+text = "Mạch đá mỏng hơn tưởng."
+resources = Dictionary[StringName, int]({&"stone": 15})
+
+[sub_resource type="Resource" id="choice_0"]
+script = ExtResource("2_choice")
+text = "Khai thác ngay"
+hint = "Nuôi thợ đào vài ngày; đá nhiều hay ít tùy mạch."
+cost = Dictionary[StringName, int]({&"food": 10})
+outcomes = Array[ExtResource("3_outcome")]([SubResource("outcome_0_0"), SubResource("outcome_0_1")])
+
+[sub_resource type="Resource" id="outcome_1_0"]
+script = ExtResource("3_outcome")
+weight = 1.0
+text = "Mạch đá bị cây cỏ che lấp dần."
+
+[sub_resource type="Resource" id="choice_1"]
+script = ExtResource("2_choice")
+text = "Để sau"
+hint = "Không tốn gì."
+outcomes = Array[ExtResource("3_outcome")]([SubResource("outcome_1_0")])
+
+[resource]
+script = ExtResource("1_event")
+event_id = &"stone_vein"
+title = "Phát hiện mạch đá"
+text = "Thợ săn phát hiện một mạch đá lộ thiên trên đồi."
+category = 0
+weight = 2.0
+cooldown = 10
+min_terrain = Dictionary[StringName, int]({&"hill": 2})
+choices = Array[ExtResource("2_choice")]([SubResource("choice_0"), SubResource("choice_1")])

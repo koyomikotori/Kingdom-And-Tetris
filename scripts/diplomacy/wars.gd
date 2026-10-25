@@ -143,6 +143,14 @@ func _start_war(clan_id: StringName) -> void:
 	changed.emit()
 
 
+## The clan declares war on the kingdom on its own (an event); false when it cannot right now.
+func clan_declares_war(clan_id: StringName) -> bool:
+	if check_declare(clan_id) != DeclareResult.OK:
+		return false
+	_start_war(clan_id)
+	return true
+
+
 ## End of turn: armies regrow, truces count down, wars keep relations hostile, and hostile
 ## neighbours may declare war. Returns the clans that declared war this turn.
 func end_turn(rng: RandomNumberGenerator) -> Array[StringName]:

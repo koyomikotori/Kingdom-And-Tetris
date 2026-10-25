@@ -408,6 +408,34 @@ Thống kê trận thắng/thua và trạng thái thắng/thua được lưu cù
 
 **Để sau:** bản đồ sẽ có thêm nhiều gia tộc, và khi bắt đầu ván người chơi chọn một trong vài gia tộc để chơi. Điều kiện thắng sẽ được chỉnh lại cho khó hơn lúc đó (code đã tính theo số gia tộc thực tế, không cố định 6).
 
+## 9c. Sự kiện ngẫu nhiên (M11b, đã chốt)
+
+**Xuất hiện:** đầu mỗi lượt, từ lượt 3, sau trận đánh đầu lượt (nếu có). Số sự kiện mỗi lượt:
+
+| Số sự kiện | Khả năng |
+|---|---|
+| 0 | 50% |
+| 1 | 30% |
+| 2 | 15% |
+| 3 | 5% |
+
+- Mỗi sự kiện có **trọng số** và **thời gian nghỉ** riêng (ví dụ được mùa không lặp lại trong 8 lượt). Một lượt không ra 2 lần cùng một sự kiện.
+- Mỗi sự kiện có **điều kiện** ghi trong dữ liệu (`data/events/*.tres`): lượt tối thiểu, kho tài nguyên, có công trình, có quân, đang chiến tranh, có đồng minh, có gia tộc ở mức quan hệ phù hợp, vừa đánh thắng cướp ở lượt trước… Sự kiện ngoại giao tự chọn một gia tộc phù hợp. Thêm sự kiện mới chỉ cần thêm file.
+- Sự kiện hiện lần lượt ở **bảng giữa màn hình**, phải chọn mới đi tiếp. Sự kiện chưa giải quyết được lưu cùng ván (tải lại vẫn còn).
+
+**Lựa chọn, hậu quả ẩn một phần:** mỗi sự kiện có 1–3 lựa chọn.
+- **Cái giá** (tài nguyên bỏ ra) luôn hiện rõ; không đủ thì lựa chọn bị khóa.
+- **Kết quả** chỉ ghi gợi ý; có thể ngẫu nhiên giữa vài kết quả. Chọn xong mới hiện kết quả thật và danh sách thay đổi.
+- Hậu quả có thể là: được/mất tài nguyên (số cố định hoặc phần trăm), quan hệ với một gia tộc hoặc mọi gia tộc (nguồn "Sự kiện" trong chi tiết quan hệ, mờ dần), thêm đơn vị lính, mất một phần lính, bổ sung quân, thêm mảnh đất vào tay, gia tộc mạnh/yếu đi, gia tộc tuyên chiến.
+
+**Bộ sự kiện đầu tiên:**
+- Kinh tế: được mùa, sâu bệnh mất mùa, thương nhân lạ, cháy kho gỗ, phát hiện mạch đá.
+- Ngoại giao: gia tộc gặp nạn đói xin viện trợ, sứ giả mang quà, gia tộc mạnh đòi cống nạp, đồng minh nhờ giúp.
+- Quân sự: người tình nguyện đầu quân, lính đòi tăng lương, dịch bệnh trong doanh trại, bọn cướp bị bắt xin tha (chỉ khi lượt trước vừa đánh thắng cướp).
+- Việc trong vương quốc: lễ hội mùa, nông dân xin khai hoang, thầy thuốc ghé qua.
+
+**Để sau (cần tướng, quân sư):** chiêu mộ tướng / quân sư của gia tộc vừa bị đánh bại; nhặt được trang bị tốt (chỉ tướng và quân sư dùng được).
+
 ## 10. Quyết định kỹ thuật
 
 | Vấn đề | Quyết định |
@@ -449,8 +477,8 @@ Thống kê trận thắng/thua và trạng thái thắng/thua được lưu cù
 | M9 | Chiến tranh: tuyên chiến, quân xâm lược (mất đất theo hướng), đi xâm lược, nghị hòa, sáp nhập + mở rộng bản đồ | Xong |
 | M9b | Liên minh: hiệp ước, đồng minh gửi quân vào trận, bất tương xâm | Xong |
 | M10 | Lưu/tải (JSON có version), menu chính | Xong |
-| M11a | Điều kiện thắng/thua, bảng Mục tiêu, màn kết thúc | Đang làm |
-| M11b | Sự kiện ngẫu nhiên (dữ liệu .tres, có lựa chọn và hậu quả) | |
+| M11a | Điều kiện thắng/thua, bảng Mục tiêu, màn kết thúc | Xong |
+| M11b | Sự kiện ngẫu nhiên (dữ liệu .tres, có lựa chọn và hậu quả) | Đang làm |
 | M11c | Tướng võ: tuyển, dẫn quân, ra trận, tử trận | |
 | M11d | Kinh nghiệm và cấp cho đơn vị và tướng | |
 | M11e | Mưu sĩ: cộng kinh tế, ngoại giao | |

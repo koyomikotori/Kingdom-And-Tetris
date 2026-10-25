@@ -97,7 +97,7 @@ func _ready() -> void:
 		_autosave()
 	else:
 		state.resume()
-		_show_end_game_if_any.call_deferred()
+		_continue_turn_start.call_deferred()
 	_on_cell_hovered(BoardView.OFF_BOARD)
 
 
@@ -212,11 +212,13 @@ func _on_end_turn_pressed() -> void:
 	elif report.has("pending_raid"):
 		lines.append("Quân cướp tấn công!")
 		_play_raid(report.pending_raid)
+	if not report.events.is_empty():
+		lines.append("Có %d sự kiện mới." % report.events.size())
 	placement_status.text = "\n".join(lines)
-	# With a battle at the start of the turn, the autosave and the end screen wait until it is over.
+	# With a battle at the start of the turn, the autosave, the events and the end screen wait until it is over.
 	if not report.has("pending_invasion") and not report.has("pending_raid"):
 		_autosave()
-		_show_end_game_if_any()
+		_continue_turn_start()
 
 
 ## "+5 Kiếm sĩ, +4 Cung thủ" from unit_id -> soldiers.
@@ -381,7 +383,22 @@ func _open_world_map() -> void:
 
 func _on_battle_report_closed() -> void:
 	_battle_report = null
-	_show_end_game_if_any()
+	_continue_turn_start()
+
+
+## After the turn's battle: answer the pending events one by one (autosaving after each, so a
+## reload cannot reroll an answer), then the end screen if the game was won or lost.
+func _continue_turn_start() -> void:
+	if state.events.current_event() == null:
+		_show_end_game_if_any()
+		return
+	_clear_selection()
+	var window := EventWindow.new()
+	$UI.add_child(window)
+	window.open(state, state.rng)
+	window.closed.connect(func() -> void:
+		_autosave()
+		_continue_turn_start())
 
 
 ## Shows the defeat screen once the castle has fallen, or the victory screen for a path just won.

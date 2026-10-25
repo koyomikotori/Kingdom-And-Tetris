@@ -25,6 +25,7 @@ var diplomacy := Diplomacy.new(ClanData.load_all(), ResourceTypeData.load_all())
 var wars := Wars.new(diplomacy)
 var alliances := Alliances.new(diplomacy, wars)
 var victory := Victory.new()
+var events := EventSystem.new()
 ## Counters for the end-of-game screen: {"battles_won", "battles_lost"}.
 var stats := {"battles_won": 0, "battles_lost": 0}
 ## False when building upkeep could not be paid last turn; building effects pause.
@@ -67,7 +68,8 @@ func _record_battle(won: bool) -> void:
 func to_save() -> Dictionary:
 	return {"turn": turn, "buildings_supplied": buildings_supplied, "board": board.to_save(),
 			"hand": hand.to_save(), "stockpile": stockpile.to_save(), "army": army.to_save(),
-			"diplomacy": diplomacy.to_save(), "wars": wars.to_save(), "victory": victory.to_save(), "stats": stats.duplicate()}
+			"diplomacy": diplomacy.to_save(), "wars": wars.to_save(), "victory": victory.to_save(), "stats": stats.duplicate(),
+			"events": events.to_save()}
 
 
 ## Restores everything but the board from to_save() data. Random rolls are not saved: they come
@@ -85,6 +87,8 @@ func load_save(data: Dictionary) -> void:
 		victory.load_save(data.victory)
 	for key in stats:
 		stats[key] = int(data.get("stats", {}).get(key, 0))
+	if data.has("events"):
+		events.load_save(data.events)
 
 
 ## What a save slot shows: {"turn", "cells", "soldiers"}.
@@ -221,7 +225,8 @@ func get_net_income() -> Dictionary[StringName, int]:
 ## 6. bandits may raid at the start of the new turn.
 ## Returns {"collected", "upkeep", "deserted", "buildings_supplied", "replenished", "agreements"} plus
 ## "treaties" (Alliances.end_turn events), "war_declared" (clan ids that declared war this turn),
-## "victory" (Victory.Path won this turn, or Victory.NO_PATH), "castle_in_danger" and,
+## "victory" (Victory.Path won this turn, or Victory.NO_PATH), "castle_in_danger", "events" (new
+## EventSystem.pending entries, answered through `events`) and,
 ## at most one battle per turn (the kingdom's allies already on its side):
 ## "pending_invasion" ({"clan_id", "simulator"}, finish with finish_invasion()) or
 ## "pending_raid" (a BattleSimulator, not yet run) when bandits attack. Play it (battle screen or
@@ -262,6 +267,9 @@ func end_turn() -> Dictionary:
 	elif raid != null and rng.randf() < RaidSystem.get_raid_chance(self, raid):
 		var bandits := RaidSystem.create_bandit_side(raid, enemy_units, turn, rng)
 		report["pending_raid"] = BattleSimulator.new(bandits, create_kingdom_side(&""), rng.randi())
+	# Rolled last so the invasion and raid rolls above stay as they were.
+	var no_events: Array[Dictionary] = []
+	report["events"] = events.roll(self, rng) if not victory.lost else no_events
 	turn_started.emit(turn)
 	return report
 
@@ -278,6 +286,8 @@ func create_kingdom_side(enemy_clan: StringName) -> BattleSide:
 func finish_raid(record: BattleRecord) -> Dictionary:
 	var result := RaidSystem.apply_outcome(self, raid, record)
 	_record_battle(result.won)
+	if result.won:
+		events.raid_won_turn = turn
 	result.merge(alliances.apply_battle(record, BattleRecord.DEFENDER))
 	return result
 
