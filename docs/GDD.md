@@ -384,6 +384,30 @@ Thang −100 → +100:
 - Mượn đường quân sự (đánh gia tộc ở xa qua đất láng giềng — M9).
 - Sự kiện ngoại giao ngẫu nhiên: sứ giả đến, gia tộc gặp nạn đói xin viện trợ, hai gia tộc gây chiến với nhau…
 
+## 9b. Thắng / thua (M11a, đã chốt)
+
+Không giới hạn số lượt: chơi tới khi thắng hoặc thua.
+
+**Hai đường chiến thắng** (đạt đường nào trước cũng được; chốt lại sau khi chơi thử, gộp ngoại giao với kinh tế):
+
+| Đường | Điều kiện |
+|---|---|
+| **Chinh phục** | Sáp nhập mọi gia tộc. Thắng ngay khi gia tộc cuối cùng đầu hàng. |
+| **Hòa bình thịnh vượng** | Cùng lúc: mọi gia tộc chưa bị sáp nhập đều đang là đồng minh (**ít nhất 1** đồng minh), **từ 120 ô lãnh thổ**, thu nhập ròng (sau nuôi quân, phí công trình, hợp đồng) **từ +50 mỗi loại tài nguyên mỗi lượt**; giữ như vậy **10 lượt liền**. |
+
+Các con số sẽ cân bằng lại sau.
+
+- Bộ đếm "giữ liền" tăng ở cuối mỗi lượt khi điều kiện đang đúng, và về 0 ngay khi điều kiện sai.
+- Thắng → **màn chiến thắng** với thống kê (số lượt, lãnh thổ, số lính, trận thắng/thua, gia tộc sáp nhập / đồng minh). Chọn **Chơi tiếp** (ván tiếp tục, không báo thắng lại) hoặc **Về menu chính**.
+
+**Thất bại: thành chính thất thủ.** Thua một trận xâm lược khi vương quốc **không còn ô đất nào ngoài thành chính** thì thành chính bị chiếm và ván kết thúc. Màn thất bại có **Tải game** và **Về menu chính**. Khi chỉ còn từ 6 ô đất trở xuống ngoài thành chính, bảng Mục tiêu và thông báo cuối lượt cảnh báo.
+
+**Theo dõi:** nút **Mục tiêu** trên thanh trên cùng mở bảng giữa màn hình (2 cột). Mỗi đường chiến thắng có thanh tiến độ, từng điều kiện kèm số hiện tại / số cần (ví dụ "Lãnh thổ 72/120"), và số lượt đã giữ ("Đã giữ 4/10 lượt"). Bảng có cả mục cảnh báo thành chính.
+
+Thống kê trận thắng/thua và trạng thái thắng/thua được lưu cùng ván (§10.1).
+
+**Để sau:** bản đồ sẽ có thêm nhiều gia tộc, và khi bắt đầu ván người chơi chọn một trong vài gia tộc để chơi. Điều kiện thắng sẽ được chỉnh lại cho khó hơn lúc đó (code đã tính theo số gia tộc thực tế, không cố định 6).
+
 ## 10. Quyết định kỹ thuật
 
 | Vấn đề | Quyết định |
@@ -424,8 +448,12 @@ Thang −100 → +100:
 | M8 | Bản đồ thế giới làm sẵn + gia tộc + quan hệ + giao thương + hợp đồng dài hạn | Xong |
 | M9 | Chiến tranh: tuyên chiến, quân xâm lược (mất đất theo hướng), đi xâm lược, nghị hòa, sáp nhập + mở rộng bản đồ | Xong |
 | M9b | Liên minh: hiệp ước, đồng minh gửi quân vào trận, bất tương xâm | Xong |
-| M10 | Lưu/tải (JSON có version), menu chính | Đang làm |
-| M11 | Sự kiện, tướng, mưu sĩ, kinh nghiệm, điều kiện thắng/thua | |
+| M10 | Lưu/tải (JSON có version), menu chính | Xong |
+| M11a | Điều kiện thắng/thua, bảng Mục tiêu, màn kết thúc | Đang làm |
+| M11b | Sự kiện ngẫu nhiên (dữ liệu .tres, có lựa chọn và hậu quả) | |
+| M11c | Tướng võ: tuyển, dẫn quân, ra trận, tử trận | |
+| M11d | Kinh nghiệm và cấp cho đơn vị và tướng | |
+| M11e | Mưu sĩ: cộng kinh tế, ngoại giao | |
 | M12 | **Hỗ trợ cảm ứng + xuất APK** (chạm để xem trước/xác nhận, vuốt để kéo, chụm để zoom, nút thay phím tắt) | |
 | M13 | Pixel art, âm thanh, cân bằng, build Windows + Android | |
 

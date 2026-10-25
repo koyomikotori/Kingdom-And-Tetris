@@ -139,6 +139,12 @@ layout_mode = 2
 focus_mode = 0
 text = "Ngoại giao"
 
+[node name="ObjectivesButton" type="Button" parent="UI/TopBar/Margin/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+text = "Mục tiêu"
+
 [node name="GameMenuButton" type="Button" parent="UI/TopBar/Margin/HBox"]
 unique_name_in_owner = true
 layout_mode = 2
