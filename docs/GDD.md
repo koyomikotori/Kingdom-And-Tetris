@@ -272,7 +272,9 @@ Thang −100 → +100:
 | Thân thiện | 20 → 59 |
 | Thân thiết | ≥ 60 |
 
-- Mỗi lượt quan hệ nhích về **mức gốc** của gia tộc (ôn hòa / thương nhân 2 điểm, hiếu chiến 3, cô lập 1).
+- Mỗi lượt quan hệ nhích về **mức mục tiêu** của gia tộc (ôn hòa / thương nhân 2 điểm, hiếu chiến 3, cô lập 1).
+- **Mức mục tiêu = mức gốc − Uy hiếp × hệ số e dè** (hiếu chiến ×1.0, cô lập ×0.8, ôn hòa ×0.5, thương nhân ×0.4), +15 khi đang có hợp đồng dài hạn.
+- **Uy hiếp** của vương quốc = (số ô lãnh thổ − 16) / 4 + 15 × số gia tộc đã sáp nhập + số lính / 20. Vương quốc càng lớn mạnh, các gia tộc càng e dè: quan hệ tự trượt xuống thay vì hồi về như cũ.
 - **Tặng quà:** mỗi 5 giá trị tài nguyên = +1 quan hệ, nhân theo tính cách (ôn hòa ×1.5, thương nhân ×1, hiếu chiến ×0.6, cô lập ×0.5); tối đa +15 mỗi lượt cho mỗi gia tộc.
 - Mỗi lần trao đổi: +1 quan hệ (tối đa +3 mỗi lượt).
 - "Đồng minh" là hiệp ước riêng ở M9, không phải một mức quan hệ.
@@ -296,7 +298,37 @@ Thang −100 → +100:
 - **Thiếu hàng để giao:** lượt đó bỏ qua, quan hệ −3.
 - **Hết hạn:** quan hệ +3. **Người chơi hủy:** quan hệ −20. **Quan hệ xuống Thù địch:** gia tộc tự hủy.
 
-### 9.6 Ý tưởng ngoại giao để sau
+### 9.6 Chiến tranh (M9)
+
+**Trạng thái:** mỗi gia tộc ở **Hòa bình** hoặc **Chiến tranh** với vương quốc.
+
+**Sức mạnh quân sự** = số lính của gia tộc (tối đa = giá trị trong file dữ liệu). Hồi 2 lính mỗi lượt tới mức tối đa. Quân của gia tộc dùng các loại lính như người chơi, theo tỉ lệ `army_units` trong file gia tộc.
+
+**Bắt đầu chiến tranh:**
+- Người chơi **tuyên chiến** (nút trên bản đồ thế giới, bấm 2 lần): quan hệ với họ xuống Thù địch, các gia tộc khác −5.
+- Gia tộc tự tuyên chiến khi quan hệ **Thù địch**, mỗi lượt có khả năng: hiếu chiến 15%, cô lập 5%, thương nhân 5%, ôn hòa 2%. Gia tộc **hiếu chiến** còn có thể tuyên chiến từ mức **Căng thẳng** (5% mỗi lượt).
+- Chỉ gia tộc **giáp biên** mới đánh nhau được. Chiến tranh nổ ra thì hợp đồng giao thương với họ tự hủy.
+
+**Quân xâm lược (họ đánh mình):** khi đang chiến tranh, mỗi lượt 25% khả năng (cách lần trước ít nhất 3 lượt), họ đem **60% quân** tới. Trận đánh như đánh cướp (màn hình trận, có rút lui).
+- Thua: luật thua chung (§7.6), **mất tối đa 6 ô lãnh thổ gần cạnh phía họ nhất** (ô thành đất hoang, công trình trên đó bị phá, thành chính không bao giờ mất) và **bị cướp phá 40%** mỗi loại tài nguyên (nặng hơn cướp: 30%).
+- Thắng: họ mất số lính tử trận.
+
+**Đi xâm lược (mình đánh họ):** nút **Tấn công** trên bản đồ thế giới, khi đang chiến tranh, 1 lần mỗi lượt. Toàn bộ quân tham chiến; họ phòng thủ bằng toàn bộ quân.
+- Thắng: mỗi lính địch tử trận = +1 lương thực, +1 gỗ, +1 đá chiến lợi phẩm.
+- Thua: **mất toàn bộ quân** (rút lui thì đơn vị chưa vỡ giữ 50%) và **bồi thường 25%** mỗi loại tài nguyên.
+
+**Sáp nhập:** khi người chơi thắng và sức mạnh của họ còn dưới 15% tối đa, họ đầu hàng:
+- Gia tộc bị sáp nhập (không còn giao thiệp).
+- **Bản đồ vương quốc nới rộng thêm 4 hàng/cột đất hoang về phía họ** (ví dụ 12×12 → 12×16). Người chơi tự đặt mảnh đất để chiếm.
+- Gia tộc ở xa có đường nối với họ trở thành **láng giềng mới cùng hướng** đó.
+
+**Nghị hòa:** thương thảo như hợp đồng, hiện khả năng đồng ý:
+- Khả năng = 0.1 + 0.8 × (tỉ lệ quân họ đã mất) + quan hệ/200 + giá trị bồi thường/100, tối đa 95%. Mỗi lượt đề nghị 1 lần.
+- Hòa xong: quan hệ ít nhất −30 (Căng thẳng), **đình chiến 10 lượt** (không bên nào tuyên chiến lại).
+
+### 9.7 Ý tưởng ngoại giao để sau
+
+- Tăng độ khó: gia tộc hồi quân nhanh hơn / mạnh dần theo thời gian, quân xâm lược đông hơn ở giai đoạn sau.
 
 - Hiệp ước bất tương xâm (không tấn công nhau trong N lượt).
 - Kết thông gia (quan hệ tăng lâu dài, cần tướng/người trong gia đình — M11).
@@ -330,8 +362,9 @@ Thang −100 → +100:
 | M5 | Logic trận đánh theo pha + **cướp** (ngẫu nhiên, không báo trước) + trạm lính canh + bảng thống kê sau trận | Xong |
 | M6 | **Chiến đấu v2** (logic): chỉ số mới, sĩ khí, charge, súng 1 loạt, cung theo thời gian nạp, mô phỏng theo tick, rút lui + **quản lý đơn vị** (bổ sung quân, giới hạn theo doanh trại, giải tán) | Xong |
 | M7 | Màn hình trận đánh cinematic (10/18/44/18/10, hoạt ảnh, tạm dừng, tăng tốc, rút lui, bỏ qua) | Xong |
-| M8 | Bản đồ thế giới làm sẵn + gia tộc + quan hệ + giao thương | Đang làm |
-| M9 | Quân xâm lược (mất đất theo hướng) + đi xâm lược + liên minh | |
+| M8 | Bản đồ thế giới làm sẵn + gia tộc + quan hệ + giao thương + hợp đồng dài hạn | Xong |
+| M9 | Chiến tranh: tuyên chiến, quân xâm lược (mất đất theo hướng), đi xâm lược, nghị hòa, sáp nhập + mở rộng bản đồ | Đang làm |
+| M9b | Liên minh: hiệp ước, đồng minh gửi quân vào trận, bất tương xâm | |
 | M10 | Lưu/tải (JSON có version) | |
 | M11 | Sự kiện, tướng, mưu sĩ, kinh nghiệm, điều kiện thắng/thua | |
 | M12 | **Hỗ trợ cảm ứng + xuất APK** (chạm để xem trước/xác nhận, vuốt để kéo, chụm để zoom, nút thay phím tắt) | |

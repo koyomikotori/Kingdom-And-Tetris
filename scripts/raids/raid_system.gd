@@ -2,10 +2,6 @@ class_name RaidSystem
 extends RefCounted
 ## Random bandit raids (GDD §7.2): chance per turn, bandit army, battle and its consequences.
 
-## Unbroken squads on the losing side keep this fraction of their soldiers (GDD §7.6).
-const RETREAT_KEEP_FRACTION := 0.5
-
-
 ## Chance (0..1) that bandits raid at the start of `state.turn`.
 ## Watchtowers only help when their upkeep was paid at the end of the previous turn.
 static func get_raid_chance(state: KingdomState, raid: RaidData) -> float:
@@ -59,25 +55,7 @@ static func resolve(state: KingdomState, raid: RaidData, bandits: BattleSide, se
 ##          "resources_lost", "reward"}.
 static func apply_outcome(state: KingdomState, raid: RaidData, record: BattleRecord) -> Dictionary:
 	var won := record.winner == BattleRecord.DEFENDER
-	var casualties: Dictionary[StringName, int] = {}
-	var scattered: Dictionary[StringName, int] = {}
-	var retreat_losses: Dictionary[StringName, int] = {}
-	for unit in record.sides[BattleRecord.DEFENDER].units:
-		var unit_id := unit.data.unit_id
-		if unit.lost() > 0:
-			casualties[unit_id] = casualties.get(unit_id, 0) + unit.lost()
-		var keep := unit.alive()
-		if not won:
-			if unit.broken:
-				scattered[unit_id] = scattered.get(unit_id, 0) + keep
-				keep = 0
-			else:
-				var kept := roundi(keep * RETREAT_KEEP_FRACTION)
-				if keep - kept > 0:
-					retreat_losses[unit_id] = retreat_losses.get(unit_id, 0) + keep - kept
-				keep = kept
-		if unit.squad != null:
-			state.army.set_soldiers(unit.squad, keep)
+	var losses := BattleOutcome.apply_to_army(state.army, record, BattleRecord.DEFENDER)
 	var resources_lost: Dictionary[StringName, int] = {}
 	var reward: Dictionary[StringName, int] = {}
 	if won:
@@ -90,5 +68,5 @@ static func apply_outcome(state: KingdomState, raid: RaidData, record: BattleRec
 			if amount > 0:
 				resources_lost[resource_id] = amount
 		state.stockpile.spend(resources_lost)
-	return {"record": record, "won": won, "casualties": casualties, "scattered": scattered,
-			"retreat_losses": retreat_losses, "resources_lost": resources_lost, "reward": reward}
+	return {"record": record, "won": won, "casualties": losses.casualties, "scattered": losses.scattered,
+			"retreat_losses": losses.retreat_losses, "resources_lost": resources_lost, "reward": reward}

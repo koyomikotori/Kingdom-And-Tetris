@@ -6,7 +6,7 @@ extends RefCounted
 signal changed
 
 enum Tier { HOSTILE, TENSE, NEUTRAL, FRIENDLY, CLOSE }
-enum GiftResult { OK, EMPTY, CANNOT_AFFORD, LIMIT_REACHED }
+enum GiftResult { OK, EMPTY, CANNOT_AFFORD, LIMIT_REACHED, ANNEXED, TOO_SMALL }
 enum TradeResult { OK, REFUSED, SAME_RESOURCE, EMPTY, CANNOT_AFFORD, OVER_CAPACITY, TOO_SMALL }
 ## OK = the clan signed. DECLINED = valid offer, but the clan said no.
 enum ProposalResult { OK, DECLINED, REFUSED, SAME_RESOURCE, EMPTY, TOO_LARGE, BAD_DURATION, ALREADY_HAS, ASKED_THIS_TURN }
@@ -49,6 +49,9 @@ const AGREEMENT_MISSED_PENALTY := 3
 const AGREEMENT_CANCEL_PENALTY := 20
 ## While an agreement runs, the clan's relation drifts toward base + this instead of base.
 const AGREEMENT_BASE_BONUS := 15
+## How strongly each personality reacts to the kingdom's threat (GDD §9.3):
+## PEACEFUL, AGGRESSIVE, MERCHANT, ISOLATED.
+const WARINESS: Array[float] = [0.5, 1.0, 0.4, 0.8]
 const AGREEMENT_MAX_CHANCE := 0.95
 ## Added to the acceptance chance, by personality: PEACEFUL, AGGRESSIVE, MERCHANT, ISOLATED.
 const AGREEMENT_PERSONALITY: Array[float] = [0.05, -0.1, 0.15, -0.2]
@@ -63,6 +66,8 @@ class ClanState:
 	var traded_value_this_turn := 0
 	## A refused or accepted proposal blocks further proposals to this clan until next turn.
 	var proposed_this_turn := false
+	## Part of the kingdom now (Wars.annex): no more diplomacy.
+	var annexed := false
 
 	func _init(p_data: ClanData) -> void:
 		data = p_data
@@ -83,6 +88,8 @@ class Agreement:
 
 var clans: Dictionary[StringName, ClanState] = {}
 var agreements: Array[Agreement] = []
+## How threatening the kingdom looks (KingdomState.get_threat()); lowers every clan's drift target.
+var threat := 0
 var _trade_values: Dictionary[StringName, int] = {}
 
 
@@ -116,14 +123,30 @@ func change_relation(clan_id: StringName, amount: int) -> void:
 func end_turn() -> void:
 	for clan_id in clans:
 		var clan := clans[clan_id]
+		if clan.annexed:
+			continue
 		var step: int = DRIFT_PER_TURN[clan.data.personality]
-		var target := clan.data.base_relation + (AGREEMENT_BASE_BONUS if get_agreement(clan_id) != null else 0)
+		var target := target_relation(clan_id)
 		clan.relation = int(move_toward(clan.relation, target, step))
 		clan.gift_gain_this_turn = 0
 		clan.trade_gain_this_turn = 0
 		clan.traded_value_this_turn = 0
 		clan.proposed_this_turn = false
 	changed.emit()
+
+
+## Relation this clan drifts toward: its base, lowered by wariness of a strong kingdom,
+## raised while a trade agreement runs.
+func target_relation(clan_id: StringName) -> int:
+	var clan := clans[clan_id]
+	var target := clan.data.base_relation - wariness_penalty(clan_id)
+	if get_agreement(clan_id) != null:
+		target += AGREEMENT_BASE_BONUS
+	return clampi(target, MIN_RELATION, MAX_RELATION)
+
+
+func wariness_penalty(clan_id: StringName) -> int:
+	return roundi(threat * WARINESS[clans[clan_id].data.personality])
 
 
 func value_of(amounts: Dictionary[StringName, int]) -> int:
@@ -143,12 +166,16 @@ func gift_gain(clan_id: StringName, amounts: Dictionary[StringName, int]) -> int
 
 
 func check_gift(stockpile: Stockpile, clan_id: StringName, amounts: Dictionary[StringName, int]) -> GiftResult:
+	if clans[clan_id].annexed:
+		return GiftResult.ANNEXED
 	if value_of(amounts) <= 0:
 		return GiftResult.EMPTY
 	if clans[clan_id].gift_gain_this_turn >= MAX_GIFT_GAIN_PER_TURN:
 		return GiftResult.LIMIT_REACHED
 	if not stockpile.can_afford(amounts):
 		return GiftResult.CANNOT_AFFORD
+	if gift_gain(clan_id, amounts) <= 0:
+		return GiftResult.TOO_SMALL
 	return GiftResult.OK
 
 
@@ -174,6 +201,10 @@ static func describe_gift(result: GiftResult) -> String:
 			return "Không đủ tài nguyên."
 		GiftResult.LIMIT_REACHED:
 			return "Lượt này họ đã nhận đủ quà (tối đa +%d quan hệ mỗi lượt)." % MAX_GIFT_GAIN_PER_TURN
+		GiftResult.ANNEXED:
+			return "Gia tộc này đã thuộc về vương quốc."
+		GiftResult.TOO_SMALL:
+			return "Món quà quá nhỏ, họ sẽ không để ý (quan hệ +0)."
 	return ""
 
 
@@ -206,7 +237,7 @@ func remaining_capacity(clan_id: StringName) -> int:
 
 func check_trade(stockpile: Stockpile, clan_id: StringName, give_id: StringName, give_amount: int,
 		get_id: StringName) -> TradeResult:
-	if get_tier(clan_id) < MIN_TRADE_TIER:
+	if clans[clan_id].annexed or get_tier(clan_id) < MIN_TRADE_TIER:
 		return TradeResult.REFUSED
 	if give_id == get_id:
 		return TradeResult.SAME_RESOURCE
@@ -294,7 +325,7 @@ static func chance_name(chance: float) -> String:
 
 func check_proposal(clan_id: StringName, give_id: StringName, give_amount: int, get_id: StringName,
 		get_amount: int, turns: int) -> ProposalResult:
-	if get_tier(clan_id) < MIN_TRADE_TIER:
+	if clans[clan_id].annexed or get_tier(clan_id) < MIN_TRADE_TIER:
 		return ProposalResult.REFUSED
 	if get_agreement(clan_id) != null:
 		return ProposalResult.ALREADY_HAS

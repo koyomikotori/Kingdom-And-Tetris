@@ -322,3 +322,11 @@ func test_income_breakdown_lists_every_source_and_adds_up() -> void:
 	check_eq([farm.count, farm.key_count], [2, 1], "Cell counts for the tooltip")
 	check(breakdown[&"wood"].map(func(e: Dictionary) -> int: return e.amount).has(-5), "Agreement takes 5 wood")
 	check_eq(state.get_net_income(), {&"food": 7, &"wood": -4}, "Net = sum of the breakdown, agreements included")
+
+
+func test_gift_too_small_to_matter_is_refused() -> void:
+	var diplomacy := _diplomacy()
+	var stockpile := _stock({&"food": 5})
+	# 5 food = value 5 -> 1 point x0.6 (aggressive) = 0
+	check_eq(diplomacy.give_gift(stockpile, &"north_wolves", {&"food": 5}), Diplomacy.GiftResult.TOO_SMALL, "No point gifting")
+	check_eq(stockpile.get_amount(&"food"), 5, "Nothing spent")

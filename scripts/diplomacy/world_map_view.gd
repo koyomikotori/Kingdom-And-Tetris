@@ -13,12 +13,14 @@ const BACKGROUND_COLOR := Color(0.23, 0.27, 0.2)
 const ROAD_COLOR := Color(0.75, 0.65, 0.45, 0.6)
 const KINGDOM_COLOR := Color(1.0, 0.85, 0.35)
 const SELECTED_COLOR := Color(1, 1, 1)
+const WAR_COLOR := Color(1.0, 0.25, 0.2)
 ## HOSTILE, TENSE, NEUTRAL, FRIENDLY, CLOSE
 const TIER_COLORS: Array[Color] = [Color(0.9, 0.2, 0.2), Color(0.95, 0.55, 0.25), Color(0.75, 0.75, 0.75),
 		Color(0.45, 0.85, 0.45), Color(0.3, 1.0, 0.6)]
 const LABEL_FONT_SIZE := 14
 
 var _diplomacy: Diplomacy
+var _wars: Wars
 var _selected: StringName = &""
 
 
@@ -26,6 +28,13 @@ func setup(diplomacy: Diplomacy) -> void:
 	_diplomacy = diplomacy
 	_diplomacy.changed.connect(queue_redraw)
 	mouse_filter = Control.MOUSE_FILTER_STOP
+
+
+## Shows war markers, annexed clans and clans that became neighbours.
+func setup_wars(wars: Wars) -> void:
+	_wars = wars
+	_wars.changed.connect(queue_redraw)
+	queue_redraw()
 
 
 func select(clan_id: StringName) -> void:
@@ -68,9 +77,25 @@ func _draw() -> void:
 	_draw_node(_point(KINGDOM_POSITION), KINGDOM_COLOR, KINGDOM_COLOR, "Vương quốc của bạn", false)
 	for clan_id in _diplomacy.clans:
 		var clan := _diplomacy.clans[clan_id]
+		var center := _point(clan.data.map_position)
+		var front: Wars.Front = _wars.fronts[clan_id] if _wars != null else null
+		if front != null and front.annexed:
+			_draw_node(center, KINGDOM_COLOR, KINGDOM_COLOR, clan.data.display_name + " (đã sáp nhập)", clan_id == _selected)
+			continue
 		var ring := TIER_COLORS[Diplomacy.tier_for(clan.relation)]
-		var label := clan.data.display_name + ("" if clan.data.is_neighbor() else " (xa)")
-		_draw_node(_point(clan.data.map_position), clan.data.color, ring, label, clan_id == _selected)
+		var neighbor := front.is_neighbor() if front != null else clan.data.is_neighbor()
+		var label := clan.data.display_name + ("" if neighbor else " (xa)")
+		_draw_node(center, clan.data.color, ring, label, clan_id == _selected)
+		if front != null and front.at_war:
+			_draw_war_marker(center + Vector2(NODE_RADIUS, -NODE_RADIUS))
+
+
+## Two crossed red strokes: this clan is at war with the kingdom.
+func _draw_war_marker(center: Vector2) -> void:
+	var r := 9.0
+	draw_circle(center, r + 4, Color(0, 0, 0, 0.7))
+	draw_line(center + Vector2(-r, -r), center + Vector2(r, r), WAR_COLOR, 3.0)
+	draw_line(center + Vector2(r, -r), center + Vector2(-r, r), WAR_COLOR, 3.0)
 
 
 func _draw_road(from: Vector2, to: Vector2) -> void:

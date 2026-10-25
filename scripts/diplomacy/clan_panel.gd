@@ -1,16 +1,21 @@
 class_name ClanPanel
 extends VBoxContainer
-## Right-hand column of the world map: details of the selected clan plus trade, gift and
+## Right-hand column of the world map: details of the selected clan plus war, trade, gift and
 ## long-term agreement forms.
-## Every action goes through Diplomacy; buttons are disabled with the reason shown when an action
-## is not possible. No hover needed (touch-ready).
+## Every action goes through Diplomacy / Wars; buttons are disabled with the reason shown when an
+## action is not possible. No hover needed (touch-ready).
+
+## The player wants to attack this clan; the kingdom scene runs the battle.
+signal attack_requested(clan_id: StringName)
 
 const MUTED_COLOR := Color(1, 1, 1, 0.65)
 const WARNING_COLOR := Color(1, 0.6, 0.5)
 const DEFAULT_AMOUNT := 5
 const DEFAULT_AGREEMENT_TURNS := 10
 
+var _state: KingdomState
 var _diplomacy: Diplomacy
+var _wars: Wars
 var _stockpile: Stockpile
 var _rng: RandomNumberGenerator
 var _resource_types: Array[ResourceTypeData] = []
@@ -44,15 +49,25 @@ var _offer_button: Button
 var _contract_box: VBoxContainer
 var _contract_label: Label
 var _cancel_button: Button
+var _war_status: Label
+var _declare_button: Button
+var _war_box: VBoxContainer
+var _attack_button: Button
+var _attack_reason: Label
+var _tribute_amount: SpinBox
+var _tribute_option: OptionButton
+var _peace_preview: Label
+var _peace_button: Button
 var _status: Label
 
 
-## `rng` decides whether clans accept agreement offers (KingdomState.rng, so games replay).
-func setup(diplomacy: Diplomacy, stockpile: Stockpile, resource_types: Array[ResourceTypeData],
-		rng: RandomNumberGenerator) -> void:
-	_diplomacy = diplomacy
-	_stockpile = stockpile
-	_rng = rng
+## Clans decide on offers with the kingdom's RNG (KingdomState.rng), so games replay.
+func setup(state: KingdomState, resource_types: Array[ResourceTypeData]) -> void:
+	_state = state
+	_diplomacy = state.diplomacy
+	_wars = state.wars
+	_stockpile = state.stockpile
+	_rng = state.rng
 	_resource_types = resource_types
 	add_theme_constant_override("separation", 8)
 	_hint = _label("Chạm vào một gia tộc trên bản đồ để xem thông tin và giao thương.", 14)
@@ -63,6 +78,7 @@ func setup(diplomacy: Diplomacy, stockpile: Stockpile, resource_types: Array[Res
 	add_child(_details)
 	_build_details()
 	_diplomacy.changed.connect(refresh)
+	_wars.changed.connect(refresh)
 	_stockpile.changed.connect(refresh)
 
 
@@ -70,6 +86,7 @@ func show_clan(clan_id: StringName) -> void:
 	_clan_id = clan_id
 	_status.text = ""
 	_cancel_button.text = "Hủy hợp đồng"
+	_declare_button.text = "Tuyên chiến"
 	refresh()
 
 
@@ -83,18 +100,25 @@ func refresh() -> void:
 	_name_label.text = data.display_name
 	_name_label.add_theme_color_override("font_color", data.color)
 	_description.text = data.description
-	_info.text = "%s · %s · Sức mạnh quân sự: %d" % [ClanData.DIRECTION_NAMES[data.direction],
-			ClanData.PERSONALITY_NAMES[data.personality], data.military_strength]
+	var front := _wars.fronts[_clan_id]
+	_info.text = "%s · %s · Quân: %d/%d lính" % [ClanData.DIRECTION_NAMES[front.direction],
+			ClanData.PERSONALITY_NAMES[data.personality], front.strength, front.max_strength]
 	var tier := Diplomacy.tier_for(clan.relation)
 	_relation_bar.value = clan.relation
 	var fill := StyleBoxFlat.new()
 	fill.bg_color = WorldMapView.TIER_COLORS[tier]
 	_relation_bar.add_theme_stylebox_override("fill", fill)
 	_relation_label.text = "Quan hệ: %d (%s)" % [clan.relation, Diplomacy.TIER_NAMES[tier]]
+	var target := _diplomacy.target_relation(_clan_id)
+	var drift := "đang nhích về %d" % target if target != clan.relation else "giữ ở mức này"
+	var wary := _diplomacy.wariness_penalty(_clan_id)
+	_relation_label.text += "\n%s%s" % [drift.substr(0, 1).to_upper() + drift.substr(1),
+			" (e dè vương quốc lớn mạnh: -%d)" % wary if wary > 0 else ""]
 	_goods.text = "Dư: %s · Thiếu: %s" % [_resource_names(data.surplus), _resource_names(data.deficit)]
 	_refresh_trade()
 	_refresh_gift()
 	_refresh_agreement()
+	_refresh_war()
 
 
 func _refresh_trade() -> void:
@@ -123,6 +147,66 @@ func _refresh_gift() -> void:
 	else:
 		_gift_preview.text = Diplomacy.describe_gift(result)
 		_gift_preview.add_theme_color_override("font_color", WARNING_COLOR)
+
+
+func _refresh_war() -> void:
+	var front := _wars.fronts[_clan_id]
+	if front.annexed:
+		_war_status.text = "Đã sáp nhập vào vương quốc."
+	elif front.at_war:
+		_war_status.text = "Đang chiến tranh!"
+	elif front.truce_turns > 0:
+		_war_status.text = "Hòa bình (đình chiến còn %d lượt)." % front.truce_turns
+	else:
+		_war_status.text = "Hòa bình."
+	_war_status.add_theme_color_override("font_color", WARNING_COLOR if front.at_war else Color.WHITE)
+	var declare := _wars.check_declare(_clan_id)
+	_declare_button.visible = not front.at_war and not front.annexed
+	_declare_button.disabled = declare != Wars.DeclareResult.OK
+	_declare_button.tooltip_text = "" if declare == Wars.DeclareResult.OK else Wars.describe_declare(declare)
+	if declare != Wars.DeclareResult.OK and _declare_button.visible:
+		_war_status.text += " " + Wars.describe_declare(declare)
+	_war_box.visible = front.at_war
+	if not front.at_war:
+		return
+	var attack := _wars.check_attack(_clan_id, _state.army.count_squads() > 0)
+	_attack_button.disabled = attack != Wars.AttackResult.OK
+	_attack_reason.text = "" if attack == Wars.AttackResult.OK else Wars.describe_attack(attack)
+	_attack_reason.visible = attack != Wars.AttackResult.OK
+	var tribute := _tribute()
+	var peace := _wars.check_peace(_stockpile, _clan_id, tribute)
+	_peace_button.disabled = peace != Wars.PeaceResult.OK
+	if peace == Wars.PeaceResult.OK:
+		var chance := _wars.peace_chance(_clan_id, tribute)
+		_peace_preview.text = "Khả năng đồng ý: %s (%d%%)." % [Diplomacy.chance_name(chance), roundi(chance * 100)]
+		_peace_preview.remove_theme_color_override("font_color")
+	else:
+		_peace_preview.text = Wars.describe_peace(peace)
+		_peace_preview.add_theme_color_override("font_color", WARNING_COLOR)
+
+
+func _tribute() -> Dictionary[StringName, int]:
+	var tribute: Dictionary[StringName, int] = {}
+	if int(_tribute_amount.value) > 0:
+		tribute[_selected_resource(_tribute_option)] = int(_tribute_amount.value)
+	return tribute
+
+
+## Declaring war cannot be undone: the first click asks for confirmation.
+func _on_declare_pressed() -> void:
+	if _declare_button.text == "Tuyên chiến":
+		_declare_button.text = "Chắc chắn tuyên chiến? (các gia tộc khác %d quan hệ)" % Wars.DECLARE_OTHERS_PENALTY
+		return
+	_declare_button.text = "Tuyên chiến"
+	_status.text = Wars.describe_declare(_wars.declare_war(_clan_id))
+
+
+func _on_attack_pressed() -> void:
+	attack_requested.emit(_clan_id)
+
+
+func _on_peace_pressed() -> void:
+	_status.text = Wars.describe_peace(_wars.propose_peace(_rng, _stockpile, _clan_id, _tribute()))
 
 
 func _refresh_agreement() -> void:
@@ -222,6 +306,10 @@ func _build_details() -> void:
 	_details.add_child(_goods)
 
 	_details.add_child(HSeparator.new())
+	_details.add_child(_label("Chiến tranh", 16))
+	_build_war_section()
+
+	_details.add_child(HSeparator.new())
 	_details.add_child(_label("Trao đổi", 16))
 	var give_row := HBoxContainer.new()
 	give_row.add_child(_label("Đưa", 13, false))
@@ -261,6 +349,33 @@ func _build_details() -> void:
 	_details.add_child(HSeparator.new())
 	_status = _label("", 13)
 	_details.add_child(_status)
+
+
+func _build_war_section() -> void:
+	_war_status = _label("", 14)
+	_details.add_child(_war_status)
+	_declare_button = _button("Tuyên chiến", _on_declare_pressed)
+	_declare_button.add_theme_color_override("font_color", WARNING_COLOR)
+	_details.add_child(_declare_button)
+	_war_box = VBoxContainer.new()
+	_details.add_child(_war_box)
+	_attack_button = _button("Tấn công (toàn bộ quân)", _on_attack_pressed)
+	_war_box.add_child(_attack_button)
+	_attack_reason = _label("", 13)
+	_attack_reason.add_theme_color_override("font_color", WARNING_COLOR)
+	_war_box.add_child(_attack_reason)
+	_war_box.add_child(_label("Nghị hòa — bồi thường (không bắt buộc):", 13))
+	var tribute_row := HBoxContainer.new()
+	_tribute_amount = _amount_box()
+	_tribute_amount.value = 0
+	tribute_row.add_child(_tribute_amount)
+	_tribute_option = _resource_option(0)
+	tribute_row.add_child(_tribute_option)
+	_war_box.add_child(tribute_row)
+	_peace_preview = _label("", 13)
+	_war_box.add_child(_peace_preview)
+	_peace_button = _button("Đề nghị nghị hòa", _on_peace_pressed)
+	_war_box.add_child(_peace_button)
 
 
 func _build_agreement_section() -> void:
