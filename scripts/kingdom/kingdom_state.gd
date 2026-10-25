@@ -47,6 +47,39 @@ func start() -> void:
 	turn_started.emit(turn)
 
 
+## Continues a loaded game (load_save) mid-turn: keeps its hand. Call once after connecting signals.
+func resume() -> void:
+	hand.changed.emit()
+	turn_started.emit(turn)
+
+
+# --- Save (GDD §10.1) ---------------------------------------------------------------------
+
+## The whole game as JSON-safe data. The board is restored separately (BoardData.from_save),
+## because the state is built around it.
+func to_save() -> Dictionary:
+	return {"turn": turn, "buildings_supplied": buildings_supplied, "board": board.to_save(),
+			"hand": hand.to_save(), "stockpile": stockpile.to_save(), "army": army.to_save(),
+			"diplomacy": diplomacy.to_save(), "wars": wars.to_save()}
+
+
+## Restores everything but the board from to_save() data. Random rolls are not saved: they come
+## out differently after loading (GDD §10.1).
+func load_save(data: Dictionary) -> void:
+	turn = int(data.turn)
+	buildings_supplied = bool(data.buildings_supplied)
+	hand.load_save(data.hand)
+	stockpile.load_save(data.stockpile)
+	army.load_save(data.army, units)
+	diplomacy.load_save(data.diplomacy)
+	wars.load_save(data.wars)
+
+
+## What a save slot shows: {"turn", "cells", "soldiers"}.
+func save_summary() -> Dictionary:
+	return {"turn": turn, "cells": board.count_owned_cells(), "soldiers": army.count_soldiers()}
+
+
 ## Places the hand piece at `index`. The piece is used up only when placement succeeds.
 func place_piece(index: int, origin: Vector2i) -> PlacementRules.Result:
 	var result := PlacementRules.apply(board, hand.pieces[index], origin)

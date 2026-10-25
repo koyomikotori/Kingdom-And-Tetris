@@ -60,3 +60,19 @@ func get_upkeep(units: Dictionary[StringName, UnitData]) -> Dictionary[StringNam
 		if unit != null:
 			Economy.add_into(total, unit.upkeep)
 	return total
+
+
+func to_save() -> Array:
+	var result: Array = []
+	for squad in squads:
+		result.append({"unit": String(squad.unit_id), "soldiers": squad.soldiers})
+	return result
+
+
+## Squads of unit types that no longer exist in `units` are dropped.
+func load_save(data: Array, units: Dictionary[StringName, UnitData]) -> void:
+	squads.clear()
+	for entry: Dictionary in data:
+		if units.has(StringName(entry.unit)) and int(entry.soldiers) > 0:
+			squads.append(Squad.new(StringName(entry.unit), int(entry.soldiers)))
+	changed.emit()

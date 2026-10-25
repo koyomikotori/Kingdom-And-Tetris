@@ -226,3 +226,30 @@ func expand(direction: Vector2i, amount: int) -> void:
 		cell.building_id = old.building_id
 		cell.building_origin = old.building_origin + shift
 	resized.emit(shift)
+
+
+# --- Save (GDD §10.1) ---------------------------------------------------------------------
+
+## Size plus every cell that is not plain wild land.
+func to_save() -> Dictionary:
+	var cells: Array = []
+	for cell in _cells:
+		if cell.has_terrain() or cell.owned or cell.is_key or cell.has_building():
+			cells.append({"x": cell.coord.x, "y": cell.coord.y, "terrain": String(cell.terrain_id), "owned": cell.owned,
+					"key": cell.is_key, "building": String(cell.building_id),
+					"origin": [cell.building_origin.x, cell.building_origin.y]})
+	return {"width": width, "height": height, "cells": cells}
+
+
+static func from_save(data: Dictionary) -> BoardData:
+	var board := BoardData.new(int(data.width), int(data.height))
+	for entry: Dictionary in data.cells:
+		var cell := board.get_cell(Vector2i(int(entry.x), int(entry.y)))
+		if cell == null:
+			continue
+		cell.terrain_id = StringName(entry.terrain)
+		cell.owned = bool(entry.owned)
+		cell.is_key = bool(entry.key)
+		cell.building_id = StringName(entry.building)
+		cell.building_origin = Vector2i(int(entry.origin[0]), int(entry.origin[1]))
+	return board

@@ -39,3 +39,18 @@ func take(index: int) -> LandPiece:
 
 func is_empty() -> bool:
 	return pieces.is_empty()
+
+
+func to_save() -> Array:
+	var result: Array = []
+	for piece in pieces:
+		result.append(piece.to_save())
+	return result
+
+
+## Puts back the pieces a saved hand held (no new draw).
+func load_save(data: Array) -> void:
+	pieces.clear()
+	for entry: Dictionary in data:
+		pieces.append(LandPiece.from_save(entry))
+	changed.emit()

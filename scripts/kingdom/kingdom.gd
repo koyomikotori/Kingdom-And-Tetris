@@ -8,6 +8,9 @@ const TAB_TITLES: Array[String] = ["Mảnh đất", "Xây dựng", "Quân đội
 @export var board_size := 12
 ## 0 = random seed each run. Set a number to replay the same pieces while testing.
 @export var piece_seed := 0
+## Writes the autosave slot at the start of every turn (GDD §10.1). Previews turn it off so they
+## never overwrite the player's saves.
+@export var autosave := true
 
 var state: KingdomState
 var _terrains: Dictionary[StringName, TerrainData] = {}
@@ -25,6 +28,7 @@ var _battle_report: BattleReport
 var _battle_screen: BattleScreen
 ## Open world map; it swallows input itself.
 var _world_map: WorldMapScreen
+var _save_system := SaveSystem.new()
 
 @onready var board_view: BoardView = $BoardView
 @onready var camera: CameraController = $Camera
@@ -40,6 +44,7 @@ var _world_map: WorldMapScreen
 @onready var placement_status: Label = %PlacementStatus
 @onready var end_turn_button: Button = %EndTurnButton
 @onready var diplomacy_button: Button = %DiplomacyButton
+@onready var game_menu_button: Button = %GameMenuButton
 
 
 func _ready() -> void:
@@ -52,7 +57,9 @@ func _ready() -> void:
 	for i in TAB_TITLES.size():
 		tabs.set_tab_title(i, TAB_TITLES[i])
 
-	var board := BoardData.create_starting_board(board_size)
+	# A game picked in the main menu, or a new one.
+	var game := GameLaunch.take_pending_game()
+	var board := BoardData.from_save(game.board) if not game.is_empty() else BoardData.create_starting_board(board_size)
 	board_view.setup(board, _terrains, _buildings)
 	board_view.cell_hovered.connect(_on_cell_hovered)
 	board_view.cell_clicked.connect(_on_cell_clicked)
@@ -61,6 +68,8 @@ func _ready() -> void:
 	var seed_value := piece_seed if piece_seed != 0 else randi()
 	var hand := PieceHand.new(PieceGenerator.new(_shapes, _terrains, seed_value))
 	state = KingdomState.new(board, hand, _terrains, _buildings, units, seed_value)
+	if not game.is_empty():
+		state.load_save(game)
 	state.hand.changed.connect(_rebuild_piece_cards)
 	state.stockpile.changed.connect(_refresh_economy)
 	state.army.changed.connect(_refresh_economy)
@@ -78,7 +87,12 @@ func _ready() -> void:
 	tabs.tab_changed.connect(func(_tab: int) -> void: _clear_selection())
 	end_turn_button.pressed.connect(_on_end_turn_pressed)
 	diplomacy_button.pressed.connect(_open_world_map)
-	state.start()
+	game_menu_button.pressed.connect(_open_game_menu)
+	if game.is_empty():
+		state.start()
+		_autosave()
+	else:
+		state.resume()
 	_on_cell_hovered(BoardView.OFF_BOARD)
 
 
@@ -187,6 +201,9 @@ func _on_end_turn_pressed() -> void:
 		lines.append("Quân cướp tấn công!")
 		_play_raid(report.pending_raid)
 	placement_status.text = "\n".join(lines)
+	# With a battle at the start of the turn, the autosave waits until it is over.
+	if not report.has("pending_invasion") and not report.has("pending_raid"):
+		_autosave()
 
 
 ## "+5 Kiếm sĩ, +4 Cung thủ" from unit_id -> soldiers.
@@ -211,6 +228,7 @@ func _play_battle(simulator: BattleSimulator, player_side: int, title: String, o
 func _play_raid(simulator: BattleSimulator) -> void:
 	_play_battle(simulator, BattleRecord.DEFENDER, "Quân cướp tấn công vương quốc!", func(record: BattleRecord) -> void:
 		var result := state.finish_raid(record)
+		_autosave()
 		placement_status.text += " %s" % ("Đã đánh lui." if result.won else "Thất thủ.")
 		_show_battle_report(result, _ally_lines(result)))
 
@@ -219,6 +237,7 @@ func _play_invasion(clan_id: StringName, simulator: BattleSimulator) -> void:
 	var title := "%s xâm lược vương quốc!" % _clan_name(clan_id)
 	_play_battle(simulator, BattleRecord.DEFENDER, title, func(record: BattleRecord) -> void:
 		var result := state.finish_invasion(clan_id, record)
+		_autosave()
 		var report := BattleReport.new()
 		$UI.add_child(report)
 		var lines := report.army_loss_lines(result, state.units)
@@ -338,6 +357,22 @@ func _open_world_map() -> void:
 	_world_map.open(state, _resource_types)
 	_world_map.closed.connect(func() -> void: _world_map = null)
 	_world_map.attack_requested.connect(_attack_clan)
+
+
+## Saves into the autosave slot (start of a game and of every turn).
+func _autosave() -> void:
+	if not autosave:
+		return
+	var error := _save_system.save(state, SaveSystem.AUTO_SLOT)
+	if error != OK:
+		placement_status.text += "\nKhông tự lưu được (lỗi %s)." % error_string(error)
+
+
+func _open_game_menu() -> void:
+	_clear_selection()
+	var menu := GameMenuWindow.new()
+	$UI.add_child(menu)
+	menu.open(state, _save_system, $UI)
 
 
 func _show_battle_report(raid: Dictionary, extra_lines: Array[String] = []) -> void:

@@ -397,6 +397,18 @@ Thang −100 → +100:
 | Nền tảng | Windows trước; **Android (APK)** sau. Renderer GL Compatibility hợp với Android. Giao diện mới không được chỉ dựa vào rê chuột hay phím tắt |
 | Tên lớp | Tránh trùng lớp có sẵn của Godot (ví dụ dùng `CellData`, không dùng `TileData`) |
 
+### 10.1 Lưu / tải (M10, đã chốt)
+
+- **Ô lưu:** 1 ô **Tự động** + **3 ô lưu tay**. Mỗi ô hiện: lượt, số ô lãnh thổ, số lính, ngày giờ lưu.
+- **Tự động lưu** mỗi khi sang lượt mới, sau khi trận đánh đầu lượt (nếu có) đã xong; và lúc bắt đầu ván mới.
+- **Lưu tay bất cứ lúc nào ở màn vương quốc**, kể cả giữa lượt: giữ nguyên mảnh đất trên tay, tài nguyên, giới hạn quà / giao thương / đề nghị của lượt. Không lưu được khi đang xem trận đánh hay đang mở bản đồ thế giới. Ghi đè ô đã có phải bấm 2 lần.
+- **Tải lại thì gieo lại ngẫu nhiên:** mảnh đất đang trên tay giữ nguyên, nhưng các mảnh sau, cướp, xâm lược, gia tộc đồng ý hay không đều ra kết quả mới.
+- **Menu chính** khi mở game: Tiếp tục (bản lưu mới nhất) · Ván mới · Tải game · Thoát. Trong ván: nút **Menu** trên thanh trên cùng → Tiếp tục chơi · Lưu game · Tải game · Về menu chính.
+- **Kỹ thuật:**
+  - File JSON trong `user://saves/` (`auto.json`, `slot_1.json`…), ghi ra file tạm rồi mới đổi tên để không hỏng file cũ khi game tắt giữa chừng.
+  - Mỗi file có `save_version`. Bản cũ hơn được nâng cấp từng bước (`v1 → v2 → …`) khi tải. Bản mới hơn phiên bản game thì báo lỗi, không tải.
+  - Chỉ lưu trạng thái ván. Dữ liệu tĩnh (địa hình, lính, gia tộc…) đọc lại từ `data/`. Gia tộc hay loại lính không còn trong dữ liệu thì bỏ qua; gia tộc mới thêm vào dữ liệu thì dùng giá trị ban đầu.
+
 ## 11. Lộ trình
 
 | Mốc | Nội dung | Trạng thái |
@@ -411,8 +423,8 @@ Thang −100 → +100:
 | M7 | Màn hình trận đánh cinematic (10/18/44/18/10, hoạt ảnh, tạm dừng, tăng tốc, rút lui, bỏ qua) | Xong |
 | M8 | Bản đồ thế giới làm sẵn + gia tộc + quan hệ + giao thương + hợp đồng dài hạn | Xong |
 | M9 | Chiến tranh: tuyên chiến, quân xâm lược (mất đất theo hướng), đi xâm lược, nghị hòa, sáp nhập + mở rộng bản đồ | Xong |
-| M9b | Liên minh: hiệp ước, đồng minh gửi quân vào trận, bất tương xâm | Đang làm |
-| M10 | Lưu/tải (JSON có version) | |
+| M9b | Liên minh: hiệp ước, đồng minh gửi quân vào trận, bất tương xâm | Xong |
+| M10 | Lưu/tải (JSON có version), menu chính | Đang làm |
 | M11 | Sự kiện, tướng, mưu sĩ, kinh nghiệm, điều kiện thắng/thua | |
 | M12 | **Hỗ trợ cảm ứng + xuất APK** (chạm để xem trước/xác nhận, vuốt để kéo, chụm để zoom, nút thay phím tắt) | |
 | M13 | Pixel art, âm thanh, cân bằng, build Windows + Android | |
