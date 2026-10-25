@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="EventData" format=3]
+
+[ext_resource type="Script" path="res://scripts/events/event_data.gd" id="1_event"]
+[ext_resource type="Script" path="res://scripts/events/event_choice_data.gd" id="2_choice"]
+[ext_resource type="Script" path="res://scripts/events/event_outcome_data.gd" id="3_outcome"]
+
+[sub_resource type="Resource" id="outcome_0_0"]
+script = ExtResource("3_outcome")
+weight = 1.0
+text = "Bạn nhận quà và tiễn sứ giả về."
+resources = Dictionary[StringName, int]({&"food": 10, &"wood": 10})
+relation = 3
+
+[sub_resource type="Resource" id="choice_0"]
+script = ExtResource("2_choice")
+text = "Nhận quà"
+hint = "Có quà thì cứ nhận."
+outcomes = Array[ExtResource("3_outcome")]([SubResource("outcome_0_0")])
+
+[sub_resource type="Resource" id="outcome_1_0"]
+script = ExtResource("3_outcome")
+weight = 1.0
+text = "{clan} rất hài lòng với món quà đáp lễ."
+resources = Dictionary[StringName, int]({&"food": 10, &"wood": 10})
+relation = 12
+
+[sub_resource type="Resource" id="choice_1"]
+script = ExtResource("2_choice")
+text = "Đáp lễ hậu hĩnh"
+hint = "Mất chút đá, nhưng họ sẽ quý bạn hơn."
+cost = Dictionary[StringName, int]({&"stone": 10})
+outcomes = Array[ExtResource("3_outcome")]([SubResource("outcome_1_0")])
+
+[resource]
+script = ExtResource("1_event")
+event_id = &"envoy_gift"
+title = "Sứ giả mang quà"
+text = "{clan} cử sứ giả mang quà sang làm quen."
+category = 1
+weight = 2.0
+cooldown = 8
+needs_clan = true
+clan_min_tier = 2
+choices = Array[ExtResource("2_choice")]([SubResource("choice_0"), SubResource("choice_1")])

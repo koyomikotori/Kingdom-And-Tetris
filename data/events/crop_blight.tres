@@ -1,0 +1,48 @@
+[gd_resource type="Resource" script_class="EventData" format=3]
+
+[ext_resource type="Script" path="res://scripts/events/event_data.gd" id="1_event"]
+[ext_resource type="Script" path="res://scripts/events/event_choice_data.gd" id="2_choice"]
+[ext_resource type="Script" path="res://scripts/events/event_outcome_data.gd" id="3_outcome"]
+
+[sub_resource type="Resource" id="outcome_0_0"]
+script = ExtResource("3_outcome")
+weight = 1.0
+text = "Sâu ăn trụi nhiều ruộng, kho thóc vơi hẳn."
+resource_loss = Dictionary[StringName, float]({&"food": 0.3})
+
+[sub_resource type="Resource" id="choice_0"]
+script = ExtResource("2_choice")
+text = "Mặc kệ, chờ qua mùa"
+hint = "Không tốn gì, nhưng thiệt hại có thể lớn."
+outcomes = Array[ExtResource("3_outcome")]([SubResource("outcome_0_0")])
+
+[sub_resource type="Resource" id="outcome_1_0"]
+script = ExtResource("3_outcome")
+weight = 0.75
+text = "Ruộng được cứu gần hết."
+resource_loss = Dictionary[StringName, float]({&"food": 0.05})
+
+[sub_resource type="Resource" id="outcome_1_1"]
+script = ExtResource("3_outcome")
+weight = 0.25
+text = "Làm muộn quá, vẫn mất khá nhiều."
+resource_loss = Dictionary[StringName, float]({&"food": 0.2})
+
+[sub_resource type="Resource" id="choice_1"]
+script = ExtResource("2_choice")
+text = "Thuê người diệt sâu"
+hint = "Tốn gỗ làm đuốc và bẫy, thường cứu được phần lớn."
+cost = Dictionary[StringName, int]({&"wood": 10})
+outcomes = Array[ExtResource("3_outcome")]([SubResource("outcome_1_0"), SubResource("outcome_1_1")])
+
+[resource]
+script = ExtResource("1_event")
+event_id = &"crop_blight"
+title = "Sâu bệnh phá lúa"
+text = "Một đàn sâu kéo đến cắn phá ruộng lúa ngoài thành."
+category = 0
+weight = 2.0
+cooldown = 8
+min_stock = Dictionary[StringName, int]({&"food": 20})
+min_terrain = Dictionary[StringName, int]({&"farmland": 3})
+choices = Array[ExtResource("2_choice")]([SubResource("choice_0"), SubResource("choice_1")])

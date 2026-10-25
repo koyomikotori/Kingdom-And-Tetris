@@ -1,0 +1,51 @@
+[gd_resource type="Resource" script_class="EventData" format=3]
+
+[ext_resource type="Script" path="res://scripts/events/event_data.gd" id="1_event"]
+[ext_resource type="Script" path="res://scripts/events/event_choice_data.gd" id="2_choice"]
+[ext_resource type="Script" path="res://scripts/events/event_outcome_data.gd" id="3_outcome"]
+
+[sub_resource type="Resource" id="outcome_0_0"]
+script = ExtResource("3_outcome")
+weight = 1.0
+text = "{clan} tạm hài lòng."
+relation = 12
+
+[sub_resource type="Resource" id="choice_0"]
+script = ExtResource("2_choice")
+text = "Nộp cống"
+hint = "Mua lấy bình yên, ít nhất là lúc này."
+cost = Dictionary[StringName, int]({&"food": 20, &"wood": 20})
+outcomes = Array[ExtResource("3_outcome")]([SubResource("outcome_0_0")])
+
+[sub_resource type="Resource" id="outcome_1_0"]
+script = ExtResource("3_outcome")
+weight = 0.5
+text = "{clan} buông lời đe dọa rồi bỏ đi."
+relation = -15
+
+[sub_resource type="Resource" id="outcome_1_1"]
+script = ExtResource("3_outcome")
+weight = 0.5
+text = "{clan} nổi giận và kéo quân!"
+relation = -15
+declare_war = true
+
+[sub_resource type="Resource" id="choice_1"]
+script = ExtResource("2_choice")
+text = "Khước từ"
+hint = "Họ có thể nổi giận."
+outcomes = Array[ExtResource("3_outcome")]([SubResource("outcome_1_0"), SubResource("outcome_1_1")])
+
+[resource]
+script = ExtResource("1_event")
+event_id = &"tribute_demand"
+title = "{clan} đòi cống nạp"
+text = "Sứ giả {clan} ngạo nghễ: nộp cống nếu không muốn thấy quân họ ngoài cổng thành."
+category = 1
+weight = 1.5
+cooldown = 10
+min_turn = 5
+needs_clan = true
+clan_max_tier = 1
+clan_must_be_stronger = true
+choices = Array[ExtResource("2_choice")]([SubResource("choice_0"), SubResource("choice_1")])

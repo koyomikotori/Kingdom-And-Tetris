@@ -1,0 +1,50 @@
+[gd_resource type="Resource" script_class="EventData" format=3]
+
+[ext_resource type="Script" path="res://scripts/events/event_data.gd" id="1_event"]
+[ext_resource type="Script" path="res://scripts/events/event_choice_data.gd" id="2_choice"]
+[ext_resource type="Script" path="res://scripts/events/event_outcome_data.gd" id="3_outcome"]
+
+[sub_resource type="Resource" id="outcome_0_0"]
+script = ExtResource("3_outcome")
+weight = 0.6
+text = "Họ hăng hái nhận gươm giáo."
+add_unit = &"swordsman"
+add_soldiers = 12
+
+[sub_resource type="Resource" id="outcome_0_1"]
+script = ExtResource("3_outcome")
+weight = 0.4
+text = "Cả làng kéo nhau đến!"
+add_unit = &"swordsman"
+add_soldiers = 20
+
+[sub_resource type="Resource" id="choice_0"]
+script = ExtResource("2_choice")
+text = "Nhận vào quân"
+hint = "Thêm một đơn vị kiếm sĩ, đông hay ít tùy họ."
+cost = Dictionary[StringName, int]({&"food": 10})
+outcomes = Array[ExtResource("3_outcome")]([SubResource("outcome_0_0"), SubResource("outcome_0_1")])
+
+[sub_resource type="Resource" id="outcome_1_0"]
+script = ExtResource("3_outcome")
+weight = 1.0
+text = "Họ về làng, mùa sau thêm thóc."
+resources = Dictionary[StringName, int]({&"food": 15})
+
+[sub_resource type="Resource" id="choice_1"]
+script = ExtResource("2_choice")
+text = "Khuyên về làm ruộng"
+hint = "Thêm người làm ruộng."
+outcomes = Array[ExtResource("3_outcome")]([SubResource("outcome_1_0")])
+
+[resource]
+script = ExtResource("1_event")
+event_id = &"volunteers"
+title = "Người tình nguyện đầu quân"
+text = "Một nhóm trai tráng trong vùng xin gia nhập quân đội."
+category = 2
+weight = 2.0
+cooldown = 8
+min_stock = Dictionary[StringName, int]({&"food": 10})
+needs_free_squad_slot = true
+choices = Array[ExtResource("2_choice")]([SubResource("choice_0"), SubResource("choice_1")])

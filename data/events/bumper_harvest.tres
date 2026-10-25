@@ -1,0 +1,46 @@
+[gd_resource type="Resource" script_class="EventData" format=3]
+
+[ext_resource type="Script" path="res://scripts/events/event_data.gd" id="1_event"]
+[ext_resource type="Script" path="res://scripts/events/event_choice_data.gd" id="2_choice"]
+[ext_resource type="Script" path="res://scripts/events/event_outcome_data.gd" id="3_outcome"]
+
+[sub_resource type="Resource" id="outcome_0_0"]
+script = ExtResource("3_outcome")
+weight = 1.0
+text = "Kho lẫm đầy ắp thóc mới."
+resources = Dictionary[StringName, int]({&"food": 30})
+
+[sub_resource type="Resource" id="choice_0"]
+script = ExtResource("2_choice")
+text = "Cất vào kho"
+hint = "Thêm lương thực cho những ngày khó khăn."
+outcomes = Array[ExtResource("3_outcome")]([SubResource("outcome_0_0")])
+
+[sub_resource type="Resource" id="outcome_1_0"]
+script = ExtResource("3_outcome")
+weight = 0.6
+text = "Thương lái trả giá hời."
+resources = Dictionary[StringName, int]({&"wood": 15, &"stone": 8})
+
+[sub_resource type="Resource" id="outcome_1_1"]
+script = ExtResource("3_outcome")
+weight = 0.4
+text = "Thương lái ép giá, nhưng vẫn có lời."
+resources = Dictionary[StringName, int]({&"wood": 8, &"stone": 4})
+
+[sub_resource type="Resource" id="choice_1"]
+script = ExtResource("2_choice")
+text = "Đem bán cho thương lái"
+hint = "Đổi thóc lấy vật liệu xây dựng, giá cả tùy may."
+outcomes = Array[ExtResource("3_outcome")]([SubResource("outcome_1_0"), SubResource("outcome_1_1")])
+
+[resource]
+script = ExtResource("1_event")
+event_id = &"bumper_harvest"
+title = "Được mùa"
+text = "Năm nay trời thuận, ruộng đồng trĩu hạt. Dân làng hỏi nên làm gì với số thóc dư."
+category = 0
+weight = 3.0
+cooldown = 8
+min_terrain = Dictionary[StringName, int]({&"farmland": 4})
+choices = Array[ExtResource("2_choice")]([SubResource("choice_0"), SubResource("choice_1")])
