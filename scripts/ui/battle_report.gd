@@ -7,6 +7,8 @@ signal closed
 
 const WIN_COLOR := Color(0.55, 0.95, 0.55)
 const LOSS_COLOR := Color(1.0, 0.5, 0.45)
+## Gap around the panel as a share of the screen: 15% left/right, 6% top/bottom.
+const PANEL_MARGIN := Vector2(0.15, 0.06)
 
 
 ## `raid` is the dictionary returned by RaidSystem.resolve.
@@ -17,23 +19,24 @@ func show_raid(raid: Dictionary, resource_types: Array[ResourceTypeData], units:
 	dim.color = Color(0, 0, 0, 0.6)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(dim)
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
+	# Sized as a share of the screen so it grows and shrinks with the window like the battle screen.
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(620, 0)
+	panel.anchor_left = PANEL_MARGIN.x
+	panel.anchor_right = 1.0 - PANEL_MARGIN.x
+	panel.anchor_top = PANEL_MARGIN.y
+	panel.anchor_bottom = 1.0 - PANEL_MARGIN.y
 	var background := StyleBoxFlat.new()
 	background.bg_color = Color(0.13, 0.14, 0.17)
 	background.set_corner_radius_all(6)
 	panel.add_theme_stylebox_override("panel", background)
-	center.add_child(panel)
+	add_child(panel)
 	var margin := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 20)
 	panel.add_child(margin)
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 12)
-	margin.add_child(box)
+	var layout := VBoxContainer.new()
+	layout.add_theme_constant_override("separation", 12)
+	margin.add_child(layout)
 
 	var record: BattleRecord = raid.record
 	var won: bool = raid.won
@@ -41,7 +44,16 @@ func show_raid(raid: Dictionary, resource_types: Array[ResourceTypeData], units:
 	title.text = "Đánh lui quân cướp!" if won else "Thất thủ trước quân cướp!"
 	title.add_theme_font_size_override("font_size", 24)
 	title.add_theme_color_override("font_color", WIN_COLOR if won else LOSS_COLOR)
-	box.add_child(title)
+	layout.add_child(title)
+	# Tables and outcome scroll when there are many units; the title and button stay in place.
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	layout.add_child(scroll)
+	var box := VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", 12)
+	scroll.add_child(box)
 	box.add_child(_label("Quân cướp tấn công đầu lượt. Phe %s %s (sau %d giây)." % [
 			record.sides[record.loser()].display_name.to_lower(), _end_reason_text(record.end_reason),
 			roundi(record.duration)]))
@@ -69,7 +81,7 @@ func show_raid(raid: Dictionary, resource_types: Array[ResourceTypeData], units:
 	button.text = "Tiếp tục (Enter)"
 	button.custom_minimum_size = Vector2(0, 40)
 	button.pressed.connect(close)
-	box.add_child(button)
+	layout.add_child(button)
 
 
 static func _end_reason_text(reason: BattleRecord.EndReason) -> String:
@@ -98,18 +110,26 @@ func _side_table(side: BattleSide) -> Control:
 		return box
 	var grid := GridContainer.new()
 	grid.columns = 6
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	grid.add_theme_constant_override("h_separation", 18)
 	box.add_child(grid)
 	for text in ["Đơn vị", "Đầu trận", "Tử trận", "Còn lại", "Hạ được", "Trạng thái"]:
-		var cell := _label(text, false)
+		var cell := _cell(text)
 		cell.add_theme_color_override("font_color", Color(1, 1, 1, 0.6))
 		grid.add_child(cell)
 	for unit in side.units:
 		var status := "Bị vỡ" if unit.broken else ("Tử trận hết" if unit.alive() == 0 else "Giữ vững")
 		for text in [unit.data.display_name, str(unit.start_soldiers), str(unit.lost()), str(unit.alive()),
 				str(roundi(unit.kills)), status]:
-			grid.add_child(_label(text, false))
+			grid.add_child(_cell(text))
 	return box
+
+
+## Table cell that shares the panel width with the other columns.
+func _cell(text: String) -> Label:
+	var label := _label(text, false)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return label
 
 
 func _unit_counts(counts: Dictionary, units: Dictionary[StringName, UnitData]) -> String:

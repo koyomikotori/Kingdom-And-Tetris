@@ -21,6 +21,8 @@ var _selected := NO_SELECTION
 var _selected_building := NO_BUILDING
 ## Open post-battle report; blocks kingdom input while shown.
 var _battle_report: BattleReport
+## Battle being played; the battle screen swallows input itself.
+var _battle_screen: BattleScreen
 
 @onready var board_view: BoardView = $BoardView
 @onready var camera: CameraController = $Camera
@@ -164,9 +166,9 @@ func _on_end_turn_pressed() -> void:
 		lines.append("Bổ sung quân: %s." % replenished)
 	if not report.buildings_supplied:
 		lines.append("Không đủ phí duy trì công trình: công trình tạm ngưng tác dụng lượt này.")
-	if report.has("raid"):
-		lines.append("Quân cướp tấn công! %s" % ("Đã đánh lui." if report.raid.won else "Thất thủ."))
-		_show_battle_report(report.raid)
+	if report.has("pending_raid"):
+		lines.append("Quân cướp tấn công!")
+		_play_raid(report.pending_raid)
 	placement_status.text = "\n".join(lines)
 
 
@@ -176,6 +178,18 @@ func _unit_amounts(counts: Dictionary) -> String:
 	for unit_id: StringName in counts:
 		parts.append("+%d %s" % [counts[unit_id], state.units[unit_id].display_name])
 	return ", ".join(parts)
+
+
+## Shows the raid on the battle screen, then applies its outcome and opens the report.
+func _play_raid(simulator: BattleSimulator) -> void:
+	_battle_screen = BattleScreen.new()
+	$UI.add_child(_battle_screen)
+	_battle_screen.start(simulator, BattleRecord.DEFENDER, "Quân cướp tấn công vương quốc!")
+	_battle_screen.finished.connect(func(record: BattleRecord) -> void:
+		_battle_screen = null
+		var result := state.finish_raid(record)
+		placement_status.text += " %s" % ("Đã đánh lui." if result.won else "Thất thủ.")
+		_show_battle_report(result))
 
 
 func _show_battle_report(raid: Dictionary) -> void:

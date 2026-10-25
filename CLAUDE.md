@@ -12,6 +12,12 @@ The user is a beginner-to-intermediate developer working with AI assistance. Tal
 - Tests: `<godot> --headless --path . -s res://tests/run_tests.gd` (exit code 0 = all passed).
 - Visual check: `<godot> --path . --write-movie <scratch>/frame.png --quit-after 5` then look at the PNG.
 
+## Git
+
+- GitHub repo: `koyomikotori/Kingdom-And-Tetris`. Push as `koyomikotori` (the remote URL carries the username).
+- Commit author is set in this repo's `.git/config` (`koyomikotori`). Don't change the global git identity; it belongs to another account used for other projects.
+- One branch per milestone (`mN/<topic>`); the user merges it into `main` with a pull request.
+
 ## Architecture
 
 - `scripts/<system>/*_data.gd`, `board_data.gd` etc.: pure logic, `RefCounted`, no Node dependency, unit-tested headless.
@@ -41,7 +47,8 @@ The user is a beginner-to-intermediate developer working with AI assistance. Tal
 - **M4 — done:** `BuildingData` + `BuildRules` (barracks), `UnitData` + `RecruitmentRules` + `Army` (swordsman, spearman, archer needs 3 forest), food upkeep with desertion in `KingdomState.end_turn()` (returns a report dict), side-panel tabs with `BuildPanel` / `ArmyPanel`. See GDD §8.
 - **M5 — done, playtested OK** (branch `m5/battle-and-bandits`): phase-based `BattleSimulator` (guns → arrows → melee rounds, rows, rout at 40%) producing a `BattleRecord` with per-step HP/alive snapshots; bandit raids (`RaidData`, `RaidSystem`, enemy units in `data/enemy_units/`) rolled at the start of a turn; watchtower with building upkeep (`buildings_supplied`); `BattleReport` modal. See GDD §7.
 - **M6 — done pending user review** (branch `m6/combat-v2`, based on `m5/battle-and-bandits`): one recruitment = one squad (`Army.Squad`, `UnitData.squad_size`); v2 stats (melee attack/defense, armor, charge, morale, range attack, reload); `BattleSimulator` is now tick-based and steppable (`new` + `step()` / `simulate()`, `retreat(side)`), with morale breaking at 0, one gun volley, timed arrow volleys; `BattleRecord` holds events + snapshots; `RaidSystem.apply_outcome` (loser: broken squads lost, others keep 50%). Squad management: capacity = 2 + 4 per barracks (max 3 barracks), free 25% replenishment per turn with a barracks, disband (two-click confirm in `ArmyPanel`). Balance numbers in GDD §8.
-- Next: **M7** — cinematic battle screen driving `BattleSimulator.step()` (GDD §7.5): pause, speed-up, retreat button, then the existing `BattleReport`. Raids currently auto-resolve with `RaidSystem.resolve`.
-- Later: M8 world map + clans, M9 invasions / conquest, M10 save/load, M11 events + heroes, M12 art and release (GDD §11).
+- **M7 — done pending user review** (branch `m7/battle-screen`): `BattleScreen` (built in code, 10/80/10 with `BattleView` split 18/44/18) plays a `BattleSimulator` through `BattlePlayback` (speed x1/x2/x4, pause, skip, retreat with two-click confirm), `BattleInfoPanel` per side; raids now come back from `end_turn()` as `pending_raid` and are applied with `KingdomState.finish_raid(record)` after the screen closes. Window opens at 1920×1080 over a 1280×720 design size (`aspect = expand`).
+- Next: **M8** — world map + clans (GDD §9). New UI must not depend on hover or keyboard only (Android is planned, GDD §10).
+- Later: M9 invasions / conquest, M10 save/load, M11 events + heroes, M12 touch + APK, M13 art and release (GDD §11).
 
 Each milestone goes on its own branch (`mN/<topic>`); the user merges it into `main` on GitHub.

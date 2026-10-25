@@ -131,9 +131,16 @@ Không có quân thì thua ngay.
 
 Màn hình ngang, chia theo bề ngang:
 
-| 5% | 20% | 50% | 20% | 5% |
+| 10% | 18% | 44% | 18% | 10% |
 |---|---|---|---|---|
-| Thông tin phe 1 (số quân còn lại) | Xạ thủ phe 1 | Chiến trường cận chiến | Xạ thủ phe 2 | Thông tin phe 2 |
+| Thông tin phe 1 (tên, số lính, sĩ khí từng đơn vị) | Xạ thủ phe 1 | Chiến trường cận chiến | Xạ thủ phe 2 | Thông tin phe 2 |
+
+(Ban đầu là 5/20/50/20/5; tăng khung thông tin lên 10% để đủ chỗ hiện tên đơn vị, đọc được cả trên điện thoại.)
+
+- Phe của người chơi luôn ở bên trái.
+- Mỗi hình lính đại diện cho 4 lính.
+- Luôn mở màn hình trận đánh khi có cướp; có nút **Bỏ qua** để mô phỏng nốt và xem kết quả ngay.
+- Thông tin luôn hiện sẵn, không cần rê chuột (chuẩn bị cho bản điện thoại).
 
 - Súng: loạt đạn li ti bay vụt qua chiến trường.
 - Cung: tên bay lên khỏi khung hình, rồi rơi xuống từ phía trên.
@@ -243,6 +250,8 @@ Biển, sông: chưa làm, để sau.
 | Hiển thị | Node riêng (`BoardView`, …) chỉ đọc dữ liệu, không tự sửa |
 | Lưu game | JSON có trường `save_version`; **không** dùng `ResourceSaver`/`.tres` cho file save |
 | Kiểm thử | Script headless tự viết trong `tests/`, không dùng thư viện ngoài |
+| Độ phân giải | Khung thiết kế 1280×720, cửa sổ mặc định 1920×1080 (phóng to tự động, chữ vẫn nét), `stretch = canvas_items`, `aspect = expand` để vừa mọi tỉ lệ màn hình |
+| Nền tảng | Windows trước; **Android (APK)** sau. Renderer GL Compatibility hợp với Android. Giao diện mới không được chỉ dựa vào rê chuột hay phím tắt |
 | Tên lớp | Tránh trùng lớp có sẵn của Godot (ví dụ dùng `CellData`, không dùng `TileData`) |
 
 ## 11. Lộ trình
@@ -255,13 +264,14 @@ Biển, sông: chưa làm, để sau.
 | M3 | Sản lượng mỗi lượt, kết thúc lượt, nhận mảnh đầu lượt, ô ◆ ×2 | Xong |
 | M4 | Công trình, dữ liệu đơn vị, doanh trại, tuyển quân, nuôi quân, mở khóa theo địa hình | Xong |
 | M5 | Logic trận đánh theo pha + **cướp** (ngẫu nhiên, không báo trước) + trạm lính canh + bảng thống kê sau trận | Xong |
-| M6 | **Chiến đấu v2** (logic): chỉ số mới, sĩ khí, charge, súng 1 loạt, cung theo thời gian nạp, mô phỏng theo tick, rút lui + **quản lý đơn vị** (bổ sung quân, giới hạn theo doanh trại, giải tán) | Đang làm |
-| M7 | Màn hình trận đánh cinematic (5/20/50/20/5, hoạt ảnh, tạm dừng, tăng tốc, nút rút lui) | |
+| M6 | **Chiến đấu v2** (logic): chỉ số mới, sĩ khí, charge, súng 1 loạt, cung theo thời gian nạp, mô phỏng theo tick, rút lui + **quản lý đơn vị** (bổ sung quân, giới hạn theo doanh trại, giải tán) | Xong |
+| M7 | Màn hình trận đánh cinematic (10/18/44/18/10, hoạt ảnh, tạm dừng, tăng tốc, rút lui, bỏ qua) | Đang làm |
 | M8 | Bản đồ thế giới làm sẵn + gia tộc + quan hệ + giao thương | |
 | M9 | Quân xâm lược (mất đất theo hướng) + đi xâm lược + liên minh | |
 | M10 | Lưu/tải (JSON có version) | |
 | M11 | Sự kiện, tướng, mưu sĩ, kinh nghiệm, điều kiện thắng/thua | |
-| M12 | Pixel art, âm thanh, cân bằng, build Windows | |
+| M12 | **Hỗ trợ cảm ứng + xuất APK** (chạm để xem trước/xác nhận, vuốt để kéo, chụm để zoom, nút thay phím tắt) | |
+| M13 | Pixel art, âm thanh, cân bằng, build Windows + Android | |
 
 Lưu/tải được đưa lên trước sự kiện và tướng, vì trạng thái game càng nhiều thì càng khó thêm lưu game về sau.
 

@@ -116,8 +116,9 @@ func get_net_income() -> Dictionary[StringName, int]:
 ## 4. squads below full strength regain soldiers for free (needs a barracks);
 ## 5. advance the turn and deal a fresh hand (unplaced pieces are discarded);
 ## 6. bandits may raid at the start of the new turn.
-## Returns {"collected", "upkeep", "deserted", "buildings_supplied", "replenished"} plus "raid"
-## when a raid happened (see RaidSystem.resolve).
+## Returns {"collected", "upkeep", "deserted", "buildings_supplied", "replenished"} plus
+## "pending_raid" (a BattleSimulator, not yet run) when bandits attack. Play it (battle screen or
+## BattleSimulator.step()) and then call finish_raid() with its record.
 func end_turn() -> Dictionary:
 	var collected := get_turn_yield()
 	stockpile.add(collected)
@@ -139,9 +140,14 @@ func end_turn() -> Dictionary:
 			"buildings_supplied": buildings_supplied, "replenished": replenished}
 	if raid != null and rng.randf() < RaidSystem.get_raid_chance(self, raid):
 		var bandits := RaidSystem.create_bandit_side(raid, enemy_units, turn, rng)
-		report["raid"] = RaidSystem.resolve(self, raid, bandits, rng.randi())
+		report["pending_raid"] = BattleSimulator.new(bandits, RaidSystem.create_kingdom_side(self), rng.randi())
 	turn_started.emit(turn)
 	return report
+
+
+## Applies a finished raid battle (see end_turn) to the kingdom. Returns RaidSystem.apply_outcome's report.
+func finish_raid(record: BattleRecord) -> Dictionary:
+	return RaidSystem.apply_outcome(self, raid, record)
 
 
 ## Returns unit_id -> soldiers added.

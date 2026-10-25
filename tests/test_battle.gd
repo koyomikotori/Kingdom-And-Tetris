@@ -284,8 +284,46 @@ func test_end_turn_can_trigger_a_raid() -> void:
 	state.turn = 10
 	state.raid = RaidData.load_bandits().duplicate()
 	state.raid.base_chance = 1.0
+	state.stockpile.add({&"food": 10})
 	var report := state.end_turn()
-	check(report.has("raid"), "Raid happens when the chance is 100%")
-	check(not report.raid.won, "No army: the raid wins")
+	check(report.has("pending_raid"), "Raid happens when the chance is 100%")
+	var simulator: BattleSimulator = report.pending_raid
+	check_eq(simulator.record.end_reason, BattleRecord.EndReason.NO_ARMY, "No army: decided before any fighting")
+	check_eq(state.stockpile.get_amount(&"food"), 10, "Nothing is lost until finish_raid applies the battle")
+	while not simulator.finished:
+		simulator.step()
+	var result := state.finish_raid(simulator.record)
+	check(not result.won, "No army: the raid wins")
+	check_eq(state.stockpile.get_amount(&"food"), 7, "Losses applied when the raid is finished")
 	state.raid.base_chance = 0.0
-	check(not state.end_turn().has("raid"), "No raid at 0%")
+	check(not state.end_turn().has("pending_raid"), "No raid at 0%")
+
+
+func test_playback_speed_pause_skip() -> void:
+	var make := func() -> BattlePlayback:
+		return BattlePlayback.new(BattleSimulator.new(_side([[unit_list[0], 20]]), _side([[unit_list[1], 20]]), 12))
+	var normal: BattlePlayback = make.call()
+	var fast: BattlePlayback = make.call()
+	fast.speed = 4.0
+	normal.advance(1.0)
+	fast.advance(1.0)
+	check(is_equal_approx(normal.simulator.time, 1.0), "x1: one second of battle per second")
+	check(is_equal_approx(fast.simulator.time, 4.0), "x4: four seconds of battle per second")
+	normal.paused = true
+	normal.advance(5.0)
+	check(is_equal_approx(normal.simulator.time, 1.0), "Paused: time stands still")
+	normal.paused = false
+	var events := normal.advance(3.0)
+	check(events.any(func(e: Dictionary) -> bool: return e.type == &"charge"), "Events since the last call are returned")
+	check(normal.advance(0.0).is_empty(), "Each event is returned only once")
+	normal.skip()
+	check(normal.is_finished(), "Skip runs the battle to the end")
+	check(normal.advance(1.0).is_empty(), "Skipped events are not replayed")
+
+
+func test_playback_retreat() -> void:
+	var playback := BattlePlayback.new(BattleSimulator.new(_side([[unit_list[0], 20]]), _side([[unit_list[1], 20]]), 13))
+	playback.advance(5.0)
+	playback.retreat(BattleRecord.DEFENDER)
+	check(playback.is_finished(), "Retreat ends the battle")
+	check_eq(playback.simulator.record.end_reason, BattleRecord.EndReason.RETREAT, "Recorded as a retreat")
