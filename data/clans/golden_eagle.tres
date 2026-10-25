@@ -17,4 +17,5 @@ deficit = Array[StringName]([&"wood"])
 start_relation = 0
 base_relation = -5
 roads = Array[StringName]([&"north_wolves", &"east_merchants"])
+friends = Array[StringName]([&"north_wolves", &"east_merchants"])
 army_units = Dictionary[StringName, float]({&"swordsman": 2.0, &"spearman": 2.0, &"archer": 2.0})

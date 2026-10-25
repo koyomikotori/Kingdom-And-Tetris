@@ -11,9 +11,11 @@ const LOSS_COLOR := Color(1.0, 0.5, 0.45)
 const PANEL_MARGIN := Vector2(0.15, 0.06)
 
 
-## `raid` is the dictionary returned by RaidSystem.apply_outcome.
-func show_raid(raid: Dictionary, resource_types: Array[ResourceTypeData], units: Dictionary[StringName, UnitData]) -> void:
+## `raid` is the dictionary returned by RaidSystem.apply_outcome; `extra_lines` go after the losses.
+func show_raid(raid: Dictionary, resource_types: Array[ResourceTypeData], units: Dictionary[StringName, UnitData],
+		extra_lines: Array[String] = []) -> void:
 	var lines := army_loss_lines(raid, units)
+	lines.append_array(extra_lines)
 	var lost := UiFormat.amounts(raid.resources_lost, resource_types)
 	if not lost.is_empty():
 		lines.append("Bị cướp mất: %s." % lost)
@@ -130,7 +132,8 @@ func _side_table(side: BattleSide) -> Control:
 		grid.add_child(cell)
 	for unit in side.units:
 		var status := "Bị vỡ" if unit.broken else ("Tử trận hết" if unit.alive() == 0 else "Giữ vững")
-		for text in [unit.data.display_name, str(unit.start_soldiers), str(unit.lost()), str(unit.alive()),
+		var unit_name := unit.data.display_name + (" · " + unit.ally.display_name if unit.ally != null else "")
+		for text in [unit_name, str(unit.start_soldiers), str(unit.lost()), str(unit.alive()),
 				str(roundi(unit.kills)), status]:
 			grid.add_child(_cell(text))
 	return box

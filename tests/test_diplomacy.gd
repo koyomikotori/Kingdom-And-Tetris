@@ -53,13 +53,17 @@ func test_tiers() -> void:
 		check_eq(Diplomacy.tier_for(relation), expected[relation], "Tier at %d" % relation)
 
 
-func test_relation_drifts_toward_base_by_personality() -> void:
+func test_recent_events_fade_by_personality() -> void:
 	var diplomacy := _diplomacy()
-	diplomacy.change_relation(&"south_farmers", -40)  # 20 -> -20, peaceful, base 30, 2 per turn
-	diplomacy.change_relation(&"west_fortress", 30)   # -5 -> 25, isolated, base 0, 1 per turn
+	# Farmers: base 30, first impression -10 (start 20), peaceful: each memory fades 2 per turn.
+	diplomacy.change_relation(&"south_farmers", -40, Diplomacy.MEMORY_GIFT)  # 20 -> -20
+	# Fortress: base 0, first impression -5, isolated: 1 per turn.
+	diplomacy.change_relation(&"west_fortress", 30, Diplomacy.MEMORY_GIFT)  # -5 -> 25
 	diplomacy.end_turn()
-	check_eq(diplomacy.clans[&"south_farmers"].relation, -18, "Peaceful drifts 2 per turn")
-	check_eq(diplomacy.clans[&"west_fortress"].relation, 24, "Isolated drifts 1 per turn")
+	check_eq(diplomacy.clans[&"south_farmers"].memories, {&"first_impression": -8, &"gift": -38}, "Each fades by 2")
+	check_eq(diplomacy.clans[&"south_farmers"].relation, -16, "30 - 8 - 38")
+	check_eq(diplomacy.clans[&"west_fortress"].memories, {&"first_impression": -4, &"gift": 29}, "Each fades by 1")
+	check_eq(diplomacy.clans[&"west_fortress"].relation, 25, "0 - 4 + 29")
 	for i in 60:
 		diplomacy.end_turn()
 	check_eq(diplomacy.clans[&"south_farmers"].relation, 30, "Ends at its base")
@@ -158,9 +162,9 @@ func test_kingdom_end_turn_advances_diplomacy() -> void:
 	var gen := PieceGenerator.new(PieceShapeLibrary.load_all(), terrains, 1)
 	var state := KingdomState.new(BoardData.create_starting_board(12), PieceHand.new(gen), terrains)
 	state.start()
-	state.diplomacy.change_relation(&"south_farmers", -10)
+	state.diplomacy.change_relation(&"south_farmers", -10)  # 20 -> 10: base 30, memories -10 and -10
 	state.end_turn()
-	check_eq(state.diplomacy.clans[&"south_farmers"].relation, 12, "Relations drift at the end of the turn")
+	check_eq(state.diplomacy.clans[&"south_farmers"].relation, 14, "Both memories fade by 2 at the end of the turn")
 
 
 ## An RNG whose first randf() satisfies `predicate` (to force an acceptance or a refusal).
@@ -216,7 +220,7 @@ func test_accepted_agreement_signs_and_raises_relation() -> void:
 	var diplomacy := _diplomacy()
 	var result := diplomacy.propose(_accepting_rng(), &"east_merchants", &"wood", 10, &"food", 12, 10)
 	check_eq(result, Diplomacy.ProposalResult.OK, "Signed")
-	check_eq(diplomacy.clans[&"east_merchants"].relation, 18, "+8 on signing")
+	check_eq(diplomacy.clans[&"east_merchants"].relation, 10 + 8 + 15, "+8 on signing, +15 while it runs")
 	var agreement := diplomacy.get_agreement(&"east_merchants")
 	check(agreement != null, "Agreement stored")
 	if agreement != null:
@@ -251,7 +255,8 @@ func test_agreement_runs_each_turn_and_completes() -> void:
 	check(report[0].completed, "Completed after 5 turns")
 	check(diplomacy.get_agreement(&"south_farmers") == null, "Removed when done")
 	check_eq(stockpile.get_amount(&"food"), 20, "Five deliveries")
-	check_eq(diplomacy.clans[&"south_farmers"].relation, relation + 5 + Diplomacy.AGREEMENT_COMPLETE_GAIN, "+3 on completion")
+	check_eq(diplomacy.clans[&"south_farmers"].relation,
+			relation + 5 + Diplomacy.AGREEMENT_COMPLETE_GAIN - Diplomacy.AGREEMENT_BASE_BONUS, "+3 on completion, the +15 ends")
 
 
 func test_missed_payment_costs_relation() -> void:
@@ -271,7 +276,8 @@ func test_cancelling_costs_a_lot_and_hostile_clans_cancel() -> void:
 	var relation := diplomacy.clans[&"south_farmers"].relation
 	diplomacy.cancel_agreement(&"south_farmers")
 	check(diplomacy.get_agreement(&"south_farmers") == null, "Cancelled")
-	check_eq(diplomacy.clans[&"south_farmers"].relation, relation - Diplomacy.AGREEMENT_CANCEL_PENALTY, "-20")
+	check_eq(diplomacy.clans[&"south_farmers"].relation,
+			relation - Diplomacy.AGREEMENT_CANCEL_PENALTY - Diplomacy.AGREEMENT_BASE_BONUS, "-20, and the +15 ends")
 	diplomacy.propose(_accepting_rng(), &"east_merchants", &"wood", 5, &"food", 4, 10)
 	diplomacy.change_relation(&"east_merchants", -100)
 	var report := diplomacy.run_agreements(_stock({&"wood": 50}))
@@ -330,3 +336,55 @@ func test_gift_too_small_to_matter_is_refused() -> void:
 	# 5 food = value 5 -> 1 point x0.6 (aggressive) = 0
 	check_eq(diplomacy.give_gift(stockpile, &"north_wolves", {&"food": 5}), Diplomacy.GiftResult.TOO_SMALL, "No point gifting")
 	check_eq(stockpile.get_amount(&"food"), 5, "Nothing spent")
+
+
+# --- Relation factors (GDD §9.3) ------------------------------------------------------------
+
+func _factor_sum(diplomacy: Diplomacy, clan_id: StringName) -> int:
+	var total := 0
+	for factor in diplomacy.relation_factors(clan_id):
+		total += factor.amount
+	return total
+
+
+func test_relation_factors_name_every_point() -> void:
+	var diplomacy := _diplomacy()
+	diplomacy.threat = 20
+	diplomacy.end_turn()  # wariness starts growing toward 0.4 x 20 = 8
+	diplomacy.give_gift(_stock({&"food": 100}), &"east_merchants", {&"food": 50} as Dictionary[StringName, int])
+	diplomacy.propose(_accepting_rng(), &"east_merchants", &"wood", 10, &"food", 12, 10)
+	var factors := diplomacy.relation_factors(&"east_merchants")
+	var by_id := {}
+	for factor in factors:
+		by_id[factor.id] = factor.amount
+	check_eq(by_id, {&"base": 20, &"wariness": -2, &"agreement_bonus": 15, &"first_impression": -8,
+			&"gift": 10, &"agreement": 8}, "Base, wariness, treaty bonus and every recent event")
+	check_eq(_factor_sum(diplomacy, &"east_merchants"), diplomacy.clans[&"east_merchants"].relation, "Adds up")
+	check_eq(factors[0].id, &"base", "Lasting factors first")
+	check(factors[-1].fading and absi(factors[-1].amount) <= absi(factors[-2].amount), "Recent events, largest first")
+
+
+func test_wariness_grows_a_little_each_turn() -> void:
+	var diplomacy := _diplomacy()
+	diplomacy.threat = 30
+	diplomacy.end_turn()
+	check_eq(diplomacy.clans[&"north_wolves"].wariness, 3, "Aggressive: 3 per turn")
+	check_eq(diplomacy.target_relation(&"north_wolves"), -15 - 30, "Long-term value uses the full wariness")
+	for i in 20:
+		diplomacy.end_turn()
+	check_eq(diplomacy.clans[&"north_wolves"].wariness, 30, "Caught up")
+	diplomacy.threat = 0
+	diplomacy.end_turn()
+	check_eq(diplomacy.clans[&"north_wolves"].wariness, 27, "Eases off the same way")
+
+
+func test_changes_move_the_shown_relation_even_past_the_limit() -> void:
+	var diplomacy := _diplomacy()
+	diplomacy.change_relation(&"south_farmers", 70)  # 20 -> 90
+	diplomacy.clans[&"south_farmers"].alliance_turns = 5  # +30: 120 before clamping
+	check_eq(diplomacy.clans[&"south_farmers"].relation, 100, "Clamped")
+	check_eq(_factor_sum(diplomacy, &"south_farmers"), 100, "The limit shows up as a factor")
+	diplomacy.change_relation(&"south_farmers", 5, Diplomacy.MEMORY_GIFT)
+	check(not diplomacy.clans[&"south_farmers"].memories.has(&"gift"), "Nothing stored above the limit")
+	diplomacy.change_relation(&"south_farmers", -10)
+	check_eq(diplomacy.clans[&"south_farmers"].relation, 90, "-10 from the shown 100")

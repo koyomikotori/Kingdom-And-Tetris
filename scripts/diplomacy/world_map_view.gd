@@ -14,6 +14,8 @@ const ROAD_COLOR := Color(0.75, 0.65, 0.45, 0.6)
 const KINGDOM_COLOR := Color(1.0, 0.85, 0.35)
 const SELECTED_COLOR := Color(1, 1, 1)
 const WAR_COLOR := Color(1.0, 0.25, 0.2)
+const ALLY_COLOR := Color(0.35, 0.9, 1.0)
+const PACT_COLOR := Color(0.95, 0.95, 0.85)
 ## HOSTILE, TENSE, NEUTRAL, FRIENDLY, CLOSE
 const TIER_COLORS: Array[Color] = [Color(0.9, 0.2, 0.2), Color(0.95, 0.55, 0.25), Color(0.75, 0.75, 0.75),
 		Color(0.45, 0.85, 0.45), Color(0.3, 1.0, 0.6)]
@@ -85,9 +87,13 @@ func _draw() -> void:
 		var ring := TIER_COLORS[Diplomacy.tier_for(clan.relation)]
 		var neighbor := front.is_neighbor() if front != null else clan.data.is_neighbor()
 		var label := clan.data.display_name + ("" if neighbor else " (xa)")
+		if clan.is_allied():
+			label += " · đồng minh"
 		_draw_node(center, clan.data.color, ring, label, clan_id == _selected)
 		if front != null and front.at_war:
 			_draw_war_marker(center + Vector2(NODE_RADIUS, -NODE_RADIUS))
+		if clan.is_allied() or clan.has_pact():
+			_draw_treaty_marker(center + Vector2(-NODE_RADIUS, -NODE_RADIUS), clan.is_allied(), clan.has_pact())
 
 
 ## Two crossed red strokes: this clan is at war with the kingdom.
@@ -96,6 +102,17 @@ func _draw_war_marker(center: Vector2) -> void:
 	draw_circle(center, r + 4, Color(0, 0, 0, 0.7))
 	draw_line(center + Vector2(-r, -r), center + Vector2(r, r), WAR_COLOR, 3.0)
 	draw_line(center + Vector2(r, -r), center + Vector2(-r, r), WAR_COLOR, 3.0)
+
+
+## A cyan ring for an ally, two light bars for a non-aggression pact (both when both).
+func _draw_treaty_marker(center: Vector2, allied: bool, pact: bool) -> void:
+	var r := 9.0
+	draw_circle(center, r + 4, Color(0, 0, 0, 0.7))
+	if allied:
+		draw_circle(center, r, ALLY_COLOR, false, 3.0)
+	if pact:
+		draw_line(center + Vector2(-5, -2.5), center + Vector2(5, -2.5), PACT_COLOR, 2.0)
+		draw_line(center + Vector2(-5, 2.5), center + Vector2(5, 2.5), PACT_COLOR, 2.0)
 
 
 func _draw_road(from: Vector2, to: Vector2) -> void:

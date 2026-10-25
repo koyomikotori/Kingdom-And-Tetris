@@ -1,7 +1,8 @@
 class_name BattleInfoPanel
 extends VBoxContainer
 ## One side's column on the battle screen: total soldiers, then per unit its name, soldier count,
-## a soldiers bar and a morale bar. Always visible (no hover needed, for touch screens later).
+## a soldiers bar and a morale bar. Units lent by another clan carry its name and banner tint.
+## Always visible (no hover needed, for touch screens later).
 
 const MORALE_COLOR := Color(1.0, 0.85, 0.3)
 const BAR_BACKGROUND := Color(0, 0, 0, 0.45)
@@ -11,7 +12,9 @@ var _total_label: Label
 var _rows: Array = []  # [name Label, count Label, soldiers ProgressBar, morale ProgressBar, container]
 
 
-func setup(side: BattleSide, color: Color) -> void:
+## `screen_side`: 0 = left, 1 = right (picks the colors, see BattleView.SIDE_COLORS).
+func setup(side: BattleSide, screen_side: int) -> void:
+	var color := BattleView.SIDE_COLORS[screen_side]
 	_side = side
 	add_theme_constant_override("separation", 6)
 	var title := _label(side.display_name, 15)
@@ -23,11 +26,16 @@ func setup(side: BattleSide, color: Color) -> void:
 		var box := VBoxContainer.new()
 		box.add_theme_constant_override("separation", 1)
 		add_child(box)
-		var name_label := _label(unit.data.display_name, 12)
+		var unit_name := unit.data.display_name
+		if unit.ally != null:
+			unit_name += " · " + unit.ally.display_name
+		var name_label := _label(unit_name, 12)
+		if unit.ally != null:
+			name_label.add_theme_color_override("font_color", unit.ally.color.lightened(0.3))
 		box.add_child(name_label)
 		var count_label := _label("", 11)
 		box.add_child(count_label)
-		var soldiers := _bar(color, unit.start_soldiers)
+		var soldiers := _bar(BattleView.unit_color(unit, screen_side), unit.start_soldiers)
 		box.add_child(soldiers)
 		var morale := _bar(MORALE_COLOR, unit.data.morale)
 		box.add_child(morale)

@@ -1,7 +1,7 @@
 class_name ClanPanel
 extends VBoxContainer
-## Right-hand column of the world map: details of the selected clan plus war, trade, gift and
-## long-term agreement forms.
+## Right-hand column of the world map: details of the selected clan plus war, treaty (alliance,
+## non-aggression pact), trade, gift and long-term agreement forms.
 ## Every action goes through Diplomacy / Wars; buttons are disabled with the reason shown when an
 ## action is not possible. No hover needed (touch-ready).
 
@@ -16,6 +16,7 @@ const DEFAULT_AGREEMENT_TURNS := 10
 var _state: KingdomState
 var _diplomacy: Diplomacy
 var _wars: Wars
+var _alliances: Alliances
 var _stockpile: Stockpile
 var _rng: RandomNumberGenerator
 var _resource_types: Array[ResourceTypeData] = []
@@ -28,6 +29,8 @@ var _description: Label
 var _info: Label
 var _relation_bar: ProgressBar
 var _relation_label: Label
+var _relation_toggle: Button
+var _relation_details_label: Label
 var _goods: Label
 var _give_option: OptionButton
 var _give_amount: SpinBox
@@ -58,6 +61,11 @@ var _tribute_amount: SpinBox
 var _tribute_option: OptionButton
 var _peace_preview: Label
 var _peace_button: Button
+var _treaty_status: Label
+var _alliance_preview: Label
+var _alliance_button: Button
+var _cancel_alliance_button: Button
+var _pact_button: Button
 var _status: Label
 
 
@@ -66,6 +74,7 @@ func setup(state: KingdomState, resource_types: Array[ResourceTypeData]) -> void
 	_state = state
 	_diplomacy = state.diplomacy
 	_wars = state.wars
+	_alliances = state.alliances
 	_stockpile = state.stockpile
 	_rng = state.rng
 	_resource_types = resource_types
@@ -87,6 +96,7 @@ func show_clan(clan_id: StringName) -> void:
 	_status.text = ""
 	_cancel_button.text = "Hủy hợp đồng"
 	_declare_button.text = "Tuyên chiến"
+	_cancel_alliance_button.text = "Hủy liên minh"
 	refresh()
 
 
@@ -110,15 +120,48 @@ func refresh() -> void:
 	_relation_bar.add_theme_stylebox_override("fill", fill)
 	_relation_label.text = "Quan hệ: %d (%s)" % [clan.relation, Diplomacy.TIER_NAMES[tier]]
 	var target := _diplomacy.target_relation(_clan_id)
-	var drift := "đang nhích về %d" % target if target != clan.relation else "giữ ở mức này"
-	var wary := _diplomacy.wariness_penalty(_clan_id)
-	_relation_label.text += "\n%s%s" % [drift.substr(0, 1).to_upper() + drift.substr(1),
-			" (e dè vương quốc lớn mạnh: -%d)" % wary if wary > 0 else ""]
-	_goods.text = "Dư: %s · Thiếu: %s" % [_resource_names(data.surplus), _resource_names(data.deficit)]
+	_relation_label.text += "\nVề lâu dài: %d" % target if target != clan.relation else "\nỔn định ở mức này"
+	var details := _relation_details()
+	_relation_details_label.text = details
+	# Hovering shows the same breakdown on desktop; the toggle is for touch screens.
+	for control: Control in [_relation_label, _relation_bar]:
+		control.tooltip_text = details
+	_goods.text = "Dư: %s · Thiếu: %s\nBạn bè: %s" % [_resource_names(data.surplus), _resource_names(data.deficit),
+			_clan_names(data.friends)]
+	_refresh_treaties()
 	_refresh_trade()
 	_refresh_gift()
 	_refresh_agreement()
 	_refresh_war()
+
+
+## Every point of the relation, gains first then losses (Diplomacy.relation_factors), summing to it.
+func _relation_details() -> String:
+	var clan := _diplomacy.clans[_clan_id]
+	var step: int = Diplomacy.DRIFT_PER_TURN[clan.data.personality]
+	var gains: Array[String] = []
+	var losses: Array[String] = []
+	for factor in _diplomacy.relation_factors(_clan_id):
+		var line := "  %+d  %s" % [factor.amount, Diplomacy.FACTOR_NAMES.get(factor.id, String(factor.id))]
+		if factor.fading:
+			line += " (mờ dần %d/lượt)" % step
+		elif factor.id == &"wariness" and _diplomacy.wariness_target(_clan_id) != clan.wariness:
+			line += " (sẽ thành %+d)" % -_diplomacy.wariness_target(_clan_id)
+		(gains if factor.amount > 0 else losses).append(line)
+	var lines: Array[String] = []
+	if not gains.is_empty():
+		lines.append("Cộng:")
+		lines.append_array(gains)
+	if not losses.is_empty():
+		lines.append("Trừ:")
+		lines.append_array(losses)
+	lines.append("= %d (%s)" % [clan.relation, Diplomacy.TIER_NAMES[Diplomacy.tier_for(clan.relation)]])
+	return "\n".join(lines)
+
+
+func _on_relation_toggle_pressed() -> void:
+	_relation_details_label.visible = not _relation_details_label.visible
+	_relation_toggle.text = "Chi tiết quan hệ ▴" if _relation_details_label.visible else "Chi tiết quan hệ ▾"
 
 
 func _refresh_trade() -> void:
@@ -192,10 +235,17 @@ func _tribute() -> Dictionary[StringName, int]:
 	return tribute
 
 
-## Declaring war cannot be undone: the first click asks for confirmation.
+## Declaring war cannot be undone: the first click asks for confirmation and shows what it costs.
 func _on_declare_pressed() -> void:
 	if _declare_button.text == "Tuyên chiến":
-		_declare_button.text = "Chắc chắn tuyên chiến? (các gia tộc khác %d quan hệ)" % Wars.DECLARE_OTHERS_PENALTY
+		var clan := _diplomacy.clans[_clan_id]
+		var others := Wars.DECLARE_OTHERS_PENALTY + (Wars.BETRAY_ALLY_PENALTY if clan.is_allied() else 0) 				+ (Wars.BREAK_PACT_PENALTY if clan.has_pact() else 0)
+		var text := "Chắc chắn tuyên chiến? (các gia tộc khác %d" % others
+		if not clan.data.friends.is_empty():
+			text += ", bạn của họ %d" % (others - Wars.DECLARE_OTHERS_PENALTY + Wars.DECLARE_FRIEND_PENALTY)
+		if clan.is_allied() or clan.has_pact():
+			text += ", phá hiệp ước"
+		_declare_button.text = text + ")"
 		return
 	_declare_button.text = "Tuyên chiến"
 	_status.text = Wars.describe_declare(_wars.declare_war(_clan_id))
@@ -207,6 +257,64 @@ func _on_attack_pressed() -> void:
 
 func _on_peace_pressed() -> void:
 	_status.text = Wars.describe_peace(_wars.propose_peace(_rng, _stockpile, _clan_id, _tribute()))
+
+
+func _refresh_treaties() -> void:
+	var clan := _diplomacy.clans[_clan_id]
+	var parts: Array[String] = []
+	if clan.is_allied():
+		parts.append("Đồng minh (còn %d lượt)." % clan.alliance_turns)
+	if clan.has_pact():
+		parts.append("Bất tương xâm (còn %d lượt)." % clan.pact_turns)
+	_treaty_status.text = " ".join(parts) if not parts.is_empty() else "Chưa có hiệp ước."
+	var help := _alliances.help_size(_clan_id)
+	if clan.is_allied():
+		_treaty_status.text += "\n" + ("Gửi %d lính vào mỗi trận của bạn." % help if help > 0
+				else "Quân họ đang yếu, tạm không gửi quân.")
+		_treaty_status.text += " Hết liên minh thì quan hệ mất %d." % Diplomacy.ALLIANCE_BASE_BONUS
+	_cancel_alliance_button.visible = clan.is_allied()
+	var alliance := _alliances.check_alliance(_clan_id)
+	var renewing := clan.is_allied()
+	# While allied, the offer only shows once it can be renewed (its last turns).
+	_alliance_button.visible = not clan.annexed and (not renewing or alliance != Alliances.AllianceResult.ALREADY_ALLIED)
+	_alliance_button.text = "Gia hạn liên minh" if renewing else "Đề nghị liên minh"
+	_alliance_button.disabled = alliance != Alliances.AllianceResult.OK
+	_alliance_preview.visible = _alliance_button.visible
+	if alliance == Alliances.AllianceResult.OK:
+		var chance := _alliances.alliance_chance(_clan_id)
+		_alliance_preview.text = "%s %d lượt. Khả năng đồng ý: %s (%d%%)." % [
+				"Gia hạn thêm" if renewing else "Liên minh", Alliances.ALLIANCE_TURNS,
+				Diplomacy.chance_name(chance), roundi(chance * 100)]
+		_alliance_preview.remove_theme_color_override("font_color")
+		# A 0% offer can only be refused and would block new offers for a few turns.
+		_alliance_button.disabled = chance <= 0.0
+	else:
+		_alliance_preview.text = Alliances.describe_alliance(alliance)
+		_alliance_preview.add_theme_color_override("font_color", WARNING_COLOR)
+	var pact := _alliances.check_pact(_clan_id)
+	_pact_button.visible = not clan.has_pact() and not clan.annexed
+	_pact_button.disabled = pact != Alliances.PactResult.OK
+	_pact_button.tooltip_text = "" if pact == Alliances.PactResult.OK else Alliances.describe_pact(pact)
+	_pact_button.text = "Ký bất tương xâm (%d lượt, quan hệ +%d)" % [Alliances.PACT_TURNS, Diplomacy.PACT_BASE_BONUS] if pact == Alliances.PactResult.OK \
+			else "Bất tương xâm: %s" % Alliances.describe_pact(pact)
+
+
+func _on_alliance_pressed() -> void:
+	_status.text = Alliances.describe_alliance(_alliances.propose_alliance(_rng, _clan_id))
+
+
+## Breaking an alliance costs a lot of relation: the first click asks for confirmation.
+func _on_cancel_alliance_pressed() -> void:
+	if _cancel_alliance_button.text == "Hủy liên minh":
+		_cancel_alliance_button.text = "Chắc chắn hủy liên minh? (quan hệ -%d)" % Alliances.ALLIANCE_CANCEL_PENALTY
+		return
+	_cancel_alliance_button.text = "Hủy liên minh"
+	_alliances.cancel_alliance(_clan_id)
+	_status.text = "Đã hủy liên minh. Quan hệ -%d." % Alliances.ALLIANCE_CANCEL_PENALTY
+
+
+func _on_pact_pressed() -> void:
+	_status.text = Alliances.describe_pact(_alliances.sign_pact(_clan_id))
 
 
 func _refresh_agreement() -> void:
@@ -295,19 +403,31 @@ func _build_details() -> void:
 	_info = _label("", 13)
 	_details.add_child(_info)
 	_relation_label = _label("", 14)
+	_relation_label.mouse_filter = Control.MOUSE_FILTER_PASS  # for its tooltip
 	_details.add_child(_relation_label)
 	_relation_bar = ProgressBar.new()
 	_relation_bar.min_value = Diplomacy.MIN_RELATION
 	_relation_bar.max_value = Diplomacy.MAX_RELATION
 	_relation_bar.show_percentage = false
-	_relation_bar.custom_minimum_size = Vector2(0, 8)
+	_relation_bar.custom_minimum_size = Vector2(0, 12)
 	_details.add_child(_relation_bar)
+	_relation_toggle = _button("Chi tiết quan hệ ▾", _on_relation_toggle_pressed)
+	_relation_toggle.custom_minimum_size = Vector2(0, 32)
+	_relation_toggle.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_details.add_child(_relation_toggle)
+	_relation_details_label = _label("", 13)
+	_relation_details_label.visible = false
+	_details.add_child(_relation_details_label)
 	_goods = _label("", 13)
 	_details.add_child(_goods)
 
 	_details.add_child(HSeparator.new())
 	_details.add_child(_label("Chiến tranh", 16))
 	_build_war_section()
+
+	_details.add_child(HSeparator.new())
+	_details.add_child(_label("Hiệp ước", 16))
+	_build_treaty_section()
 
 	_details.add_child(HSeparator.new())
 	_details.add_child(_label("Trao đổi", 16))
@@ -376,6 +496,20 @@ func _build_war_section() -> void:
 	_war_box.add_child(_peace_preview)
 	_peace_button = _button("Đề nghị nghị hòa", _on_peace_pressed)
 	_war_box.add_child(_peace_button)
+
+
+func _build_treaty_section() -> void:
+	_treaty_status = _label("", 14)
+	_details.add_child(_treaty_status)
+	_alliance_preview = _label("", 13)
+	_details.add_child(_alliance_preview)
+	_alliance_button = _button("Đề nghị liên minh", _on_alliance_pressed)
+	_details.add_child(_alliance_button)
+	_cancel_alliance_button = _button("Hủy liên minh", _on_cancel_alliance_pressed)
+	_cancel_alliance_button.add_theme_color_override("font_color", WARNING_COLOR)
+	_details.add_child(_cancel_alliance_button)
+	_pact_button = _button("Ký bất tương xâm", _on_pact_pressed)
+	_details.add_child(_pact_button)
 
 
 func _build_agreement_section() -> void:
@@ -468,6 +602,14 @@ func _resource_name(resource_id: StringName) -> String:
 		if type.resource_id == resource_id:
 			return type.display_name
 	return String(resource_id)
+
+
+func _clan_names(ids: Array[StringName]) -> String:
+	var names: Array[String] = []
+	for clan_id in ids:
+		if _diplomacy.clans.has(clan_id):
+			names.append(_diplomacy.clans[clan_id].data.display_name)
+	return ", ".join(names) if not names.is_empty() else "—"
 
 
 func _resource_names(ids: Array[StringName]) -> String:

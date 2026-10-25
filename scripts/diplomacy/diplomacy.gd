@@ -17,8 +17,41 @@ const TIER_THRESHOLDS: Array[int] = [-59, -19, 20, 60]
 const MIN_RELATION := -100
 const MAX_RELATION := 100
 
-## Relation points per turn moved back toward the clan's base relation, by personality.
+## Points per turn each recent event fades toward 0, and wariness moves toward its target,
+## by personality.
 const DRIFT_PER_TURN: Array[int] = [2, 3, 2, 1]  # PEACEFUL, AGGRESSIVE, MERCHANT, ISOLATED
+
+## Sources of relation changes, remembered separately so the player can see why a clan feels the
+## way it does (GDD §9.3). Each fades toward 0 every turn.
+const MEMORY_FIRST_IMPRESSION: StringName = &"first_impression"
+const MEMORY_GIFT: StringName = &"gift"
+const MEMORY_TRADE: StringName = &"trade"
+const MEMORY_AGREEMENT: StringName = &"agreement"
+const MEMORY_WAR: StringName = &"war"
+const MEMORY_AGGRESSION: StringName = &"aggression"
+const MEMORY_BATTLE: StringName = &"battle"
+const MEMORY_TREATY: StringName = &"treaty"
+const MEMORY_OTHER: StringName = &"other"
+## Lasting factors in relation_factors(), in display order.
+const LASTING_FACTORS: Array[StringName] = [&"base", &"wariness", &"agreement_bonus", &"alliance_bonus", &"pact_bonus"]
+## Display names of the lasting factors, the memory sources and the clamp ("limit").
+const FACTOR_NAMES: Dictionary[StringName, String] = {
+	&"base": "Thiện cảm gốc",
+	&"wariness": "E dè vương quốc lớn mạnh",
+	&"agreement_bonus": "Đang có hợp đồng giao thương",
+	&"alliance_bonus": "Đang liên minh",
+	&"pact_bonus": "Đang có hiệp ước bất tương xâm",
+	&"limit": "Giới hạn −100 → 100",
+	&"first_impression": "Ấn tượng ban đầu",
+	&"gift": "Quà tặng",
+	&"trade": "Giao thương",
+	&"agreement": "Chuyện hợp đồng (ký, giao hàng, hủy)",
+	&"war": "Chiến tranh với vương quốc",
+	&"aggression": "Vương quốc gây chiến với gia tộc khác",
+	&"battle": "Trận đánh chung",
+	&"treaty": "Bị hủy liên minh",
+	&"other": "Khác",
+}
 ## Gift value per relation point before the personality multiplier.
 const GIFT_VALUE_PER_POINT := 5
 const GIFT_MULTIPLIER: Array[float] = [1.5, 0.6, 1.0, 0.5]
@@ -47,8 +80,12 @@ const AGREEMENT_TURN_GAIN := 1
 const AGREEMENT_COMPLETE_GAIN := 3
 const AGREEMENT_MISSED_PENALTY := 3
 const AGREEMENT_CANCEL_PENALTY := 20
-## While an agreement runs, the clan's relation drifts toward base + this instead of base.
+## Added to the relation while an agreement runs.
 const AGREEMENT_BASE_BONUS := 15
+## Added to the relation while allied with the kingdom (GDD §9.7).
+const ALLIANCE_BASE_BONUS := 30
+## Added to the relation while a non-aggression pact runs.
+const PACT_BASE_BONUS := 10
 ## How strongly each personality reacts to the kingdom's threat (GDD §9.3):
 ## PEACEFUL, AGGRESSIVE, MERCHANT, ISOLATED.
 const WARINESS: Array[float] = [0.5, 1.0, 0.4, 0.8]
@@ -57,10 +94,21 @@ const AGREEMENT_MAX_CHANCE := 0.95
 const AGREEMENT_PERSONALITY: Array[float] = [0.05, -0.1, 0.15, -0.2]
 
 
+## The relation is never stored: it is the sum of lasting factors (base, wariness, treaties) and
+## recent events that fade, so the panel can always show where every point comes from (GDD §9.3).
 class ClanState:
 	extends RefCounted
 	var data: ClanData
-	var relation: int
+	## Wariness of the kingdom felt right now (subtracted); moves toward Diplomacy.wariness_target()
+	## by DRIFT_PER_TURN each turn.
+	var wariness := 0
+	## Recent events, source (MEMORY_*) -> relation points. Each fades toward 0 every turn.
+	var memories: Dictionary[StringName, int] = {}
+	## Running long-term trade agreement, or null.
+	var agreement: Agreement
+	var relation: int:
+		get:
+			return clampi(unclamped_relation(), MIN_RELATION, MAX_RELATION)
 	var gift_gain_this_turn := 0
 	var trade_gain_this_turn := 0
 	var traded_value_this_turn := 0
@@ -68,10 +116,37 @@ class ClanState:
 	var proposed_this_turn := false
 	## Part of the kingdom now (Wars.annex): no more diplomacy.
 	var annexed := false
+	## Treaties (GDD §9.7, managed by Alliances): turns left, 0 = none.
+	var alliance_turns := 0
+	var pact_turns := 0
+	## Turns before the clan hears another alliance offer after refusing one.
+	var alliance_cooldown := 0
+
+	func is_allied() -> bool:
+		return alliance_turns > 0
+
+	func has_pact() -> bool:
+		return pact_turns > 0
 
 	func _init(p_data: ClanData) -> void:
 		data = p_data
-		relation = p_data.start_relation
+		if p_data.start_relation != p_data.base_relation:
+			memories[MEMORY_FIRST_IMPRESSION] = p_data.start_relation - p_data.base_relation
+
+	## Every lasting factor by id (LASTING_FACTORS), signed.
+	func lasting_factors() -> Dictionary[StringName, int]:
+		return {&"base": data.base_relation, &"wariness": -wariness,
+				&"agreement_bonus": AGREEMENT_BASE_BONUS if agreement != null else 0,
+				&"alliance_bonus": ALLIANCE_BASE_BONUS if is_allied() else 0,
+				&"pact_bonus": PACT_BASE_BONUS if has_pact() else 0}
+
+	func unclamped_relation() -> int:
+		var total := 0
+		for amount in lasting_factors().values():
+			total += amount
+		for amount in memories.values():
+			total += amount
+		return total
 
 
 ## The player gives `give_amount` of `give_id` and receives `get_amount` of `get_id` every turn.
@@ -87,8 +162,16 @@ class Agreement:
 
 
 var clans: Dictionary[StringName, ClanState] = {}
-var agreements: Array[Agreement] = []
-## How threatening the kingdom looks (KingdomState.get_threat()); lowers every clan's drift target.
+## Every running agreement (each lives on its ClanState), in clan order.
+var agreements: Array[Agreement]:
+	get:
+		var result: Array[Agreement] = []
+		for clan_id in clans:
+			if clans[clan_id].agreement != null:
+				result.append(clans[clan_id].agreement)
+		return result
+## How threatening the kingdom looks (KingdomState.get_threat()); every clan's wariness grows toward
+## it (wariness_target).
 var threat := 0
 var _trade_values: Dictionary[StringName, int] = {}
 
@@ -112,22 +195,37 @@ func get_tier(clan_id: StringName) -> Tier:
 	return tier_for(clans[clan_id].relation)
 
 
-func change_relation(clan_id: StringName, amount: int) -> void:
+## Moves the shown relation by `amount` (within -100..100) and remembers it under `source`
+## (MEMORY_*). Points past the limits are dropped so they never sit unseen in the memory; when
+## lasting factors already pass a limit, the change starts from the shown value.
+func change_relation(clan_id: StringName, amount: int, source: StringName = MEMORY_OTHER) -> void:
 	var clan := clans[clan_id]
-	clan.relation = clampi(clan.relation + amount, MIN_RELATION, MAX_RELATION)
+	var applied := clampi(clan.relation + amount, MIN_RELATION, MAX_RELATION) - clan.unclamped_relation()
+	if applied * amount <= 0:  # still held at a limit by the lasting factors
+		return
+	var remembered: int = clan.memories.get(source, 0) + applied
+	if remembered == 0:
+		clan.memories.erase(source)
+	else:
+		clan.memories[source] = remembered
 	changed.emit()
 
 
-## Relations drift toward each clan's base (raised while an agreement runs); per-turn gift,
-## trade and proposal limits reset.
+## Each turn recent events fade and wariness moves toward the kingdom's current threat, both by
+## DRIFT_PER_TURN; per-turn gift, trade and proposal limits reset.
 func end_turn() -> void:
 	for clan_id in clans:
 		var clan := clans[clan_id]
 		if clan.annexed:
 			continue
 		var step: int = DRIFT_PER_TURN[clan.data.personality]
-		var target := target_relation(clan_id)
-		clan.relation = int(move_toward(clan.relation, target, step))
+		clan.wariness = int(move_toward(clan.wariness, wariness_target(clan_id), step))
+		for source in clan.memories.keys():
+			var left := int(move_toward(clan.memories[source], 0, step))
+			if left == 0:
+				clan.memories.erase(source)
+			else:
+				clan.memories[source] = left
 		clan.gift_gain_this_turn = 0
 		clan.trade_gain_this_turn = 0
 		clan.traded_value_this_turn = 0
@@ -135,18 +233,41 @@ func end_turn() -> void:
 	changed.emit()
 
 
-## Relation this clan drifts toward: its base, lowered by wariness of a strong kingdom,
-## raised while a trade agreement runs.
+## Relation once every recent event has faded and wariness has caught up with the threat:
+## base, lowered by wariness of a strong kingdom, raised while a trade agreement or an alliance runs.
 func target_relation(clan_id: StringName) -> int:
-	var clan := clans[clan_id]
-	var target := clan.data.base_relation - wariness_penalty(clan_id)
-	if get_agreement(clan_id) != null:
-		target += AGREEMENT_BASE_BONUS
+	var factors := clans[clan_id].lasting_factors()
+	factors[&"wariness"] = -wariness_target(clan_id)
+	var target := 0
+	for amount in factors.values():
+		target += amount
 	return clampi(target, MIN_RELATION, MAX_RELATION)
 
 
-func wariness_penalty(clan_id: StringName) -> int:
+## Wariness the clan's wariness grows (or shrinks) toward: threat x personality factor.
+func wariness_target(clan_id: StringName) -> int:
 	return roundi(threat * WARINESS[clans[clan_id].data.personality])
+
+
+## Where the relation comes from: [{"id": factor id or MEMORY_*, "amount": signed int,
+## "fading": bool}], lasting factors first (zero ones left out), then recent events, largest first.
+## The amounts add up to the relation ("limit" covers clamping).
+func relation_factors(clan_id: StringName) -> Array[Dictionary]:
+	var clan := clans[clan_id]
+	var result: Array[Dictionary] = []
+	var lasting := clan.lasting_factors()
+	for id in LASTING_FACTORS:
+		if lasting[id] != 0:
+			result.append({"id": id, "amount": lasting[id], "fading": false})
+	var recent: Array[Dictionary] = []
+	for source in clan.memories:
+		recent.append({"id": source, "amount": clan.memories[source], "fading": true})
+	recent.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return absi(a.amount) > absi(b.amount))
+	result.append_array(recent)
+	var overflow := clan.relation - clan.unclamped_relation()
+	if overflow != 0:
+		result.append({"id": &"limit", "amount": overflow, "fading": false})
+	return result
 
 
 func value_of(amounts: Dictionary[StringName, int]) -> int:
@@ -187,7 +308,7 @@ func give_gift(stockpile: Stockpile, clan_id: StringName, amounts: Dictionary[St
 	var gain := gift_gain(clan_id, amounts)
 	stockpile.spend(amounts)
 	clans[clan_id].gift_gain_this_turn += gain
-	change_relation(clan_id, gain)
+	change_relation(clan_id, gain, MEMORY_GIFT)
 	return GiftResult.OK
 
 
@@ -265,7 +386,7 @@ func trade(stockpile: Stockpile, clan_id: StringName, give_id: StringName, give_
 	clan.traded_value_this_turn += give_amount * _trade_values.get(give_id, 1)
 	if clan.trade_gain_this_turn < MAX_TRADE_GAIN_PER_TURN:
 		clan.trade_gain_this_turn += TRADE_RELATION_GAIN
-		change_relation(clan_id, TRADE_RELATION_GAIN)
+		change_relation(clan_id, TRADE_RELATION_GAIN, MEMORY_TRADE)
 	else:
 		changed.emit()
 	return TradeResult.OK
@@ -293,10 +414,13 @@ static func describe_trade(result: TradeResult) -> String:
 # --- Long-term agreements -----------------------------------------------------------------
 
 func get_agreement(clan_id: StringName) -> Agreement:
-	for agreement in agreements:
-		if agreement.clan_id == clan_id:
-			return agreement
-	return null
+	return clans[clan_id].agreement
+
+
+## Ends the clan's agreement without any relation change (war, annexation).
+func remove_agreement(clan_id: StringName) -> void:
+	clans[clan_id].agreement = null
+	changed.emit()
 
 
 ## Chance (0..AGREEMENT_MAX_CHANCE) that the clan signs. Asking for less than the fair amount
@@ -361,8 +485,8 @@ func propose(rng: RandomNumberGenerator, clan_id: StringName, give_id: StringNam
 	agreement.get_amount = get_amount
 	agreement.total_turns = turns
 	agreement.turns_left = turns
-	agreements.append(agreement)
-	change_relation(clan_id, AGREEMENT_SIGN_GAIN)
+	clans[clan_id].agreement = agreement
+	change_relation(clan_id, AGREEMENT_SIGN_GAIN, MEMORY_AGREEMENT)
 	return ProposalResult.OK
 
 
@@ -371,34 +495,34 @@ func cancel_agreement(clan_id: StringName) -> void:
 	var agreement := get_agreement(clan_id)
 	if agreement == null:
 		return
-	agreements.erase(agreement)
-	change_relation(clan_id, -AGREEMENT_CANCEL_PENALTY)
+	clans[clan_id].agreement = null
+	change_relation(clan_id, -AGREEMENT_CANCEL_PENALTY, MEMORY_AGREEMENT)
 
 
 ## Runs every agreement for one turn. Returns one entry per agreement:
 ## {"clan_id", "agreement", "event": &"delivered" | &"missed" | &"cancelled_by_clan", "completed": bool}.
 func run_agreements(stockpile: Stockpile) -> Array[Dictionary]:
 	var report: Array[Dictionary] = []
-	for agreement in agreements.duplicate():
+	for agreement in agreements:
 		var entry := {"clan_id": agreement.clan_id, "agreement": agreement, "completed": false}
 		report.append(entry)
 		if get_tier(agreement.clan_id) == Tier.HOSTILE:
-			agreements.erase(agreement)
+			clans[agreement.clan_id].agreement = null
 			entry["event"] = &"cancelled_by_clan"
 			continue
 		var payment: Dictionary[StringName, int] = {agreement.give_id: agreement.give_amount}
 		if stockpile.spend(payment):
 			var delivery: Dictionary[StringName, int] = {agreement.get_id: agreement.get_amount}
 			stockpile.add(delivery)
-			change_relation(agreement.clan_id, AGREEMENT_TURN_GAIN)
+			change_relation(agreement.clan_id, AGREEMENT_TURN_GAIN, MEMORY_AGREEMENT)
 			entry["event"] = &"delivered"
 		else:
-			change_relation(agreement.clan_id, -AGREEMENT_MISSED_PENALTY)
+			change_relation(agreement.clan_id, -AGREEMENT_MISSED_PENALTY, MEMORY_AGREEMENT)
 			entry["event"] = &"missed"
 		agreement.turns_left -= 1
 		if agreement.turns_left <= 0:
-			agreements.erase(agreement)
-			change_relation(agreement.clan_id, AGREEMENT_COMPLETE_GAIN)
+			clans[agreement.clan_id].agreement = null
+			change_relation(agreement.clan_id, AGREEMENT_COMPLETE_GAIN, MEMORY_AGREEMENT)
 			entry["completed"] = true
 	return report
 

@@ -11,6 +11,7 @@ const TEST_FILES := [
 	"res://tests/test_battle.gd",
 	"res://tests/test_diplomacy.gd",
 	"res://tests/test_war.gd",
+	"res://tests/test_alliances.gd",
 ]
 
 
