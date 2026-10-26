@@ -53,3 +53,54 @@ func test_ink_keeps_dark_colors_and_darkens_light_ones() -> void:
 	check_eq(UiPalette.ink(UiPalette.TEXT), UiPalette.TEXT, "Already dark")
 	var light := Color(0.75, 0.8, 0.9)
 	check(UiPalette.ink(light).get_luminance() < light.get_luminance() - 0.2, "Light clan colors get darker")
+
+
+# --- Battle (M12b) ------------------------------------------------------------------------
+
+func test_every_unit_has_a_battle_sprite_sheet() -> void:
+	var all_units: Array[UnitData] = []
+	all_units.append_array(UnitData.load_all())
+	all_units.append_array(UnitData.load_enemies().values())
+	all_units.append(Generals.new().guard_unit)
+	for unit in all_units:
+		var id := unit.get_sprite_id()
+		var sheet := GameArt.unit_sheet(id)
+		var team := GameArt.unit_sheet(id, true)
+		check(ResourceLoader.exists(GameArt.UNIT_DIR + String(id) + ".png"), "Own sheet for %s" % id)
+		check(sheet != null and team != null and sheet.get_size() == team.get_size(), "%s: sheet + team layer" % id)
+		if sheet != null:
+			var frame := GameArt.unit_frame(sheet, &"cheer", 1)
+			check_eq(sheet.get_size(), frame.size * Vector2(GameArt.UNIT_FRAMES, GameArt.UNIT_STATES.size()),
+					"%s: 2 frames × 5 states" % id)
+	check(GameArt.unit_sheet(&"no_such_unit") == GameArt.unit_sheet(&"swordsman"), "Unknown sprites use the swordsman")
+
+
+func test_battlefield_and_effects_exist() -> void:
+	for piece: StringName in [&"mountains", &"cloud", &"ground", &"town", &"camp", &"camp_team"]:
+		check(GameArt.battle(piece) != null, "Battlefield piece %s" % piece)
+	check(GameArt.effect(&"arrow") != null, "Arrow")
+	for stratagem: StratagemData in StratagemData.load_all().values():
+		if stratagem.effect != &"arrows":
+			check(GameArt.effect(stratagem.effect) != null, "%s: effect %s" % [stratagem.stratagem_id, stratagem.effect])
+
+
+func test_sides_wear_their_colors() -> void:
+	var gen := PieceGenerator.new(PieceShapeLibrary.load_all(), TerrainLibrary.load_all(), 1)
+	var state := KingdomState.new(BoardData.create_starting_board(12), PieceHand.new(gen), TerrainLibrary.load_all(),
+			BuildingData.load_all(), UnitData.load_all(), 3)
+	state.start()
+	check_eq(state.create_kingdom_side(&"").color, KingdomState.PLAYER_COLOR, "The kingdom wears the player's color")
+	var bandits := RaidSystem.create_bandit_side(state.raid, state.enemy_units, 10, state.rng)
+	check_eq(bandits.color, RaidSystem.BANDIT_COLOR, "Bandits wear brown")
+	var clan := state.wars.create_clan_side(&"north_wolves", 30, state.units)
+	check_eq(clan.color, state.diplomacy.clans[&"north_wolves"].data.color, "A clan wears its banner color")
+
+
+func test_commander_and_strategist_have_their_own_sprites() -> void:
+	for id: StringName in [BattleView.GENERAL_SPRITE, BattleView.ADVISOR_SPRITE]:
+		check(ResourceLoader.exists(GameArt.UNIT_DIR + String(id) + ".png"), "%s sheet" % id)
+		check(ResourceLoader.exists(GameArt.UNIT_DIR + String(id) + "_team.png"), "%s team layer" % id)
+	var general := GameArt.unit_sheet(BattleView.GENERAL_SPRITE)
+	var soldier := GameArt.unit_sheet(&"swordsman")
+	check(GameArt.unit_frame(general, &"stand", 0).size.y > GameArt.unit_frame(soldier, &"stand", 0).size.y,
+			"The commander is bigger than a soldier")

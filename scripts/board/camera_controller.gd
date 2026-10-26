@@ -24,6 +24,10 @@ func focus_on(rect: Rect2, reserved_right: float = 0.0, reserved_top: float = 0.
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
+		# Over a panel the wheel belongs to the panel (scrolling a tab), even when the panel let the
+		# event through (nothing left to scroll, or the cursor is on a label).
+		if _is_wheel(event) and get_viewport().gui_get_hovered_control() != null:
+			return
 		match event.button_index:
 			MOUSE_BUTTON_WHEEL_UP:
 				if event.pressed:
@@ -51,3 +55,8 @@ func _zoom_at(screen_pos: Vector2, factor: float) -> void:
 func _clamp_to_bounds() -> void:
 	if _bounds.has_area():
 		position = position.clamp(_bounds.position, _bounds.end)
+
+
+static func _is_wheel(event: InputEventMouseButton) -> bool:
+	return event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN, MOUSE_BUTTON_WHEEL_LEFT,
+			MOUSE_BUTTON_WHEEL_RIGHT]

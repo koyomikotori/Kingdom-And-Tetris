@@ -12,6 +12,8 @@ const TARGET_NAMES: Array[String] = ["Đơn vị địch đông nhất", "Toàn 
 @export var display_name: String
 @export_multiline var description: String
 @export var target: Target = Target.ENEMY_ALL
+## Battle screen effect over the targets: &"fire", &"smoke", &"sparkle" or &"arrows" (GameArt).
+@export var effect: StringName = &"sparkle"
 
 @export_group("Effect")
 ## Share of the target's current soldiers lost.

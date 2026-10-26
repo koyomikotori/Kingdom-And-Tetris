@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_strat")
 stratagem_id = &"feint"
+effect = &"smoke"
 display_name = "Nghi binh"
 description = "Nghi binh làm xạ thủ địch bắn sai."
 target = 2

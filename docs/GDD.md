@@ -648,8 +648,8 @@ Thống kê trận thắng/thua và trạng thái thắng/thua được lưu cù
 | M11d | Tướng: sao 1–6, Võ lực / Thống suất / đặc tính theo lãnh thổ, một tổng tướng + cận vệ kỵ binh trong trận, tử trận / bị thương, sự kiện chiêu mộ | Xong |
 | M11e | Kinh nghiệm và cấp: đơn vị 3 cấp (huấn luyện tới Cựu binh, pha loãng khi bổ sung), tướng lên cấp và tự cộng điểm | Xong |
 | M11f | Mưu sĩ: 3 chức Nội chính / Ngoại giao / Quân sự, 3 chỉ số, bộ mưu kế đầu trận, chiêu hiền chung với tướng; **Kinh tế v2**: chỉ công trình cho tài nguyên, công trình 6 cấp, giới hạn theo cấp thành | Đang làm |
-| M12a | **Đồ họa (1/3):** hệ thống ảnh pixel vẽ bằng script, bản đồ (địa hình, ô ◆, thành, công trình có cấp, mảnh đất trong tay), giao diện gỗ + giấy cuộn, icon tài nguyên (§13) | Đang làm |
-| M12b | **Đồ họa (2/3):** trận đánh: lính từng loại, cận vệ tướng cưỡi ngựa, quân cướp / gia tộc, mũi tên, nền chiến trường, hiệu ứng mưu kế | |
+| M12a | **Đồ họa (1/3):** hệ thống ảnh pixel vẽ bằng script, bản đồ (địa hình, ô ◆, thành, công trình có cấp, mảnh đất trong tay), giao diện gỗ + giấy cuộn, icon tài nguyên (§13) | Xong |
+| M12b | **Đồ họa (2/3):** trận đánh: lính từng loại, cận vệ tướng cưỡi ngựa, quân cướp / gia tộc, mũi tên, nền chiến trường, hiệu ứng mưu kế | Đang làm |
 | M12c | **Tab Tướng sĩ** kiểu Ninja Village + chân dung pixel ghép bộ phận + bản đồ thế giới vẽ lại | |
 | M12d | **Trang bị** cho tướng và mưu sĩ (tab Trang bị trong bảng chi tiết; thiết kế bàn riêng) | |
 | M13 | **Hỗ trợ cảm ứng + xuất APK** (chạm để xem trước/xác nhận, vuốt để kéo, chụm để zoom, nút thay phím tắt); **sắp xếp lại tab Quân đội, Xây dựng, bảng thành** cho gọn trên điện thoại (ít chữ, chi tiết mở khi chạm) | |
@@ -676,7 +676,16 @@ Lưu/tải được đưa lên trước sự kiện và tướng, vì trạng th
 - Icon 6 tài nguyên trên thanh trên cùng và trong các bảng.
 - Menu chính và khung các cửa sổ (bảng công trình, ngoại giao, lưu / tải, báo cáo trận, sự kiện, mục tiêu).
 
-**M12b — trận đánh:** lính kiếm, giáo, cung, quân cướp, quân gia tộc (màu cờ gia tộc); **cận vệ tướng cưỡi ngựa**; hoạt ảnh đứng / đi / đánh / ngã (vài khung); mũi tên, đạn; nền trời, cỏ, cờ hai bên; hiệu ứng mưu kế (lửa, mưa tên, trống…).
+**M12b — trận đánh (đã chốt):**
+- Lính 16×16 hiện ×2. Hoạt ảnh **2 khung** cho mỗi trạng thái: **đứng, đi, đánh** (chém / đâm giáo / bắn cung), **ngã**, và **mừng chiến thắng** (phe thắng giơ vũ khí khi trận kết thúc). Thử 2 khung trước, thêm khung sau nếu cần.
+- Mỗi loại lính một kiểu vẽ (vũ khí, mũ, giáp) khai báo theo loại lính, để sau này thêm loại lính mới chỉ cần thêm một mục.
+- **Trang phục theo phe:** quân mình mang **màu chủ đạo của người chơi** (hiện là xanh lam; sau này người chơi tự chọn chủ tướng, cờ và màu khi bắt đầu ván mới); quân gia tộc mang màu cờ gia tộc; **quân cướp áo rách nâu, khăn bịt đầu**; đồng minh mang màu cờ của họ.
+- **Tướng** to hơn lính và nổi bật: chiến mã giáp màu phe viền vàng, che mặt sắt, tua đỏ; giáp mạ vàng, mũ vàng cắm hai lông trĩ, áo choàng bay; vũ khí riêng to hơn hẳn lính (**Thanh long đao** lưỡi trăng lớn, cán sơn đỏ đai vàng, tua đỏ); cờ vàng. Tướng cưỡi ở đầu đội **cận vệ cưỡi ngựa** (giáp lá sắt trên áo màu phe, mũ sắt tua đỏ, thương có cờ đuôi nheo) cho tới khi ngã.
+- **Tướng di chuyển tự do** (chỉ phần hình ảnh): xông thẳng vào quân địch trước mặt trên cùng hàng; nếu hàng đó không còn địch thì phi sang hàng gần nhất còn địch (kể cả cung thủ phía sau).
+- **Mưu sĩ** (khi có mưu sĩ Quân sự) đứng phía sau quân mình, áo thụng màu phe, mũ văn quan, quạt lông; giơ quạt khi dùng mưu kế.
+- Nhân vật pixel sẽ chi tiết dần, nhất là tướng và mưu sĩ (sau này có nhiều kiểu tướng đẹp để chiêu mộ).
+- **Nền theo loại trận:** phòng thủ (cướp, xâm lược) có tường thành và mái nhà phía sau quân mình; đi đánh gia tộc có doanh trại và cờ gia tộc phía sau quân địch. Trời, mây, núi xa kiểu tranh, đồng cỏ.
+- Mũi tên, đạn; hiệu ứng mưu kế (lửa, mưa tên, trống…).
 
 **M12c — tab Tướng sĩ (kiểu Ninja Village):**
 - Tab thứ 4 ở cột bên phải: Mảnh đất / Xây dựng / Quân đội / **Tướng sĩ**. Chiêu hiền vẫn ở thành chính.

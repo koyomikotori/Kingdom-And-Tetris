@@ -2,6 +2,10 @@ class_name RaidSystem
 extends RefCounted
 ## Random bandit raids (GDD §7.2): chance per turn, bandit army, battle and its consequences.
 
+## Bandits wear brown rags in battle (GDD §13).
+const BANDIT_COLOR := Color(0.5, 0.36, 0.24)
+
+
 ## Chance (0..1) that bandits raid at the start of `state.turn`.
 ## Watchtowers only help when their upkeep was paid at the end of the previous turn.
 static func get_raid_chance(state: KingdomState, raid: RaidData) -> float:
@@ -28,6 +32,7 @@ static func create_bandit_side(raid: RaidData, enemy_units: Dictionary[StringNam
 		var unit_id := ids[rng.rand_weighted(weights)]
 		picked[unit_id] = picked.get(unit_id, 0) + 1
 	var side := BattleSide.new("Quân cướp")
+	side.color = BANDIT_COLOR
 	for unit_id in enemy_units:  # enemy_units is in sort order
 		for i in picked.get(unit_id, 0):
 			side.add_unit(enemy_units[unit_id], enemy_units[unit_id].squad_size)
@@ -37,6 +42,7 @@ static func create_bandit_side(raid: RaidData, enemy_units: Dictionary[StringNam
 ## The kingdom's whole army as a battle side, one battle unit per squad.
 static func create_kingdom_side(state: KingdomState) -> BattleSide:
 	var side := BattleSide.new("Vương quốc")
+	side.color = KingdomState.PLAYER_COLOR
 	for squad in state.army.squads:
 		side.add_unit(state.units[squad.unit_id], squad.soldiers, squad)
 	return side

@@ -74,6 +74,9 @@ class Unit:
 
 
 var display_name: String
+## Clothing color of the side's own soldiers in battle (the player's color, a clan's banner color,
+## bandit brown). Lent units wear their clan's color instead (Unit.ally).
+var color := Color(0.6, 0.6, 0.6)
 var units: Array[Unit] = []
 ## The commander leading this side, or "" (Generals.lead).
 var general_name := ""

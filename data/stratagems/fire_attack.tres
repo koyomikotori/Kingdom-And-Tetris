@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_strat")
 stratagem_id = &"fire_attack"
+effect = &"fire"
 display_name = "Hỏa công"
 description = "Đốt doanh trại đơn vị địch đông nhất."
 target = 0

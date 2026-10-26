@@ -14,6 +14,8 @@ const ATTACK_KIND_NAMES: Array[String] = ["Cận chiến", "Cung", "Súng"]
 
 @export var unit_id: StringName
 @export var display_name: String
+## Battle sprite sheet in assets/units/ (GameArt.unit_sheet); empty = the unit_id.
+@export var sprite_id: StringName = &""
 ## Position in the army list, lowest first.
 @export var sort_order: int = 0
 ## Soldiers per recruited squad (HP / Number at full strength).
@@ -74,3 +76,8 @@ static func _load_sorted(folder: String) -> Array[UnitData]:
 	result.assign(DataLibrary.load_folder(folder, &"unit_id").values())
 	result.sort_custom(func(a: UnitData, b: UnitData) -> bool: return a.sort_order < b.sort_order)
 	return result
+
+
+## Which battle sprite sheet draws this unit.
+func get_sprite_id() -> StringName:
+	return unit_id if sprite_id == &"" else sprite_id
