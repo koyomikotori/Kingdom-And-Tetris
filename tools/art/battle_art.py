@@ -11,6 +11,8 @@ A new unit type only needs an entry in SOLDIERS (or its own drawing function lik
 
 import random
 
+from PIL import Image
+
 from pixel import CLEAR, P, Canvas, hex_color, speckle_area
 
 STATES = ["stand", "walk", "attack", "fall", "cheer"]
@@ -372,49 +374,49 @@ def general_frame(state: str, frame: int) -> tuple:
     for i, (x, y) in enumerate(((13, top - 7), (12, top - 8), (11, top - 8), (10, top - 9), (9, top - 9), (8, top - 9))):
         c.px(x, y, C["pheasant"] if i % 2 == 0 else C["pheasant_dark"])
         c.px(x + 1, y + 1, C["pheasant_dark"])
-    # Thanh long đao: lacquered shaft with gold bands, a big crescent blade with a gold guard,
-    # and a long red tassel; far bigger than any soldier's weapon.
-    def blade(x: int, y: int, flip: bool = False) -> None:
-        rows = ((0, 1), (0, 3), (0, 4), (1, 4), (2, 4), (3, 4))
-        for dy, (x0, x1) in enumerate(rows):
-            for dx in range(x0, x1 + 1):
-                c.px(x - dx if flip else x + dx, y + dy, C["steel"])
-            c.px(x - x1 if flip else x + x1, y + dy, C["steel_edge"])
-        c.px(x, y + 2, C["steel_dark"])
-        c.px(x, y + 3, C["steel_dark"])
-
-    if state == "attack" and frame == 0:
-        for i in range(12):  # raised back over the shoulder
-            c.px(18 - i // 2, top + 4 - i, C["lacquer"])
-        c.px(15, top - 2, C["gold"])
-        blade(12, 0, flip=True)
-        c.hline(11, 13, 6, C["gold"])
-        for x, y in ((14, 7), (15, 8), (16, 8)):
-            c.px(x, y, C["tassel"])
-        c.px(18, top + 3, C["skin"])
-    elif state == "attack":
-        c.hline(17, 25, top + 2, C["lacquer"])  # swung forward
-        c.px(21, top + 2, C["gold"])
-        c.vline(26, top, top + 4, C["gold"])
-        for dy in range(6):
-            c.hline(27, 31 - abs(dy - 2), top - 1 + dy, C["steel"])
-        c.vline(31, top, top + 2, C["steel_edge"])
-        c.px(27, top + 2, C["steel_dark"])
-        for x, y in ((25, top + 3), (24, top + 4), (23, top + 5)):
-            c.px(x, y, C["tassel"])
+    # Thanh long đao: a long lacquered shaft and a slim curved blade (drawn upright once by
+    # guandao(), then placed or turned for each pose so the proportions never change).
+    weapon = guandao(frame)
+    if state == "attack" and frame == 0:  # wind-up: raised behind the rider
+        c.paste(weapon, 9, 0)
+        c.px(12, top + 1, C["skin"])
+    elif state == "attack":  # swung forward, blade leading
+        c.paste(guandao_turned(weapon), 5, top)
         c.px(18, top + 2, C["skin"])
     else:
-        shaft_top = 8 - lift  # the blade must stay inside the frame when the rider bobs
-        c.vline(20, shaft_top, 26, C["lacquer"])
-        for y in (shaft_top + 5, shaft_top + 12):
-            c.px(20, y, C["gold"])
-        c.hline(19, 22, shaft_top - 1, C["gold"])
-        blade(21, shaft_top - 7)
-        c.px(19, shaft_top - 4, C["steel"])  # back spike
-        for i, (x, y) in enumerate(((19, shaft_top), (18, shaft_top + 1), (18, shaft_top + 2), (17, shaft_top + 3 + frame))):
-            c.px(x, y, C["tassel"])
+        c.paste(weapon, 18, (1 if state == "cheer" else 3) - lift + (1 if state == "cheer" and lift else 0))
         c.px(19, top + 3, C["skin"])
     return split_team(c)
+
+
+def guandao(frame: int = 0) -> Canvas:
+    """The commander's Thanh long đao, upright (6×27): a slim blade curving forward with a light
+    edge and a back notch, a gold guard with a red tassel, a long red-lacquered shaft with gold
+    bands, and an iron butt spike."""
+    w = Canvas(6, 27)
+    blade = ((3, 3), (3, 4), (2, 4), (2, 4), (2, 3), (1, 3), (1, 3), (1, 2))
+    for y, (x0, x1) in enumerate(blade):
+        for x in range(x0, x1 + 1):
+            w.px(x, y, C["steel"])
+        w.px(x1, y, C["steel_edge"])
+        w.px(x0, y, C["steel_dark"])
+    w.px(0, 5, C["steel"])  # back notch
+    w.hline(0, 3, 8, C["gold"])
+    w.px(1, 9, C["gold_dark"])
+    w.vline(1, 10, 25, C["lacquer"])
+    for y in (14, 20):
+        w.px(1, y, C["gold"])
+    w.px(1, 26, C["iron"])
+    for x, y in ((2, 9), (3, 10), (3 + frame, 11), (2 + frame, 12)):
+        w.px(x, y, C["tassel"])
+    return w
+
+
+def guandao_turned(weapon: Canvas) -> Canvas:
+    """The glaive turned to point forward (to the right), for the slash."""
+    turned = Canvas(weapon.height, weapon.width)
+    turned.image = weapon.image.transpose(Image.Transpose.ROTATE_270)
+    return turned
 
 
 def advisor_frame(state: str, frame: int) -> tuple:
