@@ -4,8 +4,8 @@ extends ModalWindow
 ## keep playing; after a defeat only loading a save or going back to the menu are left. It cannot
 ## be closed with Esc.
 
-const VICTORY_COLOR := Color(1.0, 0.85, 0.35)
-const DEFEAT_COLOR := Color(1.0, 0.45, 0.4)
+const VICTORY_COLOR := Color(0.62, 0.42, 0.08)
+const DEFEAT_COLOR := UiPalette.WARNING
 
 var _state: KingdomState
 var _system: SaveSystem

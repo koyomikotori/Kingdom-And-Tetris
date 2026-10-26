@@ -227,8 +227,11 @@ func check_building_upgrade(origin: Vector2i) -> UpgradeResult:
 func upgrade_building(origin: Vector2i) -> UpgradeResult:
 	var result := check_building_upgrade(origin)
 	if result == UpgradeResult.OK:
-		stockpile.spend(building_upgrade_cost(origin))
+		# Level first: paying emits stockpile.changed, and the income shown must already count the
+		# new level.
+		var cost := building_upgrade_cost(origin)
 		board.set_building_level(origin, board.get_building_level(origin) + 1)
+		stockpile.spend(cost)
 	return result
 
 

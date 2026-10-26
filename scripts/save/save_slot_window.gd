@@ -9,7 +9,7 @@ enum Mode { SAVE, LOAD }
 ## LOAD mode: the player picked this slot; the host loads it (GameLaunch.load_game).
 signal load_requested(slot: String)
 
-const ACCENT := Color(1.0, 0.85, 0.35)
+const ACCENT := UiPalette.ACCENT
 
 var _mode: Mode
 var _system: SaveSystem
@@ -58,14 +58,10 @@ func _slot_row(slot: String) -> Control:
 		button.disabled = info.is_empty()
 	if slot == _confirming:
 		button.text = "Chắc chắn ghi đè?" if _mode == Mode.SAVE else "Bỏ ván đang chơi?"
-		button.add_theme_color_override("font_color", WARNING_COLOR)
+		button.add_theme_color_override("font_color", UiPalette.WARNING_ON_WOOD)
 	var row := _row([text, button])
 	var frame := PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = PANEL_COLOR.lightened(0.06)
-	style.set_corner_radius_all(4)
-	style.set_content_margin_all(10)
-	frame.add_theme_stylebox_override("panel", style)
+	frame.theme_type_variation = &"InsetPanel"
 	frame.add_child(row)
 	return frame
 

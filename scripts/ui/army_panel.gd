@@ -6,9 +6,9 @@ extends VBoxContainer
 signal recruit_requested(unit_id: StringName)
 signal disband_requested(squad: Army.Squad)
 
-const HEADER_COLOR := Color(1.0, 0.92, 0.55)
-const WARNING_COLOR := Color(1, 0.6, 0.5)
-const XP_COLOR := Color(0.55, 0.8, 1.0)
+const HEADER_COLOR := UiPalette.HEADER
+const WARNING_COLOR := UiPalette.WARNING
+const XP_COLOR := UiPalette.XP
 
 var _units: Array[UnitData] = []
 var _resource_types: Array[ResourceTypeData] = []
@@ -141,7 +141,7 @@ func _xp_bar(progress: float) -> ProgressBar:
 	var fill := StyleBoxFlat.new()
 	fill.bg_color = XP_COLOR
 	var background := StyleBoxFlat.new()
-	background.bg_color = Color(0, 0, 0, 0.35)
+	background.bg_color = UiPalette.BAR_BACKGROUND
 	bar.add_theme_stylebox_override("fill", fill)
 	bar.add_theme_stylebox_override("background", background)
 	return bar

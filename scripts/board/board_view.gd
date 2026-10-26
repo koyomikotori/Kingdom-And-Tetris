@@ -1,7 +1,7 @@
 class_name BoardView
 extends Node2D
-## Draws a BoardData and turns mouse input into cell coordinates.
-## Read-only: it never modifies the board, it only emits signals.
+## Draws a BoardData with the generated pixel art (GameArt, GDD §13) and turns mouse input into
+## cell coordinates. Read-only: it never modifies the board, it only emits signals.
 
 signal cell_hovered(coord: Vector2i)
 signal cell_clicked(coord: Vector2i)
@@ -10,22 +10,28 @@ const TILE_SIZE := 32
 const OFF_BOARD := Vector2i(-1, -1)
 
 const EMPTY_COLOR := Color(0.10, 0.11, 0.14)
-const GRID_COLOR := Color(0, 0, 0, 0.35)
-const TERRITORY_BORDER_COLOR := Color(1.0, 0.92, 0.55)
+const GRID_COLOR := Color(0, 0, 0, 0.12)
+const TERRITORY_BORDER_COLOR := Color(1.0, 0.88, 0.4)
+const TERRITORY_SHADOW_COLOR := Color(0.17, 0.11, 0.07, 0.8)
 const HOVER_COLOR := Color(1, 1, 1, 0.9)
-const CASTLE_COLOR := Color(0.62, 0.22, 0.2)
-const CASTLE_ROOF_COLOR := Color(0.85, 0.4, 0.3)
-const COORD_TEXT_COLOR := Color(1, 1, 1, 0.55)
+## Land outside the kingdom is darkened.
+const UNOWNED_TINT := Color(0.55, 0.55, 0.6)
+const COORD_TEXT_COLOR := Color(1, 1, 1, 0.75)
 const COORD_FONT_SIZE := 8
 const KEY_MARKER_COLOR := Color(1.0, 0.85, 0.2)
 const GHOST_ALPHA := 0.75
 const GHOST_VALID_COLOR := Color(0.45, 1.0, 0.45)
 const GHOST_INVALID_COLOR := Color(1.0, 0.3, 0.3)
 
-## Shows "x,y" in every cell. Toggled with G in the kingdom scene.
-var show_coords := true:
+## Shows "x,y" in every cell. Toggled with G in the kingdom scene (off now that cells have art).
+var show_coords := false:
 	set(value):
 		show_coords = value
+		queue_redraw()
+## Picks the castle picture (GameArt.castle). Set by the kingdom scene.
+var castle_level := 1:
+	set(value):
+		castle_level = value
 		queue_redraw()
 
 var _board: BoardData
@@ -125,6 +131,8 @@ func _draw() -> void:
 		_draw_cell(cell)
 	_draw_territory_border()
 	_draw_buildings()
+	_draw_key_frames()
+	_draw_level_badges()
 	if show_coords:
 		_draw_coords()
 	if _ghost_piece != null:
@@ -136,13 +144,13 @@ func _draw() -> void:
 
 
 func _draw_cell(cell: CellData) -> void:
-	var color := EMPTY_COLOR
-	if cell.has_terrain():
-		color = _terrain_color(cell.terrain_id)
-	draw_rect(_cell_rect(cell.coord), color)
-	draw_rect(_cell_rect(cell.coord), GRID_COLOR, false, 1.0)
+	var rect := _cell_rect(cell.coord)
+	var tint := Color.WHITE if cell.owned else UNOWNED_TINT
+	if not draw_terrain(self, rect, cell.terrain_id, tint):
+		draw_rect(rect, EMPTY_COLOR if not cell.has_terrain() else _terrain_color(cell.terrain_id) * tint)
+	draw_rect(rect, GRID_COLOR, false, 1.0)
 	if cell.is_key:
-		draw_key_marker(self, _cell_rect(cell.coord))
+		draw_key_marker(self, rect)
 
 
 func _draw_ghost() -> void:
@@ -150,44 +158,64 @@ func _draw_ghost() -> void:
 	var coords := _ghost_piece.get_board_coords(_ghost_origin)
 	for i in coords.size():
 		var rect := _cell_rect(coords[i])
-		var fill := _terrain_color(_ghost_piece.terrains[i])
-		fill.a = GHOST_ALPHA
-		draw_rect(rect, fill)
+		var tint := Color(1, 1, 1, GHOST_ALPHA)
+		if not draw_terrain(self, rect, _ghost_piece.terrains[i], tint):
+			var fill := _terrain_color(_ghost_piece.terrains[i])
+			fill.a = GHOST_ALPHA
+			draw_rect(rect, fill)
 		if _ghost_piece.is_key_cell(i):
 			draw_key_marker(self, rect)
+			_draw_key_frame(rect)
 		draw_rect(rect.grow(-1), outline, false, 2.0)
 
 
 func _draw_building_ghost() -> void:
 	var rect := Rect2(cell_to_local(_ghost_origin), Vector2(_ghost_building.size * TILE_SIZE))
-	var fill := _ghost_building.color
-	fill.a = GHOST_ALPHA
-	_draw_house(rect.grow(-4), fill)
+	var texture := GameArt.building(_ghost_building.building_id)
+	if texture != null:
+		draw_texture_rect(texture, rect, false, Color(1, 1, 1, GHOST_ALPHA))
+	else:
+		var fill := _ghost_building.color
+		fill.a = GHOST_ALPHA
+		draw_rect(rect.grow(-4), fill)
 	draw_rect(rect.grow(-1), GHOST_VALID_COLOR if _ghost_valid else GHOST_INVALID_COLOR, false, 2.0)
 
 
-## Placeholder building sprite: a wall with a darker roof.
-func _draw_house(rect: Rect2, color: Color) -> void:
-	var roof_height := rect.size.y * 0.4
-	var wall := Rect2(rect.position + Vector2(0, roof_height), rect.size - Vector2(0, roof_height))
-	draw_rect(wall, color)
-	var roof := PackedVector2Array([
-		rect.position + Vector2(0, roof_height),
-		rect.position + Vector2(rect.size.x * 0.5, 0),
-		rect.position + Vector2(rect.size.x, roof_height),
-	])
-	draw_colored_polygon(roof, color.darkened(0.35))
-	draw_rect(wall, Color(0, 0, 0, color.a), false, 1.0)
+## The terrain's tile stretched over `rect` (pixel art ×2). False when there is no art for it.
+## Static so piece cards can share it.
+static func draw_terrain(canvas: CanvasItem, rect: Rect2, terrain_id: StringName, tint: Color = Color.WHITE) -> bool:
+	var texture := GameArt.terrain(terrain_id)
+	if texture == null:
+		return false
+	canvas.draw_texture_rect(texture, rect, false, tint)
+	return true
 
 
-## Gold diamond in the middle of `rect`. Static so piece cards can share it.
+## Key cells (×2) keep a gold frame on top of their building, so they stay easy to spot.
+func _draw_key_frames() -> void:
+	for cell in _board.get_all_cells():
+		if cell.is_key:
+			_draw_key_frame(_cell_rect(cell.coord))
+
+
+func _draw_key_frame(rect: Rect2) -> void:
+	var frame := GameArt.key_frame()
+	if frame != null:
+		draw_texture_rect(frame, rect, false)
+	else:
+		draw_rect(rect.grow(-1), KEY_MARKER_COLOR, false, 2.0)
+
+
+## Gold diamond over a key cell. Static so piece cards can share it.
 static func draw_key_marker(canvas: CanvasItem, rect: Rect2) -> void:
+	var texture := GameArt.key_marker()
+	if texture != null:
+		canvas.draw_texture_rect(texture, rect, false)
+		return
 	var c := rect.get_center()
 	var r := rect.size.x * 0.22
 	var points := PackedVector2Array([c + Vector2(0, -r), c + Vector2(r, 0), c + Vector2(0, r), c + Vector2(-r, 0)])
 	canvas.draw_colored_polygon(points, KEY_MARKER_COLOR)
-	points.append(points[0])
-	canvas.draw_polyline(points, Color.BLACK, 1.0)
 
 
 func _terrain_color(terrain_id: StringName) -> Color:
@@ -211,6 +239,7 @@ func _draw_territory_border() -> void:
 		for i in BoardData.NEIGHBOR_OFFSETS.size():
 			var neighbor := _board.get_cell(cell.coord + BoardData.NEIGHBOR_OFFSETS[i])
 			if neighbor == null or not neighbor.owned:
+				draw_line(corners[i], corners[(i + 1) % 4], TERRITORY_SHADOW_COLOR, 4.0)
 				draw_line(corners[i], corners[(i + 1) % 4], TERRITORY_BORDER_COLOR, 2.0)
 
 
@@ -221,14 +250,28 @@ func _draw_buildings() -> void:
 		var bounds := _cell_rect(cell.coord)
 		for covered in _board.get_building_cells(cell.building_origin):
 			bounds = bounds.merge(_cell_rect(covered.coord))
-		var inner := bounds.grow(-4)
-		if cell.building_id == BoardData.CASTLE_ID:
-			draw_rect(inner, CASTLE_COLOR)
-			draw_rect(Rect2(inner.position, Vector2(inner.size.x, inner.size.y * 0.35)), CASTLE_ROOF_COLOR)
-			draw_rect(inner, Color.BLACK, false, 1.0)
+		var is_castle := cell.building_id == BoardData.CASTLE_ID
+		var texture := GameArt.castle(castle_level) if is_castle else GameArt.building(cell.building_id)
+		var building: BuildingData = _buildings.get(cell.building_id)
+		if texture != null:
+			draw_texture_rect(texture, bounds, false)
 		else:
-			var building: BuildingData = _buildings.get(cell.building_id)
-			_draw_house(inner, building.color if building != null else Color.WHITE)
+			draw_rect(bounds.grow(-4), building.color if building != null else Color.WHITE)
+
+
+## Each production building's level on a small plate in its bottom-right corner, drawn last so
+## the key cell frames never hide it.
+func _draw_level_badges() -> void:
+	for cell in _board.get_all_cells():
+		if not cell.has_building() or cell.coord != cell.building_origin:
+			continue
+		var building: BuildingData = _buildings.get(cell.building_id)
+		var badge := GameArt.level_badge(cell.building_level)
+		if building == null or not building.is_upgradable() or badge == null:
+			continue
+		var badge_size := badge.get_size() * GameArt.ART_SCALE
+		var bounds := _cell_rect(cell.coord)
+		draw_texture_rect(badge, Rect2(bounds.end - badge_size + Vector2(2, 2), badge_size), false)
 
 
 func _draw_coords() -> void:

@@ -8,7 +8,7 @@ signal closed
 ## Forwarded from the clan panel; the kingdom scene closes the map and runs the battle.
 signal attack_requested(clan_id: StringName)
 
-const BACKGROUND_COLOR := Color(0.09, 0.1, 0.13)
+const BACKGROUND_COLOR := UiPalette.BACKDROP
 
 var _map: WorldMapView
 var _panel: ClanPanel
@@ -29,6 +29,7 @@ func open(state: KingdomState, resource_types: Array[ResourceTypeData]) -> void:
 	var title := Label.new()
 	title.text = "Bản đồ thế giới — Ngoại giao (lượt %d)" % state.turn
 	title.add_theme_font_size_override("font_size", 20)
+	title.theme_type_variation = &"WoodLabel"
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(title)
 	var back := Button.new()
@@ -47,11 +48,14 @@ func open(state: KingdomState, resource_types: Array[ResourceTypeData]) -> void:
 	_map.size_flags_stretch_ratio = 7.0
 	_map.setup(state.diplomacy)
 	row.add_child(_map)
+	# The clan panel sits on paper (project theme, GDD §13).
+	var paper := PanelContainer.new()
+	paper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	paper.size_flags_stretch_ratio = 3.0
+	row.add_child(paper)
 	var scroll := ScrollContainer.new()
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.size_flags_stretch_ratio = 3.0
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	row.add_child(scroll)
+	paper.add_child(scroll)
 	_panel = ClanPanel.new()
 	_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_panel.dialog_host = self

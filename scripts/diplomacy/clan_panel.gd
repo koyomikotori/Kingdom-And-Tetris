@@ -9,8 +9,8 @@ extends VBoxContainer
 ## The player confirmed an attack on this clan; the kingdom scene runs the battle.
 signal attack_requested(clan_id: StringName)
 
-const MUTED_COLOR := Color(1, 1, 1, 0.65)
-const WARNING_COLOR := Color(1, 0.6, 0.5)
+const MUTED_COLOR := UiPalette.MUTED
+const WARNING_COLOR := UiPalette.WARNING
 
 ## Where dialogs are added (the world map screen, so they cover it).
 var dialog_host: Control
@@ -81,7 +81,7 @@ func refresh() -> void:
 	var clan := _diplomacy.clans[_clan_id]
 	var data := clan.data
 	_name_label.text = data.display_name
-	_name_label.add_theme_color_override("font_color", data.color)
+	_name_label.add_theme_color_override("font_color", UiPalette.ink(data.color))
 	_description.text = data.description
 	var front := _wars.fronts[_clan_id]
 	_info.text = "%s · %s · Quân: %d/%d lính" % [ClanData.DIRECTION_NAMES[front.direction],
@@ -102,7 +102,7 @@ func refresh() -> void:
 	_goods.text = "Dư: %s · Thiếu: %s\nBạn bè: %s" % [_resource_names(data.surplus), _resource_names(data.deficit),
 			_clan_names(data.friends)]
 	_standing.text = _standing_text()
-	_standing.add_theme_color_override("font_color", WARNING_COLOR if front.at_war else Color.WHITE)
+	_standing.add_theme_color_override("font_color", WARNING_COLOR if front.at_war else UiPalette.TEXT)
 	for command in _commands:
 		var button: Button = command.button
 		var reason: Label = command.reason
@@ -288,7 +288,7 @@ func _build_details() -> void:
 func _add_command(text: String, dialog_script: GDScript, update: Callable, danger: bool = false) -> void:
 	var button := _button(text, func() -> void: open_dialog(dialog_script.new()))
 	if danger:
-		button.add_theme_color_override("font_color", WARNING_COLOR)
+		button.add_theme_color_override("font_color", UiPalette.WARNING_ON_WOOD)
 	_details.add_child(button)
 	var reason := _label("", 12)
 	reason.add_theme_color_override("font_color", WARNING_COLOR)

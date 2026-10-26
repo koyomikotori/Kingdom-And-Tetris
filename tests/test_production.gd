@@ -87,6 +87,22 @@ func test_buildings_level_up_with_the_castle() -> void:
 	check_eq(state.check_building_upgrade(origin), KingdomState.UpgradeResult.MAX_LEVEL, "Six levels")
 
 
+## The top bar refreshes on stockpile.changed: by then the new level must already count.
+func test_paying_for_an_upgrade_sees_the_new_level() -> void:
+	var state := _state()
+	_rich(state)
+	state.castle_level = 2
+	state.board.set_land(Vector2i(4, 3), &"hill", true)
+	state.build(&"mine", Vector2i(4, 3))
+	var seen: Array[int] = []
+	var watch := func() -> void: seen.append(state.get_turn_yield().get(&"stone", 0))
+	state.stockpile.changed.connect(watch)
+	state.upgrade_building(Vector2i(4, 3))
+	# The lambda holds the state: disconnect it, or the cycle leaks at exit.
+	state.stockpile.changed.disconnect(watch)
+	check_eq(seen, [16] as Array[int], "Income seen while paying is the level 2 income (8 × 2 on the key cell)")
+
+
 func test_upgrades_need_resources() -> void:
 	var state := _state()
 	state.castle_level = 2

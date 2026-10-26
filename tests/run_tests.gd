@@ -19,6 +19,7 @@ const TEST_FILES := [
 	"res://tests/test_generals.gd",
 	"res://tests/test_experience.gd",
 	"res://tests/test_advisors.gd",
+	"res://tests/test_art.gd",
 ]
 
 
@@ -48,4 +49,5 @@ func _initialize() -> void:
 				for failure in suite.failures:
 					print("        - %s" % failure)
 	print("\n%d/%d tests passed" % [total - failed, total])
+	GameArt.clear_cache()
 	quit(1 if failed > 0 else 0)

@@ -599,12 +599,22 @@ func _building_anchor(building: BuildingData) -> Vector2i:
 	return (building.size - Vector2i.ONE) / 2
 
 
+## One icon + amount per resource on the wooden top bar; the name is in the tooltip.
 func _build_resource_labels() -> void:
 	for type in _resource_types:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 4)
+		resource_bar.add_child(row)
+		var icon := TextureRect.new()
+		icon.texture = GameArt.icon(type.resource_id)
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(icon)
 		var label := Label.new()
+		label.theme_type_variation = &"WoodLabel"
 		# Hovering shows where the per-turn change comes from (tooltip filled in _refresh_economy).
 		label.mouse_filter = Control.MOUSE_FILTER_PASS
-		resource_bar.add_child(label)
+		row.add_child(label)
 		_resource_labels[type.resource_id] = label
 
 
@@ -617,7 +627,7 @@ func _refresh_economy() -> void:
 		var label := _resource_labels[type.resource_id]
 		var amount := state.stockpile.get_amount(type.resource_id)
 		var change: int = net.get(type.resource_id, 0)
-		label.text = "%s: %d (%+d)" % [type.display_name, amount, change]
+		label.text = "%d (%+d)" % [amount, change]
 		var lines: Array[String] = ["%s: %d (%+d mỗi lượt)" % [type.display_name, amount, change]]
 		for entry: Dictionary in breakdown.get(type.resource_id, []):
 			lines.append("  %+d  %s" % [entry.amount, _income_source_text(entry)])
@@ -626,6 +636,7 @@ func _refresh_economy() -> void:
 		label.tooltip_text = "\n".join(lines)
 	army_panel.refresh(state)
 	build_panel.refresh(state)
+	board_view.castle_level = state.castle_level
 
 
 func _income_source_text(entry: Dictionary) -> String:

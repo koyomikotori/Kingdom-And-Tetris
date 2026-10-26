@@ -2,7 +2,7 @@ class_name GameMenuWindow
 extends ModalWindow
 ## In-game menu from the top bar (GDD §10.1): keep playing, save, load or go back to the main menu.
 
-const ACCENT := Color(1.0, 0.85, 0.35)
+const ACCENT := UiPalette.ACCENT
 const TO_MENU_TEXT := "Về menu chính"
 
 var _state: KingdomState
@@ -22,7 +22,7 @@ func open(state: KingdomState, system: SaveSystem, host: Node) -> void:
 	body.add_child(_menu_button("Lưu game", _open_slots.bind(SaveSlotWindow.Mode.SAVE)))
 	body.add_child(_menu_button("Tải game", _open_slots.bind(SaveSlotWindow.Mode.LOAD)))
 	_to_menu_button = _menu_button(TO_MENU_TEXT, _on_to_menu_pressed)
-	_to_menu_button.add_theme_color_override("font_color", WARNING_COLOR)
+	_to_menu_button.add_theme_color_override("font_color", UiPalette.WARNING_ON_WOOD)
 	body.add_child(_to_menu_button)
 	_last_save = _label("", 13)
 	_last_save.add_theme_color_override("font_color", MUTED_COLOR)

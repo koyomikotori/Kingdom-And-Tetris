@@ -7,8 +7,8 @@ extends VBoxContainer
 
 signal building_toggled(building_id: StringName)
 
-const MUTED_COLOR := Color(1, 1, 1, 0.65)
-const WARNING_COLOR := Color(1, 0.6, 0.5)
+const MUTED_COLOR := UiPalette.MUTED
+const WARNING_COLOR := UiPalette.WARNING
 
 var _buildings: Dictionary[StringName, BuildingData] = {}
 var _resource_types: Array[ResourceTypeData] = []
