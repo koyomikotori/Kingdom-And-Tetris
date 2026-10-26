@@ -11,7 +11,7 @@ const RESULT_DELAY := 1.6
 ## Battle seconds a stratagem message stays on screen.
 const STRATAGEM_MESSAGE_TIME := 4.0
 const STRATAGEM_COLOR := Color(1.0, 0.85, 0.35)
-const BACKGROUND_COLOR := Color(0.09, 0.1, 0.13)
+const BACKGROUND_COLOR := UiPalette.BACKDROP
 const WIN_COLOR := Color(0.55, 0.95, 0.55)
 const LOSS_COLOR := Color(1.0, 0.5, 0.45)
 
@@ -83,11 +83,11 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 # --- Layout -------------------------------------------------------------------------------
 
-## The battle screen stays dark until its art pass (M12b): labels in light text over the project
-## theme's paper colors.
+## The battle screen sits on dark wood (the info columns and bars around the battlefield): its
+## labels are cream instead of the project theme's ink.
 static func _dark_theme() -> Theme:
 	var dark := Theme.new()
-	dark.set_color("font_color", "Label", Color(0.95, 0.95, 0.95))
+	dark.set_color("font_color", "Label", UiPalette.ON_WOOD)
 	return dark
 
 

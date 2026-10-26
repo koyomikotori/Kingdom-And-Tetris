@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_strat")
 stratagem_id = &"sow_discord"
+effect = &"smoke"
 display_name = "Ly gián"
 description = "Gieo nghi ngờ vào đơn vị địch đông nhất."
 target = 0

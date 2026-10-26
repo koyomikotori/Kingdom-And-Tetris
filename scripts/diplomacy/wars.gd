@@ -212,6 +212,7 @@ func invasion_size(clan_id: StringName) -> int:
 ## The clan's soldiers as battle units, split by its army_units weights into squads.
 func create_clan_side(clan_id: StringName, soldiers: int, units: Dictionary[StringName, UnitData]) -> BattleSide:
 	var side := BattleSide.new(_diplomacy.clans[clan_id].data.display_name)
+	side.color = _diplomacy.clans[clan_id].data.color
 	add_clan_units(side, clan_id, soldiers, units)
 	return side
 

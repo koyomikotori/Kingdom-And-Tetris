@@ -6,6 +6,12 @@ extends RefCounted
 const TILE_DIR := "res://assets/tiles/"
 const BUILDING_DIR := "res://assets/buildings/"
 const ICON_DIR := "res://assets/icons/"
+const UNIT_DIR := "res://assets/units/"
+const BATTLE_DIR := "res://assets/battle/"
+const EFFECT_DIR := "res://assets/effects/"
+## Rows of every unit sprite sheet, top to bottom (tools/art/battle_art.py STATES); 2 frames each.
+const UNIT_STATES: Array[StringName] = [&"stand", &"walk", &"attack", &"fall", &"cheer"]
+const UNIT_FRAMES := 2
 ## Board art is drawn at 16×16 and shown ×2 (BoardView.TILE_SIZE).
 const ART_SCALE := 2
 
@@ -55,3 +61,29 @@ static func level_badge(level: int) -> Texture2D:
 ## Resource icon (24×24 on screen).
 static func icon(resource_id: StringName) -> Texture2D:
 	return _load(ICON_DIR + String(resource_id) + ".png")
+
+
+# --- Battle (M12b) ------------------------------------------------------------------------
+
+## A unit's sprite sheet; its "_team" sheet holds the clothes in grays, drawn tinted with the side's
+## color. Unknown sprites fall back to the swordsman.
+static func unit_sheet(sprite_id: StringName, team: bool = false) -> Texture2D:
+	var suffix := "_team.png" if team else ".png"
+	var texture := _load(UNIT_DIR + String(sprite_id) + suffix)
+	return texture if texture != null else _load(UNIT_DIR + "swordsman" + suffix)
+
+
+## The region of `sheet` holding `frame` of `state`.
+static func unit_frame(sheet: Texture2D, state: StringName, frame: int) -> Rect2:
+	var size := sheet.get_size() / Vector2(UNIT_FRAMES, UNIT_STATES.size())
+	return Rect2(Vector2(frame % UNIT_FRAMES, maxi(0, UNIT_STATES.find(state))) * size, size)
+
+
+## Battlefield pieces: &"mountains", &"cloud", &"ground", &"town", &"camp" (+ &"camp_team").
+static func battle(piece: StringName) -> Texture2D:
+	return _load(BATTLE_DIR + String(piece) + ".png")
+
+
+## Effect strips (2 frames side by side): &"fire", &"smoke", &"sparkle"; &"arrow" is one image.
+static func effect(effect_id: StringName) -> Texture2D:
+	return _load(EFFECT_DIR + String(effect_id) + ".png")

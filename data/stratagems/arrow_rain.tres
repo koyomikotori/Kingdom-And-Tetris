@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_strat")
 stratagem_id = &"arrow_rain"
+effect = &"arrows"
 display_name = "Mưa tên"
 description = "Một loạt tên trước trận rơi xuống mọi đơn vị địch."
 target = 1

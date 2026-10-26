@@ -6,6 +6,9 @@ extends RefCounted
 signal turn_started(turn: int)
 signal castle_changed
 
+## The player's main color: the kingdom's soldiers wear it in battle. Later the player picks it
+## (with a commander and a banner) when starting a new game (GDD §13).
+const PLAYER_COLOR := Color(0.27, 0.45, 0.82)
 ## Squads allowed without any barracks (the castle garrison).
 const BASE_SQUAD_CAPACITY := 2
 ## What a new game starts with (GDD §8, economy v2): land no longer yields, so the first
