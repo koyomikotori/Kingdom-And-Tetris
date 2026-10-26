@@ -22,16 +22,20 @@ func _ally(state: KingdomState, clan_ids: Array[StringName]) -> void:
 		state.diplomacy.clans[clan_id].alliance_turns = 99
 
 
-## 51 farmland, forest and hill cells each: +51 of every resource per turn.
+## 150+ cells of land with 25 farms, 15 lumber mills and 15 mines (placed straight on the board,
+## past the limits): +95 food, +75 wood, +75 stone per turn after upkeep.
 func _prosperous(state: KingdomState) -> void:
 	state.board.expand(Vector2i.RIGHT, 4)
-	var plan: Array[StringName] = []
-	for terrain_id: StringName in [&"farmland", &"forest", &"hill"]:
+	var plan: Array = []
+	for entry: Array in [[&"farmland", &"farm", 25], [&"forest", &"lumber_mill", 15], [&"hill", &"mine", 15]]:
 		for i in 51:
-			plan.append(terrain_id)
+			plan.append([entry[0], entry[1] if i < entry[2] else &""])
 	for cell in state.board.get_all_cells():
 		if cell.building_id != BoardData.CASTLE_ID and not plan.is_empty():
-			state.board.set_land(cell.coord, plan.pop_back(), false)
+			var next: Array = plan.pop_back()
+			state.board.set_land(cell.coord, next[0], false)
+			if next[1] != &"":
+				state.board.place_building(next[1], cell.coord, Vector2i.ONE)
 
 
 func _end_turns(state: KingdomState, count: int) -> int:

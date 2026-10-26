@@ -74,9 +74,15 @@ func refresh(state: KingdomState) -> void:
 		leader = "Tổng tướng: %s %s · Võ lực %d · Thống suất %d%s" % [commander.name, commander.star_text(),
 				commander.might, commander.command,
 				"" if commander.is_ready() else " · bị thương, còn %d lượt" % commander.wounded_turns]
-	_summary_label.text = "Đơn vị: %d/%d · %d lính · Nuôi quân và tướng: %s/lượt\n%s\n%s" % [
+	var strategist := "Mưu sĩ Quân sự: chưa có (giao chức ở thành chính, tab Mưu sĩ)."
+	var advisor := state.advisors.holder(&"military")
+	if advisor != null:
+		strategist = "Mưu sĩ Quân sự: %s %s · Mưu lược %d · %d mưu kế%s" % [advisor.name, advisor.star_text(),
+				advisor.strategy, advisor.stratagems.size(),
+				"" if advisor.is_ready() else " · bị thương, còn %d lượt" % advisor.wounded_turns]
+	_summary_label.text = "Đơn vị: %d/%d · %d lính · Nuôi quân, tướng, mưu sĩ: %s/lượt\n%s\n%s\n%s" % [
 			state.army.count_squads(), state.get_squad_capacity(), state.army.count_soldiers(),
-			upkeep if not upkeep.is_empty() else "0", replenish, leader]
+			upkeep if not upkeep.is_empty() else "0", replenish, leader, strategist]
 	_rebuild_squad_list(state)
 	for unit in _units:
 		_count_labels[unit.unit_id].text = "Đang có: %d đơn vị · %d lính" % [

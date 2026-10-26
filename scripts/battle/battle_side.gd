@@ -79,6 +79,11 @@ var units: Array[Unit] = []
 var general_name := ""
 ## Set by the simulator when the commander's bodyguard broke or died.
 var general_fallen := false
+## The military advisor behind this side, or "" (Advisors.assist): their Mưu lược and the
+## stratagems the simulator rolls at the start of the battle.
+var advisor_name := ""
+var strategy := 0
+var stratagems: Array[StratagemData] = []
 
 
 func _init(p_display_name: String) -> void:

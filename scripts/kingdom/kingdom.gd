@@ -89,6 +89,7 @@ func _ready() -> void:
 	build_panel.building_toggled.connect(_toggle_building)
 	state.castle_changed.connect(_refresh_economy)
 	state.generals.changed.connect(_refresh_economy)
+	state.advisors.changed.connect(_refresh_economy)
 	army_panel.setup(units, _resource_types)
 	army_panel.recruit_requested.connect(_on_recruit_requested)
 	army_panel.disband_requested.connect(_on_disband_requested)
@@ -98,6 +99,7 @@ func _ready() -> void:
 	game_menu_button.pressed.connect(_open_game_menu)
 	objectives_button.pressed.connect(_open_objectives)
 	if game.is_empty():
+		state.give_starting_resources()
 		state.start()
 		_autosave()
 	else:
@@ -241,8 +243,10 @@ func _on_end_turn_pressed() -> void:
 		lines.append("%s đã tuyên chiến với vương quốc!" % _clan_name(clan_id))
 	for general: General in report.generals_healed:
 		lines.append("Tướng %s đã lành vết thương." % general.name)
+	for advisor: Advisor in report.advisors_healed:
+		lines.append("Mưu sĩ %s đã lành vết thương." % advisor.name)
 	if state.generals.candidates_turn == state.turn:
-		lines.append("Có ứng viên tướng mới (thành chính, tab Chiêu hiền).")
+		lines.append("Có ứng viên mới (thành chính, tab Chiêu hiền).")
 	var held: int = state.victory.holds[Victory.Path.PROSPERITY]
 	if held > 0 and state.victory.won_path == Victory.NO_PATH:
 		lines.append("Đang giữ điều kiện chiến thắng %s: %d/%d lượt." % [Victory.PATH_NAMES[Victory.Path.PROSPERITY],
@@ -368,6 +372,9 @@ func _ally_lines(result: Dictionary) -> Array[String]:
 			lines.append("Tổng tướng %s đã tử trận!" % general.name)
 		&"wounded":
 			lines.append("Tổng tướng %s ngã ngựa, bị thương, nghỉ %d lượt." % [general.name, Generals.WOUND_TURNS])
+	var advisor: Dictionary = result.get("advisor", {})
+	if advisor.get("fate", &"none") == &"wounded":
+		lines.append("Mưu sĩ %s bị thương khi rút chạy, nghỉ %d lượt." % [advisor.name, Advisors.WOUND_TURNS])
 	for clan_id: StringName in result.allies:
 		var entry: Dictionary = result.allies[clan_id]
 		lines.append("Đồng minh %s gửi %d lính, mất %d (quan hệ %+d)." % [_clan_name(clan_id), entry.sent,
@@ -567,7 +574,8 @@ func _update_ghost() -> void:
 	if _selected_building != NO_BUILDING:
 		var building := _buildings[_selected_building]
 		var origin := coord - _building_anchor(building)
-		var result := BuildRules.check(state.board, state.stockpile, building, origin, state.castle_level)
+		var result := BuildRules.check(state.board, state.stockpile, building, origin, state.castle_level,
+				state.building_cost(building))
 		board_view.show_building_ghost(building, origin, result == BuildRules.Result.OK)
 		placement_status.text = BuildRules.describe(result)
 		return
@@ -579,7 +587,11 @@ func _update_ghost() -> void:
 		placement_status.text = PlacementRules.describe(placement)
 		return
 	var delta := UiFormat.amounts(Economy.placement_delta(state.board, piece, piece_origin, _terrains), _resource_types, true)
-	placement_status.text = "Có thể đặt. Sản lượng mỗi lượt: %s." % (delta if not delta.is_empty() else "không đổi")
+	# Economy v2: land yields nothing by itself, so the delta is usually empty.
+	if delta.is_empty():
+		placement_status.text = "Có thể đặt. Đất không tự cho tài nguyên: xây công trình khai thác lên đất để có sản lượng."
+	else:
+		placement_status.text = "Có thể đặt. Sản lượng mỗi lượt: %s." % delta
 
 
 ## The cell of a building that sits under the mouse cursor.
@@ -626,6 +638,12 @@ func _income_source_text(entry: Dictionary) -> String:
 			return "Nuôi quân (%d đơn vị)" % entry.count
 		&"generals":
 			return "Nuôi tướng (%d)" % entry.count
+		&"advisors":
+			return "Nuôi mưu sĩ (%d)" % entry.count
+		&"admin_upkeep":
+			return "Mưu sĩ Nội chính (giảm phí nuôi)"
+		&"admin_yield":
+			return "Mưu sĩ Nội chính (thêm sản lượng)"
 		&"production":
 			return "%s ×%d (khai thác)" % [_buildings[entry.id].display_name, entry.count]
 		&"building":
@@ -647,7 +665,7 @@ func _describe_cell(cell: CellData) -> String:
 		var cell_amounts := Economy.cell_yield(_terrains.get(cell.terrain_id), cell.is_key)
 		# A production building counts once, on its origin cell.
 		if cell.has_building() and cell.coord == cell.building_origin and _buildings.has(cell.building_id):
-			Economy.add_into(cell_amounts, Economy.building_yield(_buildings[cell.building_id], cell.is_key))
+			Economy.add_into(cell_amounts, Economy.building_yield(_buildings[cell.building_id], cell.is_key, cell.building_level))
 		var amounts := UiFormat.amounts(cell_amounts, _resource_types, true)
 		production = amounts if not amounts.is_empty() else "Không"
 	var building := "Không"

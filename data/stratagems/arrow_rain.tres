@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="StratagemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/advisors/stratagem_data.gd" id="1_strat"]
+
+[resource]
+script = ExtResource("1_strat")
+stratagem_id = &"arrow_rain"
+display_name = "Mưa tên"
+description = "Một loạt tên trước trận rơi xuống mọi đơn vị địch."
+target = 1
+soldier_loss_base = 0.02
+soldier_loss_per_point = 0.003

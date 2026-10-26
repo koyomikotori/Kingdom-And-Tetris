@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="StratagemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/advisors/stratagem_data.gd" id="1_strat"]
+
+[resource]
+script = ExtResource("1_strat")
+stratagem_id = &"feint"
+display_name = "Nghi binh"
+description = "Nghi binh làm xạ thủ địch bắn sai."
+target = 2
+range_base = -0.1
+range_per_point = -0.02

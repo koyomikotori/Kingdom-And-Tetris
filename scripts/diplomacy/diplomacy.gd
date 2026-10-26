@@ -94,6 +94,12 @@ const WARINESS: Array[float] = [0.5, 1.0, 0.4, 0.8]
 const AGREEMENT_MAX_CHANCE := 0.95
 ## Added to the acceptance chance, by personality: PEACEFUL, AGGRESSIVE, MERCHANT, ISOLATED.
 const AGREEMENT_PERSONALITY: Array[float] = [0.05, -0.1, 0.15, -0.2]
+## The Ngoại giao advisor (GDD §8, M11f), per point of `envoy`: better trade prices, likelier
+## acceptance (agreements, alliances, peace), less wariness, bigger gift gains.
+const ENVOY_PRICE := 0.02
+const ENVOY_CHANCE := 0.02
+const ENVOY_WARINESS := 0.03
+const ENVOY_GIFT := 0.03
 
 
 ## The relation is never stored: it is the sum of lasting factors (base, wariness, treaties) and
@@ -172,6 +178,8 @@ var agreements: Array[Agreement]:
 			if clans[clan_id].agreement != null:
 				result.append(clans[clan_id].agreement)
 		return result
+## Ngoại giao of the kingdom's working diplomacy advisor, 0 without one (set by KingdomState).
+var envoy := 0
 ## How threatening the kingdom looks (KingdomState.get_threat()); every clan's wariness grows toward
 ## it (wariness_target).
 var threat := 0
@@ -248,7 +256,7 @@ func target_relation(clan_id: StringName) -> int:
 
 ## Wariness the clan's wariness grows (or shrinks) toward: threat x personality factor.
 func wariness_target(clan_id: StringName) -> int:
-	return roundi(threat * WARINESS[clans[clan_id].data.personality])
+	return roundi(threat * WARINESS[clans[clan_id].data.personality] * maxf(0.0, 1.0 - envoy * ENVOY_WARINESS))
 
 
 ## Where the relation comes from: [{"id": factor id or MEMORY_*, "amount": signed int,
@@ -284,7 +292,8 @@ func value_of(amounts: Dictionary[StringName, int]) -> int:
 ## Relation the gift would add right now (after the per-turn limit).
 func gift_gain(clan_id: StringName, amounts: Dictionary[StringName, int]) -> int:
 	var clan := clans[clan_id]
-	var raw := floori(float(value_of(amounts)) / GIFT_VALUE_PER_POINT * GIFT_MULTIPLIER[clan.data.personality])
+	var raw := floori(float(value_of(amounts)) / GIFT_VALUE_PER_POINT * GIFT_MULTIPLIER[clan.data.personality]
+			* (1.0 + envoy * ENVOY_GIFT))
 	return clampi(raw, 0, MAX_GIFT_GAIN_PER_TURN - clan.gift_gain_this_turn)
 
 
@@ -345,7 +354,7 @@ func price_factor(clan_id: StringName, give_id: StringName, get_id: StringName) 
 		factor *= SURPLUS_BONUS
 	if not clan.data.is_neighbor():
 		factor *= DISTANT_PENALTY
-	return factor
+	return factor * (1.0 + envoy * ENVOY_PRICE)
 
 
 ## Units of `get_id` the player would receive for `give_amount` of `give_id` (rounded down).
@@ -433,7 +442,8 @@ func agreement_chance(clan_id: StringName, give_id: StringName, give_amount: int
 	if fair <= 0 or get_amount <= 0:
 		return 0.0
 	var clan := clans[clan_id]
-	var chance := 1.5 - float(get_amount) / fair + clan.relation / 200.0 + AGREEMENT_PERSONALITY[clan.data.personality]
+	var chance := 1.5 - float(get_amount) / fair + clan.relation / 200.0 + AGREEMENT_PERSONALITY[clan.data.personality] \
+			+ envoy * ENVOY_CHANCE
 	return clampf(chance, 0.0, AGREEMENT_MAX_CHANCE)
 
 

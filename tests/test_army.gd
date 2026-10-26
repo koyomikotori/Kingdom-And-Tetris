@@ -95,12 +95,13 @@ func test_upkeep_is_paid_each_turn() -> void:
 	state.recruit(&"spearman")
 	check_eq(state.get_upkeep(), {&"food": 2}, "2 squads eat 2 food")
 	_paint(state.board, &"farmland", [Vector2i(7, 4)])
-	check_eq(state.get_net_income().get(&"food"), -1, "Net food = 1 farm - 2 upkeep")
+	state.build(&"farm", Vector2i(7, 4))
+	check_eq(state.get_net_income().get(&"food"), 3, "Net food = 5 from the farm - 2 upkeep")
 	var food_before := state.stockpile.get_amount(&"food")
 	var report := state.end_turn()
 	check_eq(report.upkeep, {&"food": 2}, "Report shows upkeep")
 	check(report.deserted.is_empty(), "Nobody deserts when fed")
-	check_eq(state.stockpile.get_amount(&"food"), food_before + 1 - 2, "Stock = before + yield - upkeep")
+	check_eq(state.stockpile.get_amount(&"food"), food_before + 5 - 2, "Stock = before + yield - upkeep")
 
 
 func test_squads_desert_when_food_runs_out() -> void:
