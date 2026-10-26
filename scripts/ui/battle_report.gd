@@ -5,8 +5,8 @@ extends Control
 
 signal closed
 
-const WIN_COLOR := Color(0.55, 0.95, 0.55)
-const LOSS_COLOR := Color(1.0, 0.5, 0.45)
+const WIN_COLOR := UiPalette.GOOD
+const LOSS_COLOR := UiPalette.WARNING
 ## Gap around the panel as a share of the screen: 15% left/right, 6% top/bottom.
 const PANEL_MARGIN := Vector2(0.15, 0.06)
 
@@ -33,7 +33,7 @@ func show_battle(title_text: String, won: bool, intro: String, record: BattleRec
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.6)
+	dim.color = UiPalette.DIM
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(dim)
 	# Sized as a share of the screen so it grows and shrinks with the window like the battle screen.
@@ -42,10 +42,7 @@ func show_battle(title_text: String, won: bool, intro: String, record: BattleRec
 	panel.anchor_right = 1.0 - PANEL_MARGIN.x
 	panel.anchor_top = PANEL_MARGIN.y
 	panel.anchor_bottom = 1.0 - PANEL_MARGIN.y
-	var background := StyleBoxFlat.new()
-	background.bg_color = Color(0.13, 0.14, 0.17)
-	background.set_corner_radius_all(6)
-	panel.add_theme_stylebox_override("panel", background)
+	# The paper panel comes from the project theme (GDD §13).
 	add_child(panel)
 	var margin := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
@@ -128,7 +125,7 @@ func _side_table(side: BattleSide) -> Control:
 	box.add_child(grid)
 	for text in ["Đơn vị", "Đầu trận", "Tử trận", "Còn lại", "Hạ được", "Trạng thái"]:
 		var cell := _cell(text)
-		cell.add_theme_color_override("font_color", Color(1, 1, 1, 0.6))
+		cell.add_theme_color_override("font_color", UiPalette.MUTED)
 		grid.add_child(cell)
 	for unit in side.units:
 		var status := "Bị vỡ" if unit.broken else ("Tử trận hết" if unit.alive() == 0 else "Giữ vững")

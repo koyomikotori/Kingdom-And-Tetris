@@ -3,9 +3,9 @@ extends ModalWindow
 ## "Mục tiêu" from the top bar (GDD §9b): progress on each victory path, condition by condition,
 ## and how safe the castle is.
 
-const ACCENT := Color(1.0, 0.85, 0.35)
-const BAR_COLOR := Color(0.95, 0.75, 0.3)
-const DONE_COLOR := Color(0.55, 0.95, 0.55)
+const ACCENT := UiPalette.ACCENT
+const BAR_COLOR := UiPalette.GOLD
+const DONE_COLOR := UiPalette.GOOD
 
 
 func open(state: KingdomState) -> void:

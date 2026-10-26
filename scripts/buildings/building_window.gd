@@ -10,7 +10,7 @@ signal move_requested(origin: Vector2i)
 ## The building was demolished; `refund` is what came back.
 signal demolished(building_name: String, refund: Dictionary)
 
-const ACCENT := Color(1.0, 0.85, 0.35)
+const ACCENT := UiPalette.ACCENT
 ## Height of the scrolling lists in the castle tabs (Chiêu hiền, Tướng, Mưu sĩ).
 const TAB_LIST_HEIGHT := 440
 
@@ -283,7 +283,7 @@ func _refresh_generals() -> void:
 					generals.set_commander.bind(general))))
 		var dismiss := _button("Sa thải", _ask_custom.bind("Sa thải %s %s? Không hoàn tác được." % [general.name,
 				general.star_text()], generals.dismiss.bind(general)))
-		dismiss.add_theme_color_override("font_color", WARNING_COLOR)
+		dismiss.add_theme_color_override("font_color", UiPalette.WARNING_ON_WOOD)
 		buttons.append(dismiss)
 		_generals_box.add_child(_general_row(general, "%s. %s. Phí nuôi: %s mỗi lượt." % [status, _level_text(general),
 				UiFormat.amounts(generals.ranks[general.stars].upkeep, _resource_types)], buttons))
@@ -305,7 +305,7 @@ func _refresh_advisors() -> void:
 			post += ", bị thương (còn %d lượt)" % advisor.wounded_turns
 		var dismiss := _button("Sa thải", _ask_custom.bind("Sa thải mưu sĩ %s %s? Không hoàn tác được." % [advisor.name,
 				advisor.star_text()], advisors.dismiss.bind(advisor)))
-		dismiss.add_theme_color_override("font_color", WARNING_COLOR)
+		dismiss.add_theme_color_override("font_color", UiPalette.WARNING_ON_WOOD)
 		var lines: Array[String] = ["%s. %s. Phí nuôi: %s mỗi lượt." % [post, _level_text(advisor),
 				UiFormat.amounts(advisors.ranks[advisor.stars].upkeep, _resource_types)]]
 		if advisor.post != Advisor.NO_POST:

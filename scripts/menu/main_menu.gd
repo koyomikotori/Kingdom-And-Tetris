@@ -1,10 +1,12 @@
 extends Control
 ## Main menu (GDD §10.1): continue the latest save, start a new game, load a slot, quit.
-## Placeholder look until the art pass (M13). Built in code.
+## Wood + paper look (GDD §13). Built in code.
 
-const BACKGROUND_COLOR := Color(0.09, 0.1, 0.13)
-const TITLE_COLOR := Color(1.0, 0.85, 0.35)
-const WARNING_COLOR := Color(1, 0.6, 0.5)
+const BACKGROUND_COLOR := UiPalette.BACKDROP
+const TITLE_COLOR := UiPalette.ACCENT
+const WARNING_COLOR := UiPalette.WARNING
+## The castle picture above the title, ×4.
+const CASTLE_SCALE := 4
 const NEW_GAME_TEXT := "Ván mới"
 
 var _system := SaveSystem.new()
@@ -23,23 +25,35 @@ func _ready() -> void:
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(center)
+	var paper := PanelContainer.new()
+	center.add_child(paper)
+	var margin := MarginContainer.new()
+	for edge in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + edge, 24)
+	paper.add_child(margin)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 12)
 	column.custom_minimum_size = Vector2(420, 0)
-	center.add_child(column)
+	margin.add_child(column)
+	var castle := TextureRect.new()
+	castle.texture = GameArt.castle(6)
+	castle.custom_minimum_size = Vector2(32, 32) * CASTLE_SCALE
+	castle.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	castle.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	column.add_child(castle)
 
 	var title := _label("Kingdom Tiles", 48)
 	title.add_theme_color_override("font_color", TITLE_COLOR)
 	column.add_child(title)
 	var subtitle := _label("Rise Of Realms", 22)
-	subtitle.add_theme_color_override("font_color", Color(1, 1, 1, 0.7))
+	subtitle.add_theme_color_override("font_color", UiPalette.MUTED)
 	column.add_child(subtitle)
 	column.add_child(_spacer(24))
 
 	_continue_button = _button("Tiếp tục", _on_continue_pressed)
 	column.add_child(_continue_button)
 	_continue_info = _label("", 13)
-	_continue_info.add_theme_color_override("font_color", Color(1, 1, 1, 0.6))
+	_continue_info.add_theme_color_override("font_color", UiPalette.MUTED)
 	column.add_child(_continue_info)
 	_new_game_button = _button(NEW_GAME_TEXT, _on_new_game_pressed)
 	column.add_child(_new_game_button)
@@ -67,7 +81,7 @@ func _on_continue_pressed() -> void:
 func _on_new_game_pressed() -> void:
 	if _system.has_save(SaveSystem.AUTO_SLOT) and _new_game_button.text == NEW_GAME_TEXT:
 		_new_game_button.text = "Bản tự động sẽ bị ghi đè. Bấm lần nữa để bắt đầu"
-		_new_game_button.add_theme_color_override("font_color", WARNING_COLOR)
+		_new_game_button.add_theme_color_override("font_color", UiPalette.WARNING_ON_WOOD)
 		return
 	GameLaunch.new_game(get_tree())
 

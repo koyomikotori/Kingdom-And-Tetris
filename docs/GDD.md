@@ -648,10 +648,45 @@ Thống kê trận thắng/thua và trạng thái thắng/thua được lưu cù
 | M11d | Tướng: sao 1–6, Võ lực / Thống suất / đặc tính theo lãnh thổ, một tổng tướng + cận vệ kỵ binh trong trận, tử trận / bị thương, sự kiện chiêu mộ | Xong |
 | M11e | Kinh nghiệm và cấp: đơn vị 3 cấp (huấn luyện tới Cựu binh, pha loãng khi bổ sung), tướng lên cấp và tự cộng điểm | Xong |
 | M11f | Mưu sĩ: 3 chức Nội chính / Ngoại giao / Quân sự, 3 chỉ số, bộ mưu kế đầu trận, chiêu hiền chung với tướng; **Kinh tế v2**: chỉ công trình cho tài nguyên, công trình 6 cấp, giới hạn theo cấp thành | Đang làm |
-| M12 | **Hỗ trợ cảm ứng + xuất APK** (chạm để xem trước/xác nhận, vuốt để kéo, chụm để zoom, nút thay phím tắt); **sắp xếp lại tab Quân đội và Xây dựng** cho gọn trên điện thoại (ít chữ, thông tin chi tiết mở khi chạm) | |
-| M13 | Pixel art, âm thanh, cân bằng, build Windows + Android | |
+| M12a | **Đồ họa (1/3):** hệ thống ảnh pixel vẽ bằng script, bản đồ (địa hình, ô ◆, thành, công trình có cấp, mảnh đất trong tay), giao diện gỗ + giấy cuộn, icon tài nguyên (§13) | Đang làm |
+| M12b | **Đồ họa (2/3):** trận đánh: lính từng loại, cận vệ tướng cưỡi ngựa, quân cướp / gia tộc, mũi tên, nền chiến trường, hiệu ứng mưu kế | |
+| M12c | **Tab Tướng sĩ** kiểu Ninja Village + chân dung pixel ghép bộ phận + bản đồ thế giới vẽ lại | |
+| M12d | **Trang bị** cho tướng và mưu sĩ (tab Trang bị trong bảng chi tiết; thiết kế bàn riêng) | |
+| M13 | **Hỗ trợ cảm ứng + xuất APK** (chạm để xem trước/xác nhận, vuốt để kéo, chụm để zoom, nút thay phím tắt); **sắp xếp lại tab Quân đội, Xây dựng, bảng thành** cho gọn trên điện thoại (ít chữ, chi tiết mở khi chạm) | |
+| M14 | Âm thanh, cân bằng, build Windows + Android, phát hành | |
+
+Đồ họa được đưa lên trước cảm ứng (chốt sau M11f) để lần sắp xếp lại bố cục ở M13 dùng luôn giao diện mới.
 
 Lưu/tải được đưa lên trước sự kiện và tướng, vì trạng thái game càng nhiều thì càng khó thêm lưu game về sau.
+
+## 13. Đồ họa (M12, đã chốt)
+
+**Nguồn ảnh:** pixel art **tự vẽ bằng script** (Python + Pillow, nằm trong `tools/art/`), xuất PNG vào `assets/`. Chạy lại script là vẽ lại toàn bộ, nên chỉnh màu / hình dễ và đồng bộ. Ảnh vẽ tay có thể thả vào thay file cùng tên.
+
+**Phong cách:** **Đông Á cổ, tươi sáng kiểu Kairosoft**: thành mái ngói cong, tường đá, cờ hiệu; ruộng lúa, rừng tre / thông, đồi đá; lính đội nón, giáp vảy. Màu tươi, nét viền đậm, bảng màu chung cho cả game.
+
+**Độ phân giải:** ô bản đồ **16×16** hiện ở **32×32** (phóng ×2, lọc nearest để giữ nét pixel); lính 16×16; chân dung 48×48.
+
+**Giao diện:** **gỗ và giấy cuộn**: bảng nền giấy dó viền gỗ, nút gỗ nổi (thường / rê chuột / bấm / khóa), tab như thẻ treo, thanh trên cùng và cột bên phải nền gỗ. Dùng một `Theme` chung cho mọi bảng. **Font giữ nguyên** (đọc tiếng Việt rõ), chỉ đổi màu chữ và viền chữ cho hợp nền giấy; font pixel có thể thêm sau.
+
+**M12a — bản đồ và giao diện:**
+- Địa hình: cỏ, ruộng lúa, rừng, đồi đá, đất hoang ngoài lãnh thổ (tối, sương mờ), viền lãnh thổ; ô ◆ có dấu riêng.
+- Thành chính (đổi theo cấp thành: tường, mái, cờ), doanh trại, trạm lính canh, nông trại, xưởng gỗ, mỏ; công trình khai thác có dấu cấp.
+- Mảnh đất trong tay và bóng xem trước khi đặt dùng cùng ảnh ô.
+- Icon 6 tài nguyên trên thanh trên cùng và trong các bảng.
+- Menu chính và khung các cửa sổ (bảng công trình, ngoại giao, lưu / tải, báo cáo trận, sự kiện, mục tiêu).
+
+**M12b — trận đánh:** lính kiếm, giáo, cung, quân cướp, quân gia tộc (màu cờ gia tộc); **cận vệ tướng cưỡi ngựa**; hoạt ảnh đứng / đi / đánh / ngã (vài khung); mũi tên, đạn; nền trời, cỏ, cờ hai bên; hiệu ứng mưu kế (lửa, mưa tên, trống…).
+
+**M12c — tab Tướng sĩ (kiểu Ninja Village):**
+- Tab thứ 4 ở cột bên phải: Mảnh đất / Xây dựng / Quân đội / **Tướng sĩ**. Chiêu hiền vẫn ở thành chính.
+- Danh sách: mỗi người một dòng với hình pixel lúc ra trận, tên, sao, chức vụ (Tổng tướng / Dự bị / Nội chính…), tình trạng.
+- Bấm vào một người → bảng chi tiết giữa màn hình: **chân dung pixel anime** bên trái, 2 tab **Chỉ số** và **Trang bị** (tab Trang bị có từ M12d), các nút tương tác bên dưới (giao chức / làm tổng tướng, cộng điểm, sa thải…).
+- **Chân dung ghép bộ phận:** nhiều kiểu tóc, mắt, lông mày, râu, mũ / khăn, áo; mỗi người ghép ngẫu nhiên một lần và **lưu lại** (ai cũng có mặt riêng). Tướng mặc giáp, mưu sĩ mặc áo văn quan; sao cao có khung viền vàng. Có thư mục để thả chân dung vẽ tay thay thế.
+- **Nam nữ cân bằng:** mỗi ứng viên 50% nam / 50% nữ, có tên và kiểu tóc riêng theo giới. Bản demo chưa cần nhiều kiểu.
+- Bản đồ thế giới vẽ lại kiểu tranh cổ, cờ và biểu tượng từng gia tộc.
+
+**Để sau:** thêm gia tộc mới, mỗi gia tộc một nét riêng; tướng / mưu sĩ chiêu mộ từ gia tộc nào mang phong cách trang phục của gia tộc đó.
 
 ## 12. Câu hỏi mở
 

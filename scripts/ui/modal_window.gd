@@ -6,10 +6,9 @@ extends Control
 
 signal closed
 
-const MUTED_COLOR := Color(1, 1, 1, 0.65)
-const WARNING_COLOR := Color(1, 0.6, 0.5)
-const GOOD_COLOR := Color(0.55, 0.95, 0.55)
-const PANEL_COLOR := Color(0.13, 0.14, 0.17)
+const MUTED_COLOR := UiPalette.MUTED
+const WARNING_COLOR := UiPalette.WARNING
+const GOOD_COLOR := UiPalette.GOOD
 ## Default window width as a share of the screen; its height follows the content.
 const WIDTH_SHARE := 0.5
 
@@ -27,7 +26,7 @@ func build_frame(title_text: String, accent: Color, width_share: float = WIDTH_S
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.55)
+	dim.color = UiPalette.DIM
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(dim)
 	var panel := PanelContainer.new()
@@ -37,12 +36,7 @@ func build_frame(title_text: String, accent: Color, width_share: float = WIDTH_S
 	panel.anchor_top = 0.5
 	panel.anchor_bottom = 0.5
 	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
-	var background := StyleBoxFlat.new()
-	background.bg_color = PANEL_COLOR
-	background.set_corner_radius_all(6)
-	background.border_color = accent.darkened(0.3)
-	background.set_border_width_all(2)
-	panel.add_theme_stylebox_override("panel", background)
+	# The paper panel comes from the project theme (GDD §13).
 	add_child(panel)
 	var margin := MarginContainer.new()
 	for edge in ["left", "right", "top", "bottom"]:
@@ -53,7 +47,7 @@ func build_frame(title_text: String, accent: Color, width_share: float = WIDTH_S
 	margin.add_child(layout)
 
 	var title := _label(title_text, 22)
-	title.add_theme_color_override("font_color", accent)
+	title.add_theme_color_override("font_color", UiPalette.ink(accent))
 	layout.add_child(title)
 	var body := VBoxContainer.new()
 	body.add_theme_constant_override("separation", 8)
@@ -82,7 +76,7 @@ func add_action(text: String, on_pressed: Callable, danger: bool = false) -> But
 	var button := _button(text, on_pressed)
 	button.custom_minimum_size = Vector2(160, 44)
 	if danger:
-		button.add_theme_color_override("font_color", WARNING_COLOR)
+		button.add_theme_color_override("font_color", UiPalette.WARNING_ON_WOOD)
 	_actions.add_child(button)
 	_actions.move_child(button, _close_button.get_index())
 	return button

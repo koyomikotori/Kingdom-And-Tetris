@@ -36,6 +36,7 @@ var _stratagem_timer := 0.0
 func start(simulator: BattleSimulator, player_side: int, title: String) -> void:
 	_playback = BattlePlayback.new(simulator)
 	_player_side = player_side
+	theme = _dark_theme()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var background := ColorRect.new()
@@ -81,6 +82,14 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 
 # --- Layout -------------------------------------------------------------------------------
+
+## The battle screen stays dark until its art pass (M12b): labels in light text over the project
+## theme's paper colors.
+static func _dark_theme() -> Theme:
+	var dark := Theme.new()
+	dark.set_color("font_color", "Label", Color(0.95, 0.95, 0.95))
+	return dark
+
 
 func _build_top_bar(title: String) -> Control:
 	var bar := _margin(HBoxContainer.new(), 8)

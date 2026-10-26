@@ -4,9 +4,9 @@ extends ModalWindow
 ## cost and a hint. After a choice the window shows what actually happened. It cannot be closed
 ## without answering.
 
-const ACCENT := Color(0.85, 0.75, 1.0)
-const CATEGORY_COLORS: Array[Color] = [Color(0.95, 0.8, 0.4), Color(0.5, 0.8, 1.0), Color(1.0, 0.55, 0.45),
-		Color(0.6, 0.9, 0.6)]
+const ACCENT := Color(0.42, 0.2, 0.55)
+const CATEGORY_COLORS: Array[Color] = [Color(0.62, 0.42, 0.08), Color(0.18, 0.4, 0.65), Color(0.69, 0.2, 0.12),
+		Color(0.2, 0.5, 0.22)]
 
 var _state: KingdomState
 var _rng: RandomNumberGenerator
