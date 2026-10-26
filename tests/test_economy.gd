@@ -19,14 +19,14 @@ func _row(length: int) -> Array[Vector2i]:
 
 func _state(seed_value: int = 3) -> KingdomState:
 	var gen := PieceGenerator.new(PieceShapeLibrary.load_all(), terrains, seed_value)
-	return KingdomState.new(BoardData.create_starting_board(12), PieceHand.new(gen), terrains)
+	return KingdomState.new(BoardData.create_starting_board(12), PieceHand.new(gen), terrains, BuildingData.load_all())
 
 
-func test_terrain_yields_from_data() -> void:
-	check_eq(Economy.cell_yield(terrains[&"farmland"], false), {&"food": 1}, "Farmland gives 1 food")
-	check_eq(Economy.cell_yield(terrains[&"forest"], false), {&"wood": 1}, "Forest gives 1 wood")
-	check_eq(Economy.cell_yield(terrains[&"hill"], false), {&"stone": 1}, "Hill gives 1 stone")
-	check(Economy.cell_yield(terrains[&"grass"], false).is_empty(), "Grass gives nothing")
+## Economy v2 (GDD §8): the land yields nothing by itself, key cells included.
+func test_land_yields_nothing() -> void:
+	for terrain_id: StringName in [&"farmland", &"forest", &"hill", &"grass"]:
+		check(Economy.cell_yield(terrains[terrain_id], false).is_empty(), "%s gives nothing" % terrain_id)
+		check(Economy.cell_yield(terrains[terrain_id], true).is_empty(), "Key %s gives nothing" % terrain_id)
 	check(Economy.cell_yield(null, false).is_empty(), "Empty land gives nothing")
 
 
@@ -35,41 +35,22 @@ func test_resource_types_loaded_in_order() -> void:
 	check_eq(ids, [&"food", &"wood", &"stone", &"ore", &"hardwood", &"horses"], "Resource bar order")
 
 
-func test_key_cell_doubles_yield() -> void:
-	check_eq(Economy.cell_yield(terrains[&"farmland"], true), {&"food": 2}, "Key farmland gives 2 food")
-	check(Economy.cell_yield(terrains[&"grass"], true).is_empty(), "Key grass still gives nothing")
-
-
 func test_starting_board_yields_nothing() -> void:
 	check(Economy.board_yield(BoardData.create_starting_board(12), terrains).is_empty(), "All-grass start yields nothing")
 
 
-func test_overwrite_example_from_gdd() -> void:
+func test_placing_land_changes_no_yield() -> void:
 	var board := BoardData.create_starting_board(12)
-	PlacementRules.apply(board, _piece(_row(4), &"farmland"), Vector2i(4, 4))
-	check_eq(Economy.board_yield(board, terrains), {&"food": 4}, "4 farmland = 4 food")
-	PlacementRules.apply(board, _piece(_row(1), &"forest"), Vector2i(5, 4))
-	check_eq(Economy.board_yield(board, terrains), {&"food": 3, &"wood": 1}, "Forest over one farm = 3 food + 1 wood")
+	var piece := _piece(_row(4), &"farmland", 1)
+	check(Economy.placement_delta(board, piece, Vector2i(4, 3), terrains).is_empty(), "No yield change predicted")
+	PlacementRules.apply(board, piece, Vector2i(4, 3))
+	check(Economy.board_yield(board, terrains).is_empty(), "Farmland alone yields nothing")
 
 
 func test_unowned_cells_do_not_yield() -> void:
 	var board := BoardData.create_starting_board(12)
 	board.set_terrain(Vector2i(0, 0), &"forest")
 	check(Economy.board_yield(board, terrains).is_empty(), "Terrain outside the territory yields nothing")
-
-
-func test_placement_delta_matches_real_change() -> void:
-	var board := BoardData.create_starting_board(12)
-	PlacementRules.apply(board, _piece(_row(4), &"farmland"), Vector2i(4, 4))
-	# Hill bar with a key cell, half over farms (6,4),(7,4) and half on new land (8,4).
-	var piece := _piece(_row(3), &"hill", 2)
-	var predicted := Economy.placement_delta(board, piece, Vector2i(6, 4), terrains)
-	check_eq(predicted, {&"food": -2, &"stone": 4}, "Predicted: lose 2 food, gain 1+1+2 stone")
-	var before := Economy.board_yield(board, terrains)
-	PlacementRules.apply(board, piece, Vector2i(6, 4))
-	var after := Economy.board_yield(board, terrains)
-	for id in [&"food", &"wood", &"stone"]:
-		check_eq(after.get(id, 0) - before.get(id, 0), predicted.get(id, 0), "Delta of %s matches" % id)
 
 
 func test_stockpile_spend_is_all_or_nothing() -> void:
@@ -88,17 +69,28 @@ func test_end_turn_collects_and_deals_new_hand() -> void:
 	state.start()
 	check_eq(state.turn, 1, "Game starts on turn 1")
 	check_eq(state.hand.pieces.size(), 3, "First hand has 3 pieces")
-	PlacementRules.apply(state.board, _piece(_row(2), &"forest", 0), Vector2i(4, 4))
+	# A lumber mill on a key forest: 5 wood, doubled. Food pays its upkeep.
+	PlacementRules.apply(state.board, _piece(_row(2), &"forest", 0), Vector2i(4, 3))
+	state.board.place_building(&"lumber_mill", Vector2i(4, 3), Vector2i.ONE)
+	state.stockpile.add({&"food": 10})
 	var old_pieces := state.hand.pieces.duplicate()
 	var report := state.end_turn()
-	check_eq(report.collected, {&"wood": 3}, "Collected 2 (key) + 1 wood")
-	check_eq(state.stockpile.get_amount(&"wood"), 3, "Stockpile received the yield")
+	check_eq(report.collected, {&"wood": 10}, "Collected 5 wood × 2 (key)")
+	check_eq(state.stockpile.get_amount(&"wood"), 10, "Stockpile received the yield")
 	check_eq(state.turn, 2, "Turn advanced")
 	check_eq(state.hand.pieces.size(), 3, "New hand has 3 pieces")
 	for piece in state.hand.pieces:
 		check(not old_pieces.has(piece), "Unplaced pieces were discarded, not kept")
 	state.end_turn()
-	check_eq(state.stockpile.get_amount(&"wood"), 6, "Yield is collected again every turn")
+	check_eq(state.stockpile.get_amount(&"wood"), 20, "Yield is collected again every turn")
+
+
+func test_new_games_get_starting_resources() -> void:
+	var state := _state()
+	check_eq(state.stockpile.get_amount(&"food"), 0, "Empty until given")
+	state.give_starting_resources()
+	check_eq(state.stockpile.get_all(), {&"food": 80, &"wood": 80, &"stone": 80, &"ore": 10, &"hardwood": 10,
+			&"horses": 10}, "80 of each basic resource, 10 of each other")
 
 
 func test_place_piece_consumes_only_on_success() -> void:

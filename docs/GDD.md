@@ -61,6 +61,8 @@ Mỗi ô lưu riêng: **địa hình**, **quyền sở hữu**, **công trình**
 
 ## 5. Sản lượng
 
+> **Đã thay bằng Kinh tế v2 (§8, "Kinh tế v2"):** đất không còn tự cho tài nguyên; chỉ công trình khai thác cho tài nguyên. Bảng dưới đây là luật cũ (M3–M11e).
+
 Mỗi lượt, mỗi ô thuộc lãnh thổ cho sản lượng theo địa hình của nó:
 
 | Địa hình | Sản lượng mỗi lượt |
@@ -253,6 +255,34 @@ Giới hạn: Mỏ khai thác 3, Xưởng gỗ 3, Trại ngựa 2.
 
 Các con số sẽ cân bằng lại sau. Chiến thắng Hòa bình thịnh vượng (§9b) chỉ tính thu nhập của 3 tài nguyên cơ bản.
 
+### Kinh tế v2 (làm cùng M11f, đã chốt)
+
+**Lý do:** tránh lạm phát tài nguyên, người chơi farm quá nhanh.
+
+**Khởi đầu:** vào game có sẵn **80 Lương thực, 80 Gỗ, 80 Đá** và **10 Khoáng sản, 10 Gỗ cứng, 10 Ngựa**.
+
+**Đất không tự cho tài nguyên nữa.** Mảnh đất chỉ mở rộng lãnh thổ và cho địa hình để xây. Tài nguyên chỉ đến từ **công trình khai thác**, và công trình cho nhiều hơn trước. Ô ◆ vẫn nhân đôi sản lượng của công trình đặt trên nó.
+
+**Công trình khai thác** (đều xây được từ thành cấp 1; **Trại ngựa đổi thành Nông trại**):
+
+| Công trình | Đặt trên | Cấp 1 | Cấp 2 | Cấp 3 | Cấp 4 | Cấp 5 | Cấp 6 |
+|---|---|---|---|---|---|---|---|
+| Nông trại | Ruộng | 5 LT | 8 LT | 11 LT, 1 Ngựa | 13 LT, 2 Ngựa | 15 LT, 3 Ngựa | 18 LT, 4 Ngựa |
+| Xưởng gỗ | Rừng | 5 Gỗ | 8 Gỗ, 1 Gỗ cứng | 10 Gỗ, 2 Gỗ cứng | 12 Gỗ, 3 Gỗ cứng | 14 Gỗ, 4 Gỗ cứng | 17 Gỗ, 5 Gỗ cứng |
+| Mỏ khai thác | Đồi | 5 Đá | 8 Đá, 1 Khoáng sản | 10 Đá, 2 Khoáng sản | 12 Đá, 3 Khoáng sản | 14 Đá, 4 Khoáng sản | 17 Đá, 5 Khoáng sản |
+
+Sản lượng đã tăng nhẹ sau lần chơi thử đầu (trước là 4 / 6–7 / 8–9 … / 14–15).
+
+**Nâng cấp công trình:** bấm vào công trình → tab Nâng cấp. Cấp công trình **không vượt cấp thành chính** (thành cấp 3 mới nâng công trình lên cấp 3). Giá lên cấp N = **N × giá xây**, từ cấp 3 thêm **(N − 2) × 2 Khoáng sản và 2 Gỗ cứng**. Phí duy trì tăng **1 Lương thực mỗi cấp** trên cấp 1. Di chuyển giữ nguyên cấp; phá hủy hoàn lại 50% giá xây.
+
+**Giới hạn số công trình:** mỗi loại **3 cái ở thành cấp 1, +1 mỗi cấp thành** (cấp 6: 8 cái), áp dụng cho **mọi công trình**, kể cả Doanh trại và Trạm lính canh.
+
+**Thành chính không đổi kích thước** (2×2). Bản đầu cho thành lớn thêm 1 ô mỗi phía ở cấp 2, 4, 6, nhưng **đã bỏ sau khi chơi thử**: phải chờ có đủ ô cỏ quanh thành làm game khó quá.
+
+**Mưu sĩ Nội chính:** "+% sản lượng" nay áp dụng cho toàn bộ sản lượng công trình khai thác (không còn sản lượng đất).
+
+**Để sau:** Doanh trại nâng cấp khi có loại lính mới cần doanh trại cấp cao; Trạm lính canh cấp cao thành **Sở cảnh sát** (giảm cướp nhiều hơn và hạn chế các sự kiện xấu mới).
+
 **Bảng công trình (kiểu Kairosoft, chốt sau khi chơi thử M11c):** tab Xây dựng chỉ để **xây mới** (mỗi công trình ghi số đang có / tối đa, khóa khi chưa đủ cấp thành hoặc đã đủ số). **Bấm vào công trình trên bản đồ** mở bảng của nó:
 - Tab **Thông tin** (mô tả, vị trí, sản lượng, phí duy trì, số đang có) và **Nâng cấp** (hiện chỉ thành chính có nâng cấp).
 - Thao tác bên dưới: **Nâng cấp** (thành chính) · **Di chuyển** · **Phá hủy**. Bấm thao tác thì bảng ghi rõ nó sẽ làm gì, rồi chờ **Xác nhận** / **Hủy**.
@@ -283,7 +313,7 @@ Các con số sẽ cân bằng lại sau. Chiến thắng Hòa bình thịnh vư
 | Đặc tính | Điều kiện | Hiệu ứng |
 |---|---|---|
 | Thợ săn rừng | Từ 12 ô rừng | Cung thủ +25% sát thương bắn |
-| Thiết kỵ | Từ 2 trại ngựa | Xung phong +30% |
+| Thiết kỵ | Từ 3 nông trại | Xung phong +30% |
 | Giữ thành | Khi phòng thủ (cướp, xâm lược) | +2 sĩ khí, +10% phòng thủ |
 | Sinh ra trên núi | Từ 10 ô đồi | +15% phòng thủ |
 | Tướng đồn điền | Từ 15 ô ruộng | +1,5 sĩ khí |
@@ -320,6 +350,47 @@ Các con số sẽ cân bằng lại sau. Chiến thắng Hòa bình thịnh vư
 **Hiển thị:** tab Quân đội (ký hiệu cấp + thanh XP mỗi đơn vị), màn hình trận (ký hiệu cấp cạnh tên đơn vị), tab Tướng (cấp, thanh XP, nút cộng điểm). Báo cáo sau trận chưa ghi lên cấp; bố cục các tab sẽ gọn lại ở M12.
 
 **Để sau:** quân gia tộc có cấp; **Thảo phạt đạo tặc** — icon đỏ hiện ở góc màn hình, cử 1 tướng, 1 mưu sĩ và vài đơn vị đi như một chuyến commission (kiểu mini game thảo phạt trong Dungeon Village của Kairosoft): cutscene màn hình ngang, một hàng quân xếp theo loại tiến từ trái sang phải, đánh qua từng ải tới khi chinh phục hết hoặc thua hết; nhận tài nguyên, kinh nghiệm, trang bị. Cách này cho tướng dự bị có việc làm.
+
+### Mưu sĩ (M11f, đã chốt)
+
+**Mưu sĩ:** tối đa **3**, tách riêng với tướng. Mỗi người có tên, **sao 1–6** và **3 chỉ số (1–10)**: **Nội chính**, **Ngoại giao**, **Mưu lược**. Tổng 3 chỉ số theo sao, khoảng 1,5 lần tổng của tướng cùng sao (1★: 5–7 … 6★: 27–30). Giá tuyển và phí nuôi như tướng cùng sao. Mưu sĩ không có đặc tính; bản sắc là **bộ mưu kế**.
+
+**Chức vụ:** 3 chức, mỗi chức giao cho 1 mưu sĩ. Mưu sĩ chỉ có tác dụng khi đang giữ chức và không bị thương; chức dùng đúng chỉ số của nó.
+
+| Chức | Chỉ số | Mỗi điểm |
+|---|---|---|
+| **Nội chính** | Nội chính | +2% sản lượng công trình khai thác (Kinh tế v2); −2% giá xây công trình và nâng cấp thành; −2% phí nuôi quân và tướng |
+| **Ngoại giao** | Ngoại giao | Trao đổi tài nguyên có lợi hơn 2%; +2% khả năng gia tộc nhận hợp đồng, liên minh, bất tương xâm, nghị hòa; −3% mức cảnh giác của gia tộc; +3% quan hệ nhận được khi tặng quà |
+| **Quân sự** | Mưu lược | Ra trận cùng quân: +0,3 sĩ khí và +2% tấn công tầm xa cho quân của vương quốc; dùng mưu kế đầu trận |
+
+Phần cộng và phần giảm của Nội chính làm tròn tới số nguyên gần nhất (ví dụ giảm 16% của 6 Gỗ = 1 Gỗ).
+
+**Mưu kế:** mưu sĩ N sao có **N mưu kế khác nhau**, rút ngẫu nhiên khi tạo từ kho 8 mưu kế (xem được trước khi tuyển). Chỉ mưu sĩ giữ chức Quân sự dùng mưu kế. **Đầu trận, trước khi giáp chiến**, mỗi mưu kế tung xúc xắc riêng: tỉ lệ **25% + 3% mỗi điểm Mưu lược** (Mưu lược 10 → 55%). Sức mạnh cũng tăng theo Mưu lược (ML):
+
+| Mưu kế | Hiệu ứng |
+|---|---|
+| Hỏa công | Đơn vị địch đông nhất mất 5% + 0,5% × ML lính |
+| Mưa tên | Mọi đơn vị địch mất 2% + 0,3% × ML lính |
+| Trống trận | Toàn quân mình +1 + 0,2 × ML sĩ khí |
+| Phục binh | Toàn quân địch −1 − 0,2 × ML sĩ khí |
+| Ly gián | Đơn vị địch đông nhất −2 − 0,4 × ML sĩ khí |
+| Bày trận | Hàng đầu quân mình +5% + 1% × ML phòng thủ cận chiến |
+| Khích tướng | Toàn quân mình +5% + 1% × ML tấn công cận chiến |
+| Nghi binh | Xạ thủ địch −10% − 2% × ML tấn công tầm xa |
+
+Màn hình trận hiện dòng chữ cho mỗi mưu kế thành công (ví dụ "Mưu sĩ X dùng Hỏa công!").
+
+**Rủi ro:** mưu sĩ Quân sự đứng sau, không có cận vệ. Chỉ khi **thua trận**: 50% bị thương nghỉ 3 lượt (mất tác dụng chức). Không tử trận.
+
+**Kinh nghiệm và cấp** (như tướng): bắt đầu cấp 1, tối đa 2 + sao, lên cấp tiếp theo cần 100 × cấp hiện tại; mỗi cấp 1 điểm, người chơi tự cộng vào một trong 3 chỉ số.
+- Mưu sĩ giữ chức **Nội chính / Ngoại giao**: **+10 XP mỗi lượt** (chậm).
+- Mưu sĩ giữ chức **Quân sự**: không nhận XP theo lượt; mỗi trận ra trận **+30**, **+30 nếu thắng** (sau này thêm Thảo phạt).
+
+**Chiêu hiền:** danh sách vẫn **3 ứng viên chung cho cả tướng và mưu sĩ** (mỗi ứng viên 50% là mưu sĩ), sao theo cấp thành, đổi sau mỗi 5 lượt hoặc trả 20 Lương thực. Tuyển mưu sĩ cần còn chỗ (dưới 3 mưu sĩ).
+
+**Giao diện:** bảng thành chính thêm tab **Mưu sĩ**: mỗi mưu sĩ có chức đang giữ, 3 chỉ số, cấp và kinh nghiệm, bộ mưu kế, nút giao chức (Nội chính / Ngoại giao / Quân sự; giao chức đang có người thì hai người đổi chỗ), nút cộng điểm, sa thải. Tab Chiêu hiền ghi rõ ứng viên là tướng hay mưu sĩ.
+
+**Để sau:** gia tộc có mưu sĩ dùng mưu kế; sự kiện mưu sĩ xin đầu quân; mưu sĩ đi Thảo phạt.
 
 ## 9. Bản đồ thế giới & ngoại giao
 
@@ -575,8 +646,8 @@ Thống kê trận thắng/thua và trạng thái thắng/thua được lưu cù
 | M11b | Sự kiện ngẫu nhiên (dữ liệu .tres, có lựa chọn và hậu quả) | Xong |
 | M11c | Kinh tế mới: cấp thành chính, công trình khai thác, Khoáng sản / Gỗ cứng / Ngựa | Xong |
 | M11d | Tướng: sao 1–6, Võ lực / Thống suất / đặc tính theo lãnh thổ, một tổng tướng + cận vệ kỵ binh trong trận, tử trận / bị thương, sự kiện chiêu mộ | Xong |
-| M11e | Kinh nghiệm và cấp: đơn vị 3 cấp (huấn luyện tới Cựu binh, pha loãng khi bổ sung), tướng lên cấp và tự cộng điểm | Đang làm |
-| M11f | Mưu sĩ: cộng kinh tế, ngoại giao | |
+| M11e | Kinh nghiệm và cấp: đơn vị 3 cấp (huấn luyện tới Cựu binh, pha loãng khi bổ sung), tướng lên cấp và tự cộng điểm | Xong |
+| M11f | Mưu sĩ: 3 chức Nội chính / Ngoại giao / Quân sự, 3 chỉ số, bộ mưu kế đầu trận, chiêu hiền chung với tướng; **Kinh tế v2**: chỉ công trình cho tài nguyên, công trình 6 cấp, giới hạn theo cấp thành | Đang làm |
 | M12 | **Hỗ trợ cảm ứng + xuất APK** (chạm để xem trước/xác nhận, vuốt để kéo, chụm để zoom, nút thay phím tắt); **sắp xếp lại tab Quân đội và Xây dựng** cho gọn trên điện thoại (ít chữ, thông tin chi tiết mở khi chạm) | |
 | M13 | Pixel art, âm thanh, cân bằng, build Windows + Android | |
 

@@ -8,4 +8,3 @@ terrain_id = &"forest"
 display_name = "Rừng"
 color = Color(0.16, 0.42, 0.22, 1)
 spawn_weight = 3.0
-yields = Dictionary[StringName, int]({&"wood": 1})

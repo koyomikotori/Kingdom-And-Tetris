@@ -293,7 +293,8 @@ func annex(clan_id: StringName) -> Vector2i:
 func peace_chance(clan_id: StringName, tribute: Dictionary[StringName, int]) -> float:
 	var front := fronts[clan_id]
 	var chance := PEACE_BASE_CHANCE + PEACE_LOSSES_WEIGHT * front.losses_share() \
-			+ _diplomacy.clans[clan_id].relation / 200.0 + _diplomacy.value_of(tribute) / PEACE_TRIBUTE_PER_POINT
+			+ _diplomacy.clans[clan_id].relation / 200.0 + _diplomacy.value_of(tribute) / PEACE_TRIBUTE_PER_POINT \
+			+ _diplomacy.envoy * Diplomacy.ENVOY_CHANCE
 	return clampf(chance, 0.0, PEACE_MAX_CHANCE)
 
 

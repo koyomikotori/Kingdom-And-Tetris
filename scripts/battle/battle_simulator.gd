@@ -4,7 +4,7 @@ extends RefCounted
 ## Call step() repeatedly (the battle screen does this every frame, more often when sped up),
 ## or simulate() to run a whole battle at once. retreat() ends the battle immediately.
 ##
-## Timeline: guns fire one volley at GUN_TIME; archers fire at FIRST_ARROW_TIME and then every
+## Timeline: military advisors try their stratagems on the first tick; guns fire one volley at GUN_TIME; archers fire at FIRST_ARROW_TIME and then every
 ## reload_time; melee lines clash at CONTACT_TIME with a one-off charge, then fight continuously.
 ## Casualties use attack / (attack + defense), so stats compare as ratios and never hit zero.
 ## Same seed + same armies (+ same retreat time) = same result.
@@ -70,6 +70,9 @@ func step() -> void:
 	for s in 2:
 		for unit in _sides[s].units:
 			_hits[s].append([])
+	if _ticks == 0:
+		for s in 2:
+			_use_stratagems(s)
 	for s in 2:
 		_fire_guns(s)
 		_fire_arrows(s)
@@ -104,6 +107,48 @@ func is_melee_started() -> bool:
 ## A ranged unit stops shooting once its row is the front line in melee.
 func _is_in_melee(side: int, unit: BattleSide.Unit) -> bool:
 	return is_melee_started() and unit.data.row == _sides[side].front_row()
+
+
+## Each stratagem of the side's advisor works with Advisors.stratagem_chance (GDD §8, M11f).
+## Only the ones that work are recorded (event "stratagem" with "stratagem" = its id).
+func _use_stratagems(s: int) -> void:
+	var side := _sides[s]
+	for stratagem in side.stratagems:
+		if _rng.randf() >= Advisors.stratagem_chance(side.strategy):
+			continue
+		var targets := _stratagem_targets(s, stratagem)
+		if targets.is_empty():
+			continue
+		var points := side.strategy
+		for unit in targets:
+			var loss := stratagem.soldier_loss_base + stratagem.soldier_loss_per_point * points
+			unit.soldiers = maxf(0.0, unit.soldiers * (1.0 - loss))
+			unit.morale += stratagem.morale_base + stratagem.morale_per_point * points
+			unit.attack_mult += stratagem.attack_base + stratagem.attack_per_point * points
+			unit.defense_mult += stratagem.defense_base + stratagem.defense_per_point * points
+			unit.range_mult = maxf(0.1, unit.range_mult + stratagem.range_base + stratagem.range_per_point * points)
+		record.events.append({"time": time, "type": &"stratagem", "side": s, "unit": -1,
+				"stratagem": stratagem.stratagem_id})
+
+
+func _stratagem_targets(s: int, stratagem: StratagemData) -> Array[BattleSide.Unit]:
+	var enemy := _sides[1 - s].active_units()
+	var own := _sides[s].active_units()
+	match stratagem.target:
+		StratagemData.Target.ENEMY_LARGEST:
+			var largest: Array[BattleSide.Unit] = []
+			for unit in enemy:
+				if largest.is_empty() or unit.alive() > largest[0].alive():
+					largest = [unit]
+			return largest
+		StratagemData.Target.ENEMY_RANGED:
+			return enemy.filter(func(u: BattleSide.Unit) -> bool: return u.data.is_ranged())
+		StratagemData.Target.OWN_ALL:
+			return own
+		StratagemData.Target.OWN_FRONT:
+			var front := _sides[s].front_row()
+			return own.filter(func(u: BattleSide.Unit) -> bool: return u.data.row == front)
+	return enemy
 
 
 func _fire_guns(s: int) -> void:

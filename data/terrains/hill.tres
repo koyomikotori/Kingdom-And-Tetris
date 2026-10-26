@@ -8,4 +8,3 @@ terrain_id = &"hill"
 display_name = "Đồi đá"
 color = Color(0.55, 0.52, 0.48, 1)
 spawn_weight = 2.0
-yields = Dictionary[StringName, int]({&"stone": 1})

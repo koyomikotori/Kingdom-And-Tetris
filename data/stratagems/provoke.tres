@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="StratagemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/advisors/stratagem_data.gd" id="1_strat"]
+
+[resource]
+script = ExtResource("1_strat")
+stratagem_id = &"provoke"
+display_name = "Khích tướng"
+description = "Khích lệ toàn quân xông lên."
+target = 3
+attack_base = 0.05
+attack_per_point = 0.01

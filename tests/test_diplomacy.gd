@@ -311,23 +311,26 @@ func test_income_breakdown_lists_every_source_and_adds_up() -> void:
 	var state := KingdomState.new(BoardData.create_starting_board(12), PieceHand.new(gen), terrains,
 			BuildingData.load_all(), UnitData.load_all())
 	state.start()
-	state.board.set_land(Vector2i(4, 4), &"farmland", true)   # 2 food (key cell)
-	state.board.set_land(Vector2i(5, 4), &"farmland", false)  # 1 food
-	state.board.set_land(Vector2i(6, 4), &"forest", false)    # 1 wood
+	state.board.set_land(Vector2i(4, 4), &"farmland", true)   # farm: 10 food (key cell)
+	state.board.set_land(Vector2i(5, 4), &"farmland", false)  # farm: 5 food
+	state.board.set_land(Vector2i(6, 4), &"forest", false)    # land alone: nothing
 	state.army.add_squad(&"swordsman", 20)                    # -1 food
-	state.stockpile.add({&"wood": 10, &"stone": 10})
+	state.stockpile.add({&"wood": 30, &"stone": 10})
+	state.build(&"farm", Vector2i(4, 4))
+	state.build(&"farm", Vector2i(5, 4))
 	state.build(&"watchtower", Vector2i(7, 7))                # -1 food
 	state.diplomacy.propose(_accepting_rng(), &"east_merchants", &"wood", 5, &"food", 6, 10)  # -5 wood, +6 food
 	var breakdown := state.get_income_breakdown()
 	var sources := breakdown[&"food"].map(func(e: Dictionary) -> Array: return [e.source, e.amount])
-	check(sources.has([&"terrain", 3]), "Farmland: 2 cells, one key = +3 food")
+	check(sources.has([&"production", 15]), "Two farms, one on a key cell = +15 food")
+	check(not sources.any(func(s: Array) -> bool: return s[0] == &"terrain"), "The land itself gives nothing")
 	check(sources.has([&"army", -1]), "One squad eats 1 food")
 	check(sources.has([&"building", -1]), "Watchtower upkeep -1 food")
 	check(sources.has([&"agreement", 6]), "Agreement delivers 6 food")
-	var farm: Dictionary = breakdown[&"food"].filter(func(e: Dictionary) -> bool: return e.source == &"terrain")[0]
-	check_eq([farm.count, farm.key_count], [2, 1], "Cell counts for the tooltip")
+	var farm: Dictionary = breakdown[&"food"].filter(func(e: Dictionary) -> bool: return e.source == &"production")[0]
+	check_eq(farm.count, 2, "Building count for the tooltip")
 	check(breakdown[&"wood"].map(func(e: Dictionary) -> int: return e.amount).has(-5), "Agreement takes 5 wood")
-	check_eq(state.get_net_income(), {&"food": 7, &"wood": -4}, "Net = sum of the breakdown, agreements included")
+	check_eq(state.get_net_income(), {&"food": 19, &"wood": -5}, "Net = sum of the breakdown, agreements included")
 
 
 func test_gift_too_small_to_matter_is_refused() -> void:

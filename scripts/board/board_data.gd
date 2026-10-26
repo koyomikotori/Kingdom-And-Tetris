@@ -112,8 +112,20 @@ func place_building(building_id: StringName, origin: Vector2i, size: Vector2i) -
 		var cell := get_cell(coord)
 		cell.building_id = building_id
 		cell.building_origin = origin
+		cell.building_level = 1
 		cell_changed.emit(coord)
 	return true
+
+
+func get_building_level(origin: Vector2i) -> int:
+	var cell := get_cell(origin)
+	return cell.building_level if cell != null and cell.has_building() else 0
+
+
+func set_building_level(origin: Vector2i, level: int) -> void:
+	for cell in get_building_cells(origin):
+		cell.building_level = level
+		cell_changed.emit(cell.coord)
 
 
 ## All cells covered by the building whose top-left cell is `origin`.
@@ -246,7 +258,7 @@ func to_save() -> Dictionary:
 		if cell.has_terrain() or cell.owned or cell.is_key or cell.has_building():
 			cells.append({"x": cell.coord.x, "y": cell.coord.y, "terrain": String(cell.terrain_id), "owned": cell.owned,
 					"key": cell.is_key, "building": String(cell.building_id),
-					"origin": [cell.building_origin.x, cell.building_origin.y]})
+					"origin": [cell.building_origin.x, cell.building_origin.y], "level": cell.building_level})
 	return {"width": width, "height": height, "cells": cells}
 
 
@@ -261,4 +273,5 @@ static func from_save(data: Dictionary) -> BoardData:
 		cell.is_key = bool(entry.key)
 		cell.building_id = StringName(entry.building)
 		cell.building_origin = Vector2i(int(entry.origin[0]), int(entry.origin[1]))
+		cell.building_level = int(entry.level)
 	return board

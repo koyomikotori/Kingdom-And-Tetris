@@ -1,8 +1,8 @@
 class_name Generals
 extends RefCounted
 ## The kingdom's generals (GDD §8, M11d): up to MAX_GENERALS, one of them the commander; the
-## recruitment candidates; wounds; battle bonuses. Owned by KingdomState; takes what it needs as
-## arguments (no reference back to the state).
+## recruitment candidates (generals and, with `advisors` set, advisors too, M11f); wounds; battle
+## bonuses. Owned by KingdomState; takes what it needs as arguments (no reference back to the state).
 
 signal changed
 
@@ -37,8 +37,12 @@ const GIVEN_NAMES: Array[String] = ["Dũng", "Hùng", "Khải", "Bình", "Sơn",
 
 var generals: Array[General] = []
 var commander: General
-## Generals the player may recruit right now.
-var candidates: Array[General] = []
+## Generals and advisors the player may recruit right now.
+var candidates: Array[Officer] = []
+## Where recruited advisors go; null leaves advisors out of the candidate list.
+var advisors: Advisors
+## Chance that each candidate is an advisor (when `advisors` is set).
+var advisor_share := 0.5
 ## Turn the candidate list was last made.
 var candidates_turn := -100
 var ranks: Dictionary[int, GeneralRankData] = GeneralRankData.load_all()
@@ -69,14 +73,19 @@ func generate(stars: int) -> General:
 	return general
 
 
-## New candidates, each of up to `max_stars` stars (lower stars more likely).
+## New candidates, each of up to `max_stars` stars (lower stars more likely), each an advisor
+## with `advisor_share` chance.
 func refresh_candidates(max_stars: int, turn: int) -> void:
 	candidates.clear()
 	var weights := PackedFloat32Array()
 	for stars in range(1, maxi(1, max_stars) + 1):
 		weights.append(max_stars - stars + 1)
 	for i in CANDIDATES:
-		candidates.append(generate(rng.rand_weighted(weights) + 1))
+		var stars := rng.rand_weighted(weights) + 1
+		if advisors != null and rng.randf() < advisor_share:
+			candidates.append(advisors.generate(stars))
+		else:
+			candidates.append(generate(stars))
 	candidates_turn = turn
 	changed.emit()
 
@@ -89,26 +98,37 @@ func buy_refresh(stockpile: Stockpile, max_stars: int, turn: int) -> bool:
 	return true
 
 
-func cost_of(general: General) -> Dictionary[StringName, int]:
-	return ranks[general.stars].recruit_cost
+func cost_of(officer: Officer) -> Dictionary[StringName, int]:
+	return ranks[officer.stars].recruit_cost
 
 
 func check_recruit(stockpile: Stockpile, index: int) -> RecruitResult:
 	if index < 0 or index >= candidates.size():
 		return RecruitResult.GONE
-	if generals.size() >= MAX_GENERALS:
+	if not has_room_for(candidates[index]):
 		return RecruitResult.NO_ROOM
 	if not stockpile.can_afford(cost_of(candidates[index])):
 		return RecruitResult.CANNOT_AFFORD
 	return RecruitResult.OK
 
 
-## Hires candidate `index`. The first general becomes the commander.
+func has_room_for(officer: Officer) -> bool:
+	if officer is Advisor:
+		return advisors != null and not advisors.is_full()
+	return generals.size() < MAX_GENERALS
+
+
+## Hires candidate `index`. The first general becomes the commander; an advisor joins `advisors`.
 func recruit(stockpile: Stockpile, index: int) -> RecruitResult:
 	var result := check_recruit(stockpile, index)
 	if result == RecruitResult.OK:
 		stockpile.spend(cost_of(candidates[index]))
-		add(candidates.pop_at(index))
+		var officer: Officer = candidates.pop_at(index)
+		if officer is Advisor:
+			advisors.add(officer)
+			changed.emit()
+		else:
+			add(officer as General)
 	return result
 
 
@@ -268,8 +288,8 @@ func to_save() -> Dictionary:
 	for general in generals:
 		saved.append(general.to_save())
 	var waiting: Array = []
-	for general in candidates:
-		waiting.append(general.to_save())
+	for officer in candidates:
+		waiting.append(officer.to_save())
 	return {"generals": saved, "commander": generals.find(commander), "candidates": waiting,
 			"candidates_turn": candidates_turn}
 
@@ -282,6 +302,9 @@ func load_save(data: Dictionary) -> void:
 	commander = generals[index] if index >= 0 and index < generals.size() else null
 	candidates.clear()
 	for entry: Dictionary in data.candidates:
-		candidates.append(General.from_save(entry))
+		if entry.get("kind", "") == "advisor":
+			candidates.append(Advisor.from_save(entry))
+		else:
+			candidates.append(General.from_save(entry))
 	candidates_turn = int(data.candidates_turn)
 	changed.emit()

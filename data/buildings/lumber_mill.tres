@@ -6,11 +6,10 @@
 script = ExtResource("1_building")
 building_id = &"lumber_mill"
 display_name = "Xưởng gỗ"
-description = "Đốn gỗ và gỗ cứng. Xây trên ô rừng; trên ô ◆ thì sản lượng gấp đôi. Tối đa 3. Cần thành chính cấp 2."
+description = "Đốn gỗ; cấp 2 trở lên có thêm gỗ cứng. Xây trên ô rừng; trên ô ◆ thì sản lượng gấp đôi."
 cost = Dictionary[StringName, int]({&"wood": 6, &"stone": 4})
 allowed_terrains = Array[StringName]([&"forest"])
 max_count = 3
 color = Color(0.5, 0.35, 0.15, 1)
 upkeep = Dictionary[StringName, int]({&"food": 1})
-yields = Dictionary[StringName, int]({&"wood": 2, &"hardwood": 1})
-required_castle_level = 2
+level_yields = Array[Dictionary]([{&"wood": 5}, {&"wood": 8, &"hardwood": 1}, {&"wood": 10, &"hardwood": 2}, {&"wood": 12, &"hardwood": 3}, {&"wood": 14, &"hardwood": 4}, {&"wood": 17, &"hardwood": 5}])

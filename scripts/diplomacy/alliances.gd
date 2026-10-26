@@ -52,7 +52,7 @@ func alliance_chance(clan_id: StringName) -> float:
 	var clan := _diplomacy.clans[clan_id]
 	var chance := ALLIANCE_BASE_CHANCE + (clan.relation - Diplomacy.TIER_THRESHOLDS[Diplomacy.Tier.CLOSE - 1]) \
 			/ ALLIANCE_RELATION_SCALE + Diplomacy.AGREEMENT_PERSONALITY[clan.data.personality] \
-			- _diplomacy.threat / ALLIANCE_THREAT_SCALE
+			- _diplomacy.threat / ALLIANCE_THREAT_SCALE + _diplomacy.envoy * Diplomacy.ENVOY_CHANCE
 	return clampf(chance, 0.0, ALLIANCE_MAX_CHANCE)
 
 

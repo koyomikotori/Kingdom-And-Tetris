@@ -8,6 +8,10 @@ signal castle_changed
 
 ## Squads allowed without any barracks (the castle garrison).
 const BASE_SQUAD_CAPACITY := 2
+## What a new game starts with (GDD §8, economy v2): land no longer yields, so the first
+## buildings are paid from this.
+const STARTING_RESOURCES: Dictionary[StringName, int] = {&"food": 80, &"wood": 80, &"stone": 80, &"ore": 10,
+		&"hardwood": 10, &"horses": 10}
 ## Each turn, squads below full strength regain this fraction of their full size (rounded up);
 ## the new soldiers dilute the squad's XP (Army.add_soldiers).
 const REPLENISH_FRACTION := 0.25
@@ -29,6 +33,7 @@ var alliances := Alliances.new(diplomacy, wars)
 var victory := Victory.new()
 var events := EventSystem.new()
 var generals := Generals.new()
+var advisors := Advisors.new()
 ## Counters for the end-of-game screen: {"battles_won", "battles_lost"}.
 var stats := {"battles_won": 0, "battles_lost": 0}
 ## False when building upkeep could not be paid last turn; building effects pause.
@@ -50,6 +55,20 @@ func _init(p_board: BoardData, p_hand: PieceHand, p_terrains: Dictionary[StringN
 		units[unit.unit_id] = unit
 	rng.seed = seed_value
 	generals.rng.seed = seed_value + 1
+	advisors.rng.seed = seed_value + 2
+	generals.advisors = advisors
+	advisors.changed.connect(_sync_advisors)
+
+
+## The diplomacy advisor's skill lives in Diplomacy (its rules use it); keep it current.
+func _sync_advisors() -> void:
+	diplomacy.envoy = advisors.post_stat(&"diplomacy")
+
+
+## A new game's stockpile (KingdomState.STARTING_RESOURCES). The kingdom scene calls it for new
+## games only; tests start from an empty stockpile.
+func give_starting_resources() -> void:
+	stockpile.add(STARTING_RESOURCES)
 
 
 ## Deals the first hand. Call once after connecting signals.
@@ -77,7 +96,7 @@ func to_save() -> Dictionary:
 	return {"turn": turn, "buildings_supplied": buildings_supplied, "castle_level": castle_level, "board": board.to_save(),
 			"hand": hand.to_save(), "stockpile": stockpile.to_save(), "army": army.to_save(),
 			"diplomacy": diplomacy.to_save(), "wars": wars.to_save(), "victory": victory.to_save(), "stats": stats.duplicate(),
-			"events": events.to_save(), "generals": generals.to_save()}
+			"events": events.to_save(), "generals": generals.to_save(), "advisors": advisors.to_save()}
 
 
 ## Restores everything but the board from to_save() data. Random rolls are not saved: they come
@@ -104,6 +123,8 @@ func load_save(data: Dictionary) -> void:
 		generals.load_save(data.generals)
 	else:
 		generals.refresh_candidates(castle_level, turn)
+	# Saves from before M11f have no advisors.
+	advisors.load_save(data.get("advisors", []))
 
 
 ## What a save slot shows: {"turn", "cells", "soldiers"}.
@@ -120,7 +141,13 @@ func place_piece(index: int, origin: Vector2i) -> PlacementRules.Result:
 
 
 func build(building_id: StringName, origin: Vector2i) -> BuildRules.Result:
-	return BuildRules.apply(board, stockpile, buildings[building_id], origin, castle_level)
+	var building := buildings[building_id]
+	return BuildRules.apply(board, stockpile, building, origin, castle_level, building_cost(building))
+
+
+## What a building costs right now: its cost less the Nội chính discount (Advisors.discounted).
+func building_cost(building: BuildingData) -> Dictionary[StringName, int]:
+	return advisors.discounted(building.cost)
 
 
 ## Share of the building cost given back when a building is demolished.
@@ -160,8 +187,48 @@ func move_building(from_origin: Vector2i, to_origin: Vector2i) -> BuildRules.Res
 	var building := buildings[cell.building_id]
 	var result := BuildRules.check_move(board, building, from_origin, to_origin)
 	if result == BuildRules.Result.OK:
+		var level := board.get_building_level(from_origin)
 		board.remove_building(from_origin)
 		board.place_building(building.building_id, to_origin, building.size)
+		board.set_building_level(to_origin, level)
+	return result
+
+
+# --- Building levels (GDD §8, economy v2) -------------------------------------------------
+
+enum UpgradeResult { OK, NOT_UPGRADABLE, MAX_LEVEL, CASTLE_TOO_LOW, CANNOT_AFFORD }
+
+
+## What raising the building at `origin` one level costs right now (Nội chính discount included).
+func building_upgrade_cost(origin: Vector2i) -> Dictionary[StringName, int]:
+	var cell := board.get_cell(origin)
+	var none: Dictionary[StringName, int] = {}
+	if cell == null or not buildings.has(cell.building_id):
+		return none
+	return advisors.discounted(buildings[cell.building_id].upgrade_cost(cell.building_level + 1))
+
+
+## A building's level never goes above the castle's.
+func check_building_upgrade(origin: Vector2i) -> UpgradeResult:
+	var cell := board.get_cell(origin)
+	if cell == null or not buildings.has(cell.building_id) or cell.building_origin != origin \
+			or not buildings[cell.building_id].is_upgradable():
+		return UpgradeResult.NOT_UPGRADABLE
+	if cell.building_level >= buildings[cell.building_id].max_level():
+		return UpgradeResult.MAX_LEVEL
+	if cell.building_level >= castle_level:
+		return UpgradeResult.CASTLE_TOO_LOW
+	if not stockpile.can_afford(building_upgrade_cost(origin)):
+		return UpgradeResult.CANNOT_AFFORD
+	return UpgradeResult.OK
+
+
+## Pays and raises the building one level. Nothing changes unless check_building_upgrade() is OK.
+func upgrade_building(origin: Vector2i) -> UpgradeResult:
+	var result := check_building_upgrade(origin)
+	if result == UpgradeResult.OK:
+		stockpile.spend(building_upgrade_cost(origin))
+		board.set_building_level(origin, board.get_building_level(origin) + 1)
 	return result
 
 
@@ -199,11 +266,18 @@ func next_castle_level() -> CastleLevelData:
 	return null
 
 
+## The next castle level's cost less the Nội chính discount; empty at the top level.
+func castle_upgrade_cost() -> Dictionary[StringName, int]:
+	var next := next_castle_level()
+	var none: Dictionary[StringName, int] = {}
+	return advisors.discounted(next.cost) if next != null else none
+
+
 func check_castle_upgrade() -> CastleResult:
 	var next := next_castle_level()
 	if next == null:
 		return CastleResult.MAX_LEVEL
-	if not stockpile.can_afford(next.cost):
+	if not stockpile.can_afford(castle_upgrade_cost()):
 		return CastleResult.CANNOT_AFFORD
 	return CastleResult.OK
 
@@ -212,7 +286,7 @@ func check_castle_upgrade() -> CastleResult:
 func upgrade_castle() -> CastleResult:
 	var result := check_castle_upgrade()
 	if result == CastleResult.OK:
-		stockpile.spend(next_castle_level().cost)
+		stockpile.spend(castle_upgrade_cost())
 		castle_level += 1
 		castle_changed.emit()
 	return result
@@ -225,26 +299,56 @@ func can_replenish() -> bool:
 	return false
 
 
-## Land plus production buildings (only while their upkeep was paid last turn).
+## Land plus production buildings (only while their upkeep was paid last turn), plus the
+## Nội chính advisor's share of both (advisor_yield_bonus).
 func get_turn_yield() -> Dictionary[StringName, int]:
 	var total := Economy.board_yield(board, terrains)
 	if buildings_supplied:
 		Economy.add_into(total, Economy.buildings_yield(board, buildings))
+	Economy.add_into(total, advisor_yield_bonus())
 	return total
 
 
-## Squads and generals together (both are paid before anything else at the end of a turn).
+## Nội chính: a share of what production buildings make (economy v2: the land yields nothing).
+func advisor_yield_bonus() -> Dictionary[StringName, int]:
+	var bonus: Dictionary[StringName, int] = {}
+	if buildings_supplied:
+		bonus = Advisors.share_of(Economy.buildings_yield(board, buildings), advisors.post_stat(&"admin") * Advisors.ADMIN_YIELD)
+	return bonus
+
+
+## Squads, generals and advisors together (paid before anything else at the end of a turn), less
+## the Nội chính advisor's share of the squads' and generals' part (upkeep_discount).
 func get_army_upkeep() -> Dictionary[StringName, int]:
 	var total := army.get_upkeep(units)
 	Economy.add_into(total, generals.get_upkeep())
+	var saved := upkeep_discount()
+	for resource_id in saved:
+		total[resource_id] -= saved[resource_id]
+	Economy.add_into(total, advisors.get_upkeep())
 	return total
 
 
+## What the Nội chính advisor saves on squad and general upkeep.
+func upkeep_discount() -> Dictionary[StringName, int]:
+	var base := army.get_upkeep(units)
+	Economy.add_into(base, generals.get_upkeep())
+	return Advisors.share_of(base, advisors.post_stat(&"admin") * Advisors.ADMIN_UPKEEP)
+
+
+## Every building's upkeep at its level (BuildingData.upkeep_at).
 func get_building_upkeep() -> Dictionary[StringName, int]:
 	var total: Dictionary[StringName, int] = {}
 	for building_id in buildings:
-		for i in board.count_buildings(building_id):
-			Economy.add_into(total, buildings[building_id].upkeep)
+		Economy.add_into(total, _upkeep_of_type(building_id))
+	return total
+
+
+func _upkeep_of_type(building_id: StringName) -> Dictionary[StringName, int]:
+	var total: Dictionary[StringName, int] = {}
+	for cell in board.get_all_cells():
+		if cell.building_id == building_id and cell.coord == cell.building_origin:
+			Economy.add_into(total, buildings[building_id].upkeep_at(cell.building_level))
 	return total
 
 
@@ -295,13 +399,24 @@ func get_income_breakdown() -> Dictionary[StringName, Array]:
 	for resource_id in general_upkeep:
 		add.call(resource_id, {"source": &"generals", "id": &"", "amount": -general_upkeep[resource_id],
 				"count": generals.generals.size()})
+	var advisor_upkeep := advisors.get_upkeep()
+	for resource_id in advisor_upkeep:
+		add.call(resource_id, {"source": &"advisors", "id": &"", "amount": -advisor_upkeep[resource_id],
+				"count": advisors.advisors.size()})
+	# The Nội chính advisor: upkeep saved and extra yield.
+	var saved := upkeep_discount()
+	for resource_id in saved:
+		add.call(resource_id, {"source": &"admin_upkeep", "id": &"", "amount": saved[resource_id], "count": 1})
+	var extra := advisor_yield_bonus()
+	for resource_id in extra:
+		add.call(resource_id, {"source": &"admin_yield", "id": &"", "amount": extra[resource_id], "count": 1})
 	# Production buildings, per building type (paused while their upkeep is unpaid).
 	if buildings_supplied:
 		var produced := {}  # building_id -> amounts
 		for cell in board.get_all_cells():
 			if cell.has_building() and cell.coord == cell.building_origin and buildings.has(cell.building_id):
 				var amounts: Dictionary[StringName, int] = produced.get_or_add(cell.building_id, {} as Dictionary[StringName, int])
-				Economy.add_into(amounts, Economy.building_yield(buildings[cell.building_id], cell.is_key))
+				Economy.add_into(amounts, Economy.building_yield(buildings[cell.building_id], cell.is_key, cell.building_level))
 		for building_id in produced:
 			for resource_id in produced[building_id]:
 				add.call(resource_id, {"source": &"production", "id": building_id,
@@ -309,9 +424,10 @@ func get_income_breakdown() -> Dictionary[StringName, Array]:
 	# Building upkeep, per building type.
 	for building_id in buildings:
 		var count := board.count_buildings(building_id)
-		for resource_id in buildings[building_id].upkeep:
+		var type_upkeep := _upkeep_of_type(building_id)
+		for resource_id in type_upkeep:
 			add.call(resource_id, {"source": &"building", "id": building_id,
-					"amount": -buildings[building_id].upkeep[resource_id] * count, "count": count})
+					"amount": -type_upkeep[resource_id], "count": count})
 	# Trade agreements.
 	for agreement in diplomacy.agreements:
 		add.call(agreement.give_id, {"source": &"agreement", "id": agreement.clan_id, "amount": -agreement.give_amount, "count": 1})
@@ -371,12 +487,14 @@ func end_turn() -> Dictionary:
 	var declared := wars.end_turn(rng)
 	turn += 1
 	var healed := generals.end_turn(castle_level, turn)
+	var advisors_healed := advisors.end_turn()
 	hand.deal_new_hand()
 	var report := {"collected": collected, "upkeep": upkeep, "deserted": deserted,
 			"buildings_supplied": buildings_supplied, "replenished": replenished, "agreements": agreements}
 	report["treaties"] = treaties
 	report["war_declared"] = declared
 	report["generals_healed"] = healed
+	report["advisors_healed"] = advisors_healed
 	report["victory"] = victory.end_turn(self)
 	report["castle_in_danger"] = victory.castle_in_danger(self)
 	var invader := wars.pick_invader(rng)
@@ -399,6 +517,7 @@ func end_turn() -> Dictionary:
 func create_kingdom_side(enemy_clan: StringName, defending: bool = true) -> BattleSide:
 	var side := RaidSystem.create_kingdom_side(self)
 	generals.lead(side, board, defending)
+	advisors.assist(side)
 	alliances.add_allies(side, enemy_clan, units)
 	return side
 
@@ -409,6 +528,7 @@ func finish_raid(record: BattleRecord) -> Dictionary:
 	var result := RaidSystem.apply_outcome(self, raid, record)
 	_record_battle(result.won)
 	result["general"] = generals.after_battle(record, BattleRecord.DEFENDER)
+	result["advisor"] = advisors.after_battle(record, BattleRecord.DEFENDER)
 	if result.won:
 		events.raid_won_turn = turn
 	result.merge(alliances.apply_battle(record, BattleRecord.DEFENDER))
@@ -459,6 +579,7 @@ func finish_invasion(clan_id: StringName, record: BattleRecord) -> Dictionary:
 	var won := record.winner == BattleRecord.DEFENDER
 	_record_battle(won)
 	var general := generals.after_battle(record, BattleRecord.DEFENDER)
+	var advisor := advisors.after_battle(record, BattleRecord.DEFENDER)
 	var castle_fallen := not won and board.count_land_outside_castle() == 0
 	if castle_fallen:
 		victory.lost = true
@@ -478,7 +599,7 @@ func finish_invasion(clan_id: StringName, record: BattleRecord) -> Dictionary:
 		stockpile.spend(resources_lost)
 	result.merge({"record": record, "won": won, "clan_id": clan_id, "lost_cells": lost_cells,
 			"resources_lost": resources_lost, "enemy_lost": enemy_lost, "castle_fallen": castle_fallen,
-			"general": general})
+			"general": general, "advisor": advisor})
 	return result
 
 
@@ -503,6 +624,7 @@ func finish_attack(clan_id: StringName, record: BattleRecord) -> Dictionary:
 	var won := record.winner == BattleRecord.ATTACKER
 	_record_battle(won)
 	var general := generals.after_battle(record, BattleRecord.ATTACKER)
+	var advisor := advisors.after_battle(record, BattleRecord.ATTACKER)
 	var result := BattleOutcome.apply_to_army(army, record, BattleRecord.ATTACKER, true)
 	result.merge(alliances.apply_battle(record, BattleRecord.ATTACKER))
 	var enemy_lost := BattleOutcome.soldiers_lost(record, BattleRecord.DEFENDER)
@@ -525,5 +647,5 @@ func finish_attack(clan_id: StringName, record: BattleRecord) -> Dictionary:
 				compensation[resource_id] = amount
 		stockpile.spend(compensation)
 	result.merge({"record": record, "won": won, "clan_id": clan_id, "enemy_lost": enemy_lost,
-			"loot": loot, "compensation": compensation, "annexed": annexed, "general": general})
+			"loot": loot, "compensation": compensation, "annexed": annexed, "general": general, "advisor": advisor})
 	return result

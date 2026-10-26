@@ -7,6 +7,8 @@ func _state() -> KingdomState:
 	var gen := PieceGenerator.new(PieceShapeLibrary.load_all(), terrains, 1)
 	var state := KingdomState.new(BoardData.create_starting_board(12), PieceHand.new(gen), terrains,
 			BuildingData.load_all(), UnitData.load_all(), 3)
+	# Generals only: advisors in the candidate list are tested in test_advisors.gd.
+	state.generals.advisor_share = 0.0
 	state.start()
 	return state
 

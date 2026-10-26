@@ -8,6 +8,9 @@ signal finished(record: BattleRecord)
 
 ## Real seconds the result banner stays before `finished` is emitted.
 const RESULT_DELAY := 1.6
+## Battle seconds a stratagem message stays on screen.
+const STRATAGEM_MESSAGE_TIME := 4.0
+const STRATAGEM_COLOR := Color(1.0, 0.85, 0.35)
 const BACKGROUND_COLOR := Color(0.09, 0.1, 0.13)
 const WIN_COLOR := Color(0.55, 0.95, 0.55)
 const LOSS_COLOR := Color(1.0, 0.5, 0.45)
@@ -24,6 +27,9 @@ var _skip_button: Button
 var _retreat_button: Button
 var _result_label: Label
 var _result_timer := -1.0
+## Stratagems used at the start of the battle (GDD §8, M11f), shown over the battlefield.
+var _stratagem_label: Label
+var _stratagem_timer := 0.0
 
 
 ## `player_side` is the BattleRecord side the player commands; it is drawn on the left.
@@ -52,6 +58,7 @@ func _process(delta: float) -> void:
 	var events := _playback.advance(delta)
 	var battle_delta := 0.0 if _playback.paused else delta * _playback.speed
 	_view.update_view(battle_delta, events)
+	_show_stratagems(events, battle_delta)
 	for panel in _info_panels:
 		panel.refresh()
 	var seconds := roundi(_playback.simulator.time)
@@ -114,7 +121,36 @@ func _build_middle(simulator: BattleSimulator) -> Control:
 	_result_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_result_label.visible = false
 	_view.add_child(_result_label)
+	_stratagem_label = Label.new()
+	_stratagem_label.add_theme_font_size_override("font_size", 24)
+	_stratagem_label.add_theme_constant_override("outline_size", 8)
+	_stratagem_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	_stratagem_label.add_theme_color_override("font_color", STRATAGEM_COLOR)
+	_stratagem_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_stratagem_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	_stratagem_label.offset_top = 12
+	_view.add_child(_stratagem_label)
 	return row
+
+
+## Adds a line for each stratagem that worked; the lines fade after STRATAGEM_MESSAGE_TIME.
+func _show_stratagems(events: Array[Dictionary], battle_delta: float) -> void:
+	for event in events:
+		if event.type != &"stratagem":
+			continue
+		var side := _playback.simulator.record.sides[event.side]
+		var stratagem_name := String(event.stratagem)
+		for stratagem in side.stratagems:
+			if stratagem.stratagem_id == event.stratagem:
+				stratagem_name = stratagem.display_name
+		var line := "Mưu sĩ %s dùng %s!" % [side.advisor_name, stratagem_name]
+		_stratagem_label.text = line if _stratagem_label.text.is_empty() else _stratagem_label.text + "\n" + line
+		_stratagem_timer = STRATAGEM_MESSAGE_TIME
+	if _stratagem_timer > 0.0:
+		_stratagem_timer -= battle_delta
+		_stratagem_label.modulate.a = clampf(_stratagem_timer, 0.0, 1.0)
+		if _stratagem_timer <= 0.0:
+			_stratagem_label.text = ""
 
 
 ## The info column scrolls, so a long army list never pushes the controls bar off screen.

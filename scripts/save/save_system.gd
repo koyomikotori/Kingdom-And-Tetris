@@ -5,7 +5,7 @@ extends RefCounted
 ## by step on load; newer ones are refused. Files are written to a temp file first and then
 ## renamed, so a crash never leaves a half-written save.
 
-const SAVE_VERSION := 2
+const SAVE_VERSION := 3
 const AUTO_SLOT := "auto"
 const MANUAL_SLOTS := 3
 const DEFAULT_FOLDER := "user://saves"
@@ -105,8 +105,18 @@ static func migrate(game: Dictionary, version: int) -> Dictionary:
 		match version:
 			1:
 				_migrate_from_1(data)
+			2:
+				_migrate_from_2(data)
 		version += 1
 	return data
+
+
+## v3 (economy v2): the stable became the farm; every building cell has a level (1).
+static func _migrate_from_2(data: Dictionary) -> void:
+	for cell: Dictionary in data.get("board", {}).get("cells", []):
+		if cell.get("building", "") == "stable":
+			cell["building"] = "farm"
+		cell["level"] = 1
 
 
 ## v2 (M11e): squads have XP; generals have a level, XP and unspent points.

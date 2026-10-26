@@ -12,7 +12,8 @@ enum EndReason { NO_ARMY, ALL_BROKEN, RETREAT, TIME_LIMIT }
 ## [attacker, defender]
 var sides: Array[BattleSide] = []
 ## Notable moments, in time order: {"time": float, "type": StringName, "side": int, "unit": int}.
-## Types: &"gun_volley", &"arrow_volley", &"charge", &"broken", &"retreat".
+## Types: &"gun_volley", &"arrow_volley", &"charge", &"broken", &"retreat", &"general_fallen",
+## &"stratagem" (also has "stratagem": the StratagemData id).
 var events: Array[Dictionary] = []
 ## Taken every BattleSimulator.SNAPSHOT_INTERVAL seconds and at the end:
 ## {"time": float, "soldiers": [[int...], [int...]], "morale": [[float...], [float...]]}.

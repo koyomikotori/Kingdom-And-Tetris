@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/buildings/building_data.gd" id="1_building"]
+
+[resource]
+script = ExtResource("1_building")
+building_id = &"farm"
+display_name = "Nông trại"
+description = "Trồng lương thực; cấp 3 trở lên nuôi thêm ngựa. Xây trên ô ruộng; trên ô ◆ thì sản lượng gấp đôi."
+cost = Dictionary[StringName, int]({&"wood": 8, &"stone": 2})
+allowed_terrains = Array[StringName]([&"farmland"])
+max_count = 3
+color = Color(0.7, 0.55, 0.3, 1)
+level_yields = Array[Dictionary]([{&"food": 5}, {&"food": 8}, {&"food": 11, &"horses": 1}, {&"food": 13, &"horses": 2}, {&"food": 15, &"horses": 3}, {&"food": 18, &"horses": 4}])

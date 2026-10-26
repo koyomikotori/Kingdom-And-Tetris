@@ -15,6 +15,8 @@ var is_key: bool = false
 var building_id: StringName = NO_BUILDING
 ## Top-left cell of the building covering this cell. Only meaningful when has_building().
 var building_origin: Vector2i = Vector2i.ZERO
+## Level of the building covering this cell (same on all its cells; GDD §8, economy v2).
+var building_level := 1
 
 
 func _init(p_coord: Vector2i) -> void:

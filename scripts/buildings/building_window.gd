@@ -1,8 +1,8 @@
 class_name BuildingWindow
 extends ModalWindow
 ## Opens when a building on the board is tapped (Kairosoft style): its information and upgrade
-## tabs (the castle also has "Chiêu hiền" to recruit generals and "Tướng" to manage them, GDD §8
-## M11d), and the actions below (upgrade the castle, move, demolish). Every action first explains
+## tabs (the castle also has "Chiêu hiền" to recruit generals and advisors, "Tướng" and "Mưu sĩ"
+## to manage them, GDD §8 M11d/M11f), and the actions below (upgrade the castle, move, demolish). Every action first explains
 ## what it will do and waits for "Xác nhận".
 
 ## The player confirmed moving the building at `origin`; the kingdom scene lets them pick the spot.
@@ -11,6 +11,8 @@ signal move_requested(origin: Vector2i)
 signal demolished(building_name: String, refund: Dictionary)
 
 const ACCENT := Color(1.0, 0.85, 0.35)
+## Height of the scrolling lists in the castle tabs (Chiêu hiền, Tướng, Mưu sĩ).
+const TAB_LIST_HEIGHT := 440
 
 enum Action { NONE, UPGRADE, MOVE, DEMOLISH, CUSTOM }
 
@@ -30,6 +32,7 @@ var _pending := Action.NONE
 var _custom: Callable
 var _recruit_box: VBoxContainer
 var _generals_box: VBoxContainer
+var _advisors_box: VBoxContainer
 
 
 func open(state: KingdomState, origin: Vector2i) -> void:
@@ -47,7 +50,9 @@ func open(state: KingdomState, origin: Vector2i) -> void:
 	if _is_castle:
 		_recruit_box = _tab_box("Chiêu hiền")
 		_generals_box = _tab_box("Tướng")
+		_advisors_box = _tab_box("Mưu sĩ")
 		state.generals.changed.connect(_refresh)
+		state.advisors.changed.connect(_refresh)
 	_confirm_box = VBoxContainer.new()
 	_confirm_box.visible = false
 	body.add_child(_confirm_box)
@@ -59,9 +64,9 @@ func open(state: KingdomState, origin: Vector2i) -> void:
 	var cancel := _button("Hủy", _cancel_action)
 	cancel.custom_minimum_size = Vector2(140, 44)
 	_confirm_box.add_child(_row([confirm, cancel]))
-	if _is_castle:
+	if _is_castle or (_building != null and _building.is_upgradable()):
 		_upgrade_button = add_action("Nâng cấp", _ask.bind(Action.UPGRADE))
-	else:
+	if not _is_castle:
 		add_action("Di chuyển", _ask.bind(Action.MOVE))
 		add_action("Phá hủy", _ask.bind(Action.DEMOLISH), true)
 	state.stockpile.changed.connect(_refresh)
@@ -80,9 +85,15 @@ func _tab_box(title: String) -> VBoxContainer:
 	for edge in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + edge, 10)
 	_tabs.add_child(margin)
+	# Long lists (three advisors with their stratagems) scroll instead of growing off screen.
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(0, TAB_LIST_HEIGHT)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	margin.add_child(scroll)
 	var box := VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.add_theme_constant_override("separation", 8)
-	margin.add_child(box)
+	scroll.add_child(box)
 	return box
 
 
@@ -104,24 +115,28 @@ func _refresh() -> void:
 	if _is_castle:
 		lines.append("Trung tâm của vương quốc. Không thể phá hủy hay di chuyển; mất hết đất xung quanh mà thua thêm một trận xâm lược thì thành thất thủ.")
 		lines.append("Chỗ cho đơn vị lính: %d (gồm doanh trại và cấp thành)." % _state.get_squad_capacity())
-		lines.append("Tướng tuyển được: tới %d sao (tab Chiêu hiền)." % _state.castle_level)
+		lines.append("Tướng và mưu sĩ tuyển được: tới %d sao (tab Chiêu hiền)." % _state.castle_level)
 		var commander := _state.generals.commander
 		lines.append("Tổng tướng: %s." % ("%s %s" % [commander.name, commander.star_text()] if commander != null else "chưa có"))
 	elif _building != null:
 		lines.append(_building.description)
 		lines.append("Vị trí: ô (%d, %d), %s%s." % [_origin.x, _origin.y, terrain.display_name if terrain != null else "đất hoang",
 				" ◆" if cell.is_key else ""])
-		var produced := Economy.building_yield(_building, cell.is_key)
+		if _building.is_upgradable():
+			lines.append("Cấp %d/%d." % [cell.building_level, _building.max_level()])
+		var produced := Economy.building_yield(_building, cell.is_key, cell.building_level)
 		if not produced.is_empty():
 			lines.append("Mỗi lượt: %s%s." % [UiFormat.amounts(produced, _resource_types, true),
 					"" if _state.buildings_supplied else " (đang ngừng vì thiếu phí duy trì)"])
-		if not _building.upkeep.is_empty():
-			lines.append("Phí duy trì: %s mỗi lượt." % UiFormat.amounts(_building.upkeep, _resource_types))
-		if _building.max_count > 0:
-			lines.append("Đang có %d/%d." % [_state.board.count_buildings(_building.building_id), _building.max_count])
+		var upkeep := _building.upkeep_at(cell.building_level)
+		if not upkeep.is_empty():
+			lines.append("Phí duy trì: %s mỗi lượt." % UiFormat.amounts(upkeep, _resource_types))
+		var most := BuildRules.limit(_building, _state.castle_level)
+		if most > 0:
+			lines.append("Đang có %d/%d (thêm 1 chỗ mỗi cấp thành)." % [_state.board.count_buildings(_building.building_id), most])
 	_info.text = "\n".join(lines)
 	if not _is_castle:
-		_upgrade.text = "Công trình này chưa có nâng cấp."
+		_refresh_building_upgrade(cell)
 		return
 	_refresh_generals()
 	var next := _state.next_castle_level()
@@ -130,10 +145,36 @@ func _refresh() -> void:
 		_upgrade_button.disabled = true
 		return
 	var result := _state.check_castle_upgrade()
-	_upgrade.text = "Lên cấp %d: %s.\nCấp mới: thêm %d chỗ cho đơn vị lính, mở khóa công trình cần cấp %d, tuyển được tướng tới %d sao.%s" % [
-			next.level, UiFormat.amounts(next.cost, _resource_types), next.squad_capacity, next.level, next.level,
-			"\nChưa đủ tài nguyên." if result == KingdomState.CastleResult.CANNOT_AFFORD else ""]
+	var text := "Lên cấp %d: %s.\nCấp mới: thêm %d chỗ cho đơn vị lính, thêm 1 chỗ cho mỗi loại công trình, công trình nâng được tới cấp %d, tuyển được tướng và mưu sĩ tới %d sao." % [
+			next.level, UiFormat.amounts(_state.castle_upgrade_cost(), _resource_types), next.squad_capacity, next.level, next.level]
+	if result == KingdomState.CastleResult.CANNOT_AFFORD:
+		text += "\nChưa đủ tài nguyên."
+	_upgrade.text = text
 	_upgrade_button.disabled = result != KingdomState.CastleResult.OK
+
+
+## The Upgrade tab of a production building: next level's cost, yield and upkeep (GDD §8, economy v2).
+func _refresh_building_upgrade(cell: CellData) -> void:
+	if _building == null or not _building.is_upgradable():
+		_upgrade.text = "Công trình này chưa có nâng cấp."
+		return
+	var result := _state.check_building_upgrade(_origin)
+	var level := cell.building_level
+	if result == KingdomState.UpgradeResult.MAX_LEVEL:
+		_upgrade.text = "Đã đạt cấp cao nhất (%d)." % level
+		_upgrade_button.disabled = true
+		return
+	var text := "Lên cấp %d: %s.\nMỗi lượt: %s. Phí duy trì: %s mỗi lượt." % [level + 1,
+			UiFormat.amounts(_state.building_upgrade_cost(_origin), _resource_types),
+			UiFormat.amounts(Economy.building_yield(_building, cell.is_key, level + 1), _resource_types, true),
+			UiFormat.amounts(_building.upkeep_at(level + 1), _resource_types)]
+	match result:
+		KingdomState.UpgradeResult.CASTLE_TOO_LOW:
+			text += "\nCần thành chính cấp %d (cấp công trình không vượt cấp thành)." % (level + 1)
+		KingdomState.UpgradeResult.CANNOT_AFFORD:
+			text += "\nChưa đủ tài nguyên."
+	_upgrade.text = text
+	_upgrade_button.disabled = result != KingdomState.UpgradeResult.OK
 
 
 ## First step of an action: say what it will do and wait for confirmation.
@@ -142,8 +183,13 @@ func _ask(action: Action) -> void:
 	match action:
 		Action.UPGRADE:
 			_tabs.current_tab = 1
-			_confirm_text.text = "Nâng thành chính lên cấp %d? Trả %s." % [_state.castle_level + 1,
-					UiFormat.amounts(_state.next_castle_level().cost, _resource_types)]
+			if _is_castle:
+				_confirm_text.text = "Nâng thành chính lên cấp %d? Trả %s." % [_state.castle_level + 1,
+						UiFormat.amounts(_state.castle_upgrade_cost(), _resource_types)]
+			else:
+				_confirm_text.text = "Nâng %s lên cấp %d? Trả %s." % [_building.display_name,
+						_state.board.get_building_level(_origin) + 1,
+						UiFormat.amounts(_state.building_upgrade_cost(_origin), _resource_types)]
 		Action.MOVE:
 			_confirm_text.text = "Di chuyển %s? Bảng sẽ đóng; chọn ô mới trên bản đồ (miễn phí, đúng địa hình, trong lãnh thổ). Esc để hủy." % _building.display_name
 		Action.DEMOLISH:
@@ -163,8 +209,10 @@ func _on_confirm_pressed() -> void:
 	_cancel_action()
 	match action:
 		Action.UPGRADE:
-			if _state.upgrade_castle() == KingdomState.CastleResult.OK:
+			if _is_castle and _state.upgrade_castle() == KingdomState.CastleResult.OK:
 				set_status("Thành chính đã lên cấp %d!" % _state.castle_level)
+			elif not _is_castle and _state.upgrade_building(_origin) == KingdomState.UpgradeResult.OK:
+				set_status("%s đã lên cấp %d!" % [_building.display_name, _state.board.get_building_level(_origin)])
 			_refresh()
 		Action.MOVE:
 			move_requested.emit(_origin)
@@ -188,26 +236,35 @@ func _ask_custom(text: String, on_confirm: Callable) -> void:
 
 func _refresh_generals() -> void:
 	var generals := _state.generals
-	for box in [_recruit_box, _generals_box]:
+	var advisors := _state.advisors
+	for box in [_recruit_box, _generals_box, _advisors_box]:
 		for child in box.get_children():
 			box.remove_child(child)
 			child.queue_free()
-	var room := generals.generals.size() < Generals.MAX_GENERALS
-	_recruit_box.add_child(_muted("Ứng viên tới %d sao (cấp thành). Đang có %d/%d tướng. Danh sách mới sau %d lượt." % [
-			_state.castle_level, generals.generals.size(), Generals.MAX_GENERALS,
-			maxi(0, Generals.CANDIDATE_TURNS - (_state.turn - generals.candidates_turn))]))
+	_recruit_box.add_child(_muted("Ứng viên tướng và mưu sĩ tới %d sao (cấp thành). Đang có %d/%d tướng, %d/%d mưu sĩ. Danh sách mới sau %d lượt." % [
+			_state.castle_level, generals.generals.size(), Generals.MAX_GENERALS, advisors.advisors.size(),
+			Advisors.MAX_ADVISORS, maxi(0, Generals.CANDIDATE_TURNS - (_state.turn - generals.candidates_turn))]))
 	for i in generals.candidates.size():
 		var candidate := generals.candidates[i]
+		var is_advisor := candidate is Advisor
+		var role := "mưu sĩ" if is_advisor else "tướng"
 		var cost := generals.cost_of(candidate)
 		var result := generals.check_recruit(_state.stockpile, i)
-		var button := _button("Tuyển", _ask_custom.bind("Tuyển %s %s? Trả %s; phí nuôi %s mỗi lượt." % [candidate.name,
+		var button := _button("Tuyển", _ask_custom.bind("Tuyển %s %s %s? Trả %s; phí nuôi %s mỗi lượt." % [role, candidate.name,
 				candidate.star_text(), UiFormat.amounts(cost, _resource_types),
 				UiFormat.amounts(generals.ranks[candidate.stars].upkeep, _resource_types)], _recruit.bind(i)))
 		button.disabled = result != Generals.RecruitResult.OK
 		button.custom_minimum_size = Vector2(110, 44)
-		var reason := "" if result == Generals.RecruitResult.OK else (" Đã đủ %d tướng." % Generals.MAX_GENERALS
-				if not room else " Chưa đủ tài nguyên.")
-		_recruit_box.add_child(_general_row(candidate, "Giá: %s.%s" % [UiFormat.amounts(cost, _resource_types), reason], [button]))
+		var reason := ""
+		if result == Generals.RecruitResult.NO_ROOM:
+			reason = " Đã đủ %d mưu sĩ." % Advisors.MAX_ADVISORS if is_advisor else " Đã đủ %d tướng." % Generals.MAX_GENERALS
+		elif result != Generals.RecruitResult.OK:
+			reason = " Chưa đủ tài nguyên."
+		var extra := "Giá: %s.%s" % [UiFormat.amounts(cost, _resource_types), reason]
+		if is_advisor:
+			_recruit_box.add_child(_advisor_row(candidate as Advisor, extra, [button]))
+		else:
+			_recruit_box.add_child(_general_row(candidate as General, extra, [button]))
 	var refresh := _button("Làm mới ngay (%s)" % UiFormat.amounts(Generals.REFRESH_COST, _resource_types),
 			_ask_custom.bind("Đổi danh sách ứng viên ngay? Trả %s." % UiFormat.amounts(Generals.REFRESH_COST, _resource_types),
 			_buy_refresh))
@@ -232,13 +289,98 @@ func _refresh_generals() -> void:
 				UiFormat.amounts(generals.ranks[general.stars].upkeep, _resource_types)], buttons))
 		if general.points > 0:
 			_generals_box.add_child(_points_row(general))
+	_refresh_advisors()
 
 
-## Level, XP toward the next one, and the level cap from the general's stars (GDD §8, M11e).
-func _level_text(general: General) -> String:
-	if general.level >= general.max_level():
-		return "Cấp %d (tối đa)" % general.level
-	return "Cấp %d/%d · Kinh nghiệm %d/%d" % [general.level, general.max_level(), general.xp, general.xp_to_next()]
+## The "Mưu sĩ" tab: each advisor's post (and what it gives now), stats, level, stratagems,
+## buttons to change posts (a swap when the post is taken), level points and dismissal.
+func _refresh_advisors() -> void:
+	var advisors := _state.advisors
+	_advisors_box.add_child(_muted("Ba chức: Nội chính (kinh tế, theo Nội chính), Ngoại giao (theo Ngoại giao), Quân sự (ra trận, dùng mưu kế, theo Mưu lược)."))
+	if advisors.advisors.is_empty():
+		_advisors_box.add_child(_muted("Chưa có mưu sĩ nào. Tuyển ở tab Chiêu hiền."))
+	for advisor in advisors.advisors:
+		var post := "Chức: %s" % Advisors.POST_NAMES[advisor.post] if advisor.post != Advisor.NO_POST else "Chưa giữ chức"
+		if not advisor.is_ready():
+			post += ", bị thương (còn %d lượt)" % advisor.wounded_turns
+		var dismiss := _button("Sa thải", _ask_custom.bind("Sa thải mưu sĩ %s %s? Không hoàn tác được." % [advisor.name,
+				advisor.star_text()], advisors.dismiss.bind(advisor)))
+		dismiss.add_theme_color_override("font_color", WARNING_COLOR)
+		var lines: Array[String] = ["%s. %s. Phí nuôi: %s mỗi lượt." % [post, _level_text(advisor),
+				UiFormat.amounts(advisors.ranks[advisor.stars].upkeep, _resource_types)]]
+		if advisor.post != Advisor.NO_POST:
+			lines.append(_post_effect(advisor.post, advisor.stat_for(advisor.post)))
+		if advisor.post == &"military":
+			for id in advisor.stratagems:
+				var stratagem: StratagemData = advisors.stratagems.get(id)
+				if stratagem != null:
+					lines.append("%s — %s" % [stratagem.display_name, stratagem.describe(advisor.strategy)])
+		_advisors_box.add_child(_advisor_row(advisor, "\n".join(lines), [dismiss]))
+		var label := _label("Giao chức:", 13)
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var row := _row([label])
+		for post_id in Advisors.POSTS:
+			var button := _button(Advisors.POST_NAMES[post_id], advisors.assign.bind(advisor, post_id))
+			button.disabled = advisor.post == post_id
+			row.add_child(button)
+		_advisors_box.add_child(row)
+		if advisor.points > 0:
+			_advisors_box.add_child(_advisor_points_row(advisor))
+
+
+## What a post gives right now with `points` in its stat.
+func _post_effect(post_id: StringName, points: int) -> String:
+	match post_id:
+		&"admin":
+			return "Đang cộng: +%d%% sản lượng công trình khai thác, −%d%% giá xây dựng và nâng cấp, −%d%% phí nuôi quân và tướng." % [
+					roundi(points * Advisors.ADMIN_YIELD * 100), roundi(points * Advisors.ADMIN_COST * 100),
+					roundi(points * Advisors.ADMIN_UPKEEP * 100)]
+		&"diplomacy":
+			return "Đang cộng: giao thương lợi hơn %d%%, +%d%% khả năng được chấp nhận, −%d%% cảnh giác, +%d%% quà tặng." % [
+					roundi(points * Diplomacy.ENVOY_PRICE * 100), roundi(points * Diplomacy.ENVOY_CHANCE * 100),
+					roundi(points * Diplomacy.ENVOY_WARINESS * 100), roundi(points * Diplomacy.ENVOY_GIFT * 100)]
+		&"military":
+			return "Đang cộng: +%.1f sĩ khí, +%d%% tấn công tầm xa; mỗi mưu kế %d%% thành công đầu trận." % [
+					points * Advisors.MILITARY_MORALE, roundi(points * Advisors.MILITARY_RANGE * 100),
+					roundi(Advisors.stratagem_chance(points) * 100)]
+	return ""
+
+
+## Name, stars, the three stats and the stratagems, plus a line and buttons.
+func _advisor_row(advisor: Advisor, extra: String, buttons: Array) -> Control:
+	var names: Array[String] = []
+	for id in advisor.stratagems:
+		var stratagem: StratagemData = _state.advisors.stratagems.get(id)
+		names.append(stratagem.display_name if stratagem != null else String(id))
+	var text := "Mưu sĩ %s %s · Nội chính %d · Ngoại giao %d · Mưu lược %d\nMưu kế: %s" % [advisor.name,
+			advisor.star_text(), advisor.admin, advisor.diplomacy, advisor.strategy, ", ".join(names)]
+	var column := VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_child(_label(text, 14))
+	column.add_child(_muted(extra))
+	var row := _row([column])
+	for button: Button in buttons:
+		row.add_child(button)
+	return row
+
+
+func _advisor_points_row(advisor: Advisor) -> Control:
+	var label := _label("Còn %d điểm cộng:" % advisor.points, 13)
+	label.add_theme_color_override("font_color", ACCENT)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var row := _row([label])
+	for stat in Advisors.STAT_IDS:
+		var button := _button("+1 " + Advisors.STAT_NAMES[stat], _state.advisors.spend_point.bind(advisor, stat))
+		button.disabled = not _state.advisors.can_spend_point(advisor, stat)
+		row.add_child(button)
+	return row
+
+
+## Level, XP toward the next one, and the level cap from the officer's stars (GDD §8, M11e).
+func _level_text(officer: Officer) -> String:
+	if officer.level >= officer.max_level():
+		return "Cấp %d (tối đa)" % officer.level
+	return "Cấp %d/%d · Kinh nghiệm %d/%d" % [officer.level, officer.max_level(), officer.xp, officer.xp_to_next()]
 
 
 ## Buttons to add the general's unspent level points to Võ lực or Thống suất.
