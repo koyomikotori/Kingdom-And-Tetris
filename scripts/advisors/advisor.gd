@@ -26,6 +26,18 @@ func stat_for(post_id: StringName) -> int:
 	return 0
 
 
+## A stat by its id (Advisors.STAT_IDS): &"admin", &"diplomacy" or &"strategy".
+func get_stat(stat: StringName) -> int:
+	match stat:
+		&"admin":
+			return admin
+		&"diplomacy":
+			return diplomacy
+		&"strategy":
+			return strategy
+	return 0
+
+
 func to_save() -> Dictionary:
 	var data := _officer_save()
 	var ids: Array[String] = []

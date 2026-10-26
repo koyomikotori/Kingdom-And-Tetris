@@ -649,8 +649,8 @@ Thống kê trận thắng/thua và trạng thái thắng/thua được lưu cù
 | M11e | Kinh nghiệm và cấp: đơn vị 3 cấp (huấn luyện tới Cựu binh, pha loãng khi bổ sung), tướng lên cấp và tự cộng điểm | Xong |
 | M11f | Mưu sĩ: 3 chức Nội chính / Ngoại giao / Quân sự, 3 chỉ số, bộ mưu kế đầu trận, chiêu hiền chung với tướng; **Kinh tế v2**: chỉ công trình cho tài nguyên, công trình 6 cấp, giới hạn theo cấp thành | Đang làm |
 | M12a | **Đồ họa (1/3):** hệ thống ảnh pixel vẽ bằng script, bản đồ (địa hình, ô ◆, thành, công trình có cấp, mảnh đất trong tay), giao diện gỗ + giấy cuộn, icon tài nguyên (§13) | Xong |
-| M12b | **Đồ họa (2/3):** trận đánh: lính từng loại, cận vệ tướng cưỡi ngựa, quân cướp / gia tộc, mũi tên, nền chiến trường, hiệu ứng mưu kế | Đang làm |
-| M12c | **Tab Tướng sĩ** kiểu Ninja Village + chân dung pixel ghép bộ phận + bản đồ thế giới vẽ lại | |
+| M12b | **Đồ họa (2/3):** trận đánh: lính từng loại, cận vệ tướng cưỡi ngựa, quân cướp / gia tộc, mũi tên, nền chiến trường, hiệu ứng mưu kế | Xong |
+| M12c | **Tab Tướng sĩ** kiểu Ninja Village + chân dung pixel ghép bộ phận + bản đồ thế giới vẽ lại | Đang làm |
 | M12d | **Trang bị** cho tướng và mưu sĩ (tab Trang bị trong bảng chi tiết; thiết kế bàn riêng) | |
 | M13 | **Hỗ trợ cảm ứng + xuất APK** (chạm để xem trước/xác nhận, vuốt để kéo, chụm để zoom, nút thay phím tắt); **sắp xếp lại tab Quân đội, Xây dựng, bảng thành** cho gọn trên điện thoại (ít chữ, chi tiết mở khi chạm) | |
 | M14 | Âm thanh, cân bằng, build Windows + Android, phát hành | |
@@ -687,13 +687,14 @@ Lưu/tải được đưa lên trước sự kiện và tướng, vì trạng th
 - **Nền theo loại trận:** phòng thủ (cướp, xâm lược) có tường thành và mái nhà phía sau quân mình; đi đánh gia tộc có doanh trại và cờ gia tộc phía sau quân địch. Trời, mây, núi xa kiểu tranh, đồng cỏ.
 - Mũi tên, đạn; hiệu ứng mưu kế (lửa, mưa tên, trống…).
 
-**M12c — tab Tướng sĩ (kiểu Ninja Village):**
-- Tab thứ 4 ở cột bên phải: Mảnh đất / Xây dựng / Quân đội / **Tướng sĩ**. Chiêu hiền vẫn ở thành chính.
-- Danh sách: mỗi người một dòng với hình pixel lúc ra trận, tên, sao, chức vụ (Tổng tướng / Dự bị / Nội chính…), tình trạng.
-- Bấm vào một người → bảng chi tiết giữa màn hình: **chân dung pixel anime** bên trái, 2 tab **Chỉ số** và **Trang bị** (tab Trang bị có từ M12d), các nút tương tác bên dưới (giao chức / làm tổng tướng, cộng điểm, sa thải…).
-- **Chân dung ghép bộ phận:** nhiều kiểu tóc, mắt, lông mày, râu, mũ / khăn, áo; mỗi người ghép ngẫu nhiên một lần và **lưu lại** (ai cũng có mặt riêng). Tướng mặc giáp, mưu sĩ mặc áo văn quan; sao cao có khung viền vàng. Có thư mục để thả chân dung vẽ tay thay thế.
-- **Nam nữ cân bằng:** mỗi ứng viên 50% nam / 50% nữ, có tên và kiểu tóc riêng theo giới. Bản demo chưa cần nhiều kiểu.
-- Bản đồ thế giới vẽ lại kiểu tranh cổ, cờ và biểu tượng từng gia tộc.
+**M12c — tab Tướng sĩ (kiểu Ninja Village, đã chốt):**
+- Tab thứ 4 ở cột bên phải: Mảnh đất / Xây dựng / Quân đội / **Tướng sĩ**. Bảng thành chính chỉ còn **Thông tin / Nâng cấp / Chiêu hiền**; mọi việc quản lý chuyển sang tab Tướng sĩ.
+- Danh sách: mỗi người một dòng với **hình pixel lúc ra trận** của chính người đó, tên, sao, chức vụ (Tổng tướng / Dự bị / Nội chính / Ngoại giao / Quân sự / chưa giữ chức), cấp, tình trạng (bị thương), dấu báo còn điểm cộng.
+- Bấm vào một người → bảng chi tiết giữa màn hình: **chân dung pixel** bên trái, 2 tab **Chỉ số** (chỉ số có thanh, cấp và kinh nghiệm, đặc tính hoặc bộ mưu kế, chức vụ và tác dụng, phí nuôi) và **Trang bị** (3 ô vũ khí / giáp / phụ kiện còn trống, ghi "sắp có" cho tới M12d); các nút bên dưới: tướng — Làm tổng tướng, cộng điểm, Sa thải; mưu sĩ — Giao chức, cộng điểm, Sa thải.
+- **Diện mạo** mỗi người (lưu trong bản lưu): giới tính (50% nam / 50% nữ, tên theo giới), màu da, kiểu tóc và màu tóc, kiểu mắt, lông mày, râu (nam), màu nhấn (mũ, lông trĩ, viền áo). Bản lưu cũ chưa có diện mạo thì tự tạo từ tên (luôn ra cùng một diện mạo).
+- **Chân dung 48×48** ghép từ bộ phận vẽ sẵn (mặt, mắt, mày, miệng, tóc sau / tóc trước, râu, mũ / trâm, áo), tô màu theo diện mạo; tướng mặc giáp, mưu sĩ mặc áo văn quan; sao cao có khung viền vàng. Chân dung vẽ tay / vẽ bằng AI (64×64, nền trong suốt, không khung) đặt vào `assets/portraits/pool/` theo nhóm (`general_m_01.png`, `advisor_f_02.png`…): mỗi người tự nhận một ảnh trong nhóm đúng loại và giới tính, cố định và lưu lại; game tự vẽ nền và khung; nhóm chưa có ảnh thì dùng chân dung ghép. Hướng dẫn: `docs/portrait_ai_guide.md`.
+- **Hình ra trận theo người:** tướng và mưu sĩ có bản nam và nữ, tóc và màu nhấn theo diện mạo; trận đánh và danh sách dùng cùng hình.
+- **Bản đồ thế giới kiểu tranh cổ trên giấy:** nền giấy dó, núi, sông, rừng vẽ như bản đồ cổ; mỗi gia tộc là một tòa thành nhỏ cắm cờ màu của họ; đường nối là đường đất; biểu tượng chiến tranh / liên minh / bất tương xâm vẽ pixel.
 
 **Để sau:** thêm gia tộc mới, mỗi gia tộc một nét riêng; tướng / mưu sĩ chiêu mộ từ gia tộc nào mang phong cách trang phục của gia tộc đó.
 

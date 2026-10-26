@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://jgttmkhd15hk"
-path="res://.godot/imported/general_team.png-b7f00a64107b9b9b4e51943958dbaa21.ctex"
+uid="uid://cmoutc8fjt8hx"
+path="res://.godot/imported/general_m_team.png-df1fcf813e4192d287e610a27db6a1a7.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/units/general_team.png"
-dest_files=["res://.godot/imported/general_team.png-b7f00a64107b9b9b4e51943958dbaa21.ctex"]
+source_file="res://assets/units/general_m_team.png"
+dest_files=["res://.godot/imported/general_m_team.png-df1fcf813e4192d287e610a27db6a1a7.ctex"]
 
 [params]
 

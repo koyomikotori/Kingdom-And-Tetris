@@ -246,6 +246,7 @@ func expand(direction: Vector2i, amount: int) -> void:
 		cell.is_key = old.is_key
 		cell.building_id = old.building_id
 		cell.building_origin = old.building_origin + shift
+		cell.building_level = old.building_level
 	resized.emit(shift)
 
 

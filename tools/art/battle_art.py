@@ -23,6 +23,15 @@ TEAM = hex_color("ff00ff")
 TEAM_DARK = hex_color("800080")
 TEAM_LIGHT = hex_color("ff80ff")
 TEAM_GRAYS = {TEAM: hex_color("e0e0e0"), TEAM_DARK: hex_color("8e8e8e"), TEAM_LIGHT: hex_color("ffffff")}
+# Officers also have a hair layer and an accent layer (plume, hat band, hairpin), tinted from
+# their OfficerLook.
+HAIR = hex_color("00ffff")
+HAIR_DARK = hex_color("008080")
+ACCENT = hex_color("ffff00")
+ACCENT_DARK = hex_color("808000")
+HAIR_GRAYS = {HAIR: hex_color("d8d8d8"), HAIR_DARK: hex_color("8a8a8a")}
+ACCENT_GRAYS = {ACCENT: hex_color("e8e8e8"), ACCENT_DARK: hex_color("9a9a9a")}
+LAYER_SUFFIXES = ["", "_team", "_hair", "_accent"]
 
 C = {
     "skin": hex_color("f2c9a0"), "skin_dark": hex_color("d39b72"), "eye": hex_color("2b1d14"),
@@ -221,6 +230,24 @@ def split_team(full: Canvas) -> tuple:
     return base, team
 
 
+def split_layers(full: Canvas) -> tuple:
+    """Like split_team, plus the hair and accent layers of an officer sprite."""
+    full.outline()
+    layers = [Canvas(full.width, full.height) for _ in LAYER_SUFFIXES]
+    for y in range(full.height):
+        for x in range(full.width):
+            color = full.get(x, y)
+            if color in TEAM_GRAYS:
+                layers[1].px(x, y, TEAM_GRAYS[color])
+            elif color in HAIR_GRAYS:
+                layers[2].px(x, y, HAIR_GRAYS[color])
+            elif color in ACCENT_GRAYS:
+                layers[3].px(x, y, ACCENT_GRAYS[color])
+            elif color[3]:
+                layers[0].px(x, y, color)
+    return tuple(layers)
+
+
 def soldier_frame(spec: dict, state: str, frame: int) -> tuple:
     pose = Pose(state, frame)
     c = Canvas(16, 16)
@@ -306,7 +333,7 @@ def cavalry_frame(state: str, frame: int) -> tuple:
     return split_team(c)
 
 
-def general_frame(state: str, frame: int) -> tuple:
+def general_frame(state: str, frame: int, female: bool = False) -> tuple:
     """The commander (32×32): a barded warhorse with a plated chamfron and red tassels, the rider
     in gilded armor with a flowing cape, a gold helmet with two long pheasant feathers, and a
     crescent-bladed glaive. Clothes, barding and cape take the side's color."""
@@ -370,10 +397,13 @@ def general_frame(state: str, frame: int) -> tuple:
     c.hline(13, 16, top - 6, C["gold"])
     c.px(14, top - 6, C["gold_light"])
     c.px(12, top - 4, C["gold_dark"])
-    # Two pheasant feathers sweeping back from the helmet.
+    # Two pheasant feathers sweeping back from the helmet (accent color).
     for i, (x, y) in enumerate(((13, top - 7), (12, top - 8), (11, top - 8), (10, top - 9), (9, top - 9), (8, top - 9))):
-        c.px(x, y, C["pheasant"] if i % 2 == 0 else C["pheasant_dark"])
-        c.px(x + 1, y + 1, C["pheasant_dark"])
+        c.px(x, y, ACCENT if i % 2 == 0 else ACCENT_DARK)
+        c.px(x + 1, y + 1, ACCENT_DARK)
+    if female:  # long hair flowing from under the helmet
+        for y in range(top - 3, top + 4):
+            c.hline(10 - (y - top) // 3 - frame, 12, y, HAIR if y < top + 2 else HAIR_DARK)
     # Thanh long đao: a long lacquered shaft and a slim curved blade (drawn upright once by
     # guandao(), then placed or turned for each pose so the proportions never change).
     weapon = guandao(frame)
@@ -386,7 +416,7 @@ def general_frame(state: str, frame: int) -> tuple:
     else:
         c.paste(weapon, 18, (1 if state == "cheer" else 3) - lift + (1 if state == "cheer" and lift else 0))
         c.px(19, top + 3, C["skin"])
-    return split_team(c)
+    return split_layers(c)
 
 
 def guandao(frame: int = 0) -> Canvas:
@@ -419,7 +449,7 @@ def guandao_turned(weapon: Canvas) -> Canvas:
     return turned
 
 
-def advisor_frame(state: str, frame: int) -> tuple:
+def advisor_frame(state: str, frame: int, female: bool = False) -> tuple:
     """A strategist (20×24): long robe with wide sleeves in the side's color, a black scholar's hat
     and a white feather fan they raise to cast a stratagem."""
     c = Canvas(20, 24)
@@ -446,11 +476,19 @@ def advisor_frame(state: str, frame: int) -> tuple:
     c.rect(8, 6, 4, 5, C["skin"])
     c.vline(8, 6, 10, C["skin_dark"])
     c.px(11, 8, C["eye"])
-    c.hline(7, 12, 5, C["hat_black"])
-    c.rect(8, 2, 4, 3, C["hat_black"])
-    c.px(10, 1, C["hat_black"])
-    c.px(9, 3, C["iron"])
-    c.vline(7, 6, 8, C["hair"])
+    if female:
+        c.rect(7, 4, 5, 3, HAIR)
+        c.ellipse(9.5, 3, 2.2, 1.8, HAIR)
+        c.vline(7, 6, 13, HAIR_DARK)  # long hair down the back
+        c.vline(6, 8, 12, HAIR_DARK)
+        c.hline(11, 14, 3, ACCENT)  # hairpin
+        c.px(14, 2, ACCENT_DARK)
+    else:
+        c.rect(7, 3, 5, 3, C["hat_black"])  # winged official's cap
+        c.hline(4, 6, 4, C["hat_black"])
+        c.hline(13, 15, 4, C["hat_black"])
+        c.hline(7, 11, 5, ACCENT)
+        c.vline(7, 6, 8, HAIR)
     # Feather fan.
     if state == "attack" and frame == 0 or state == "cheer":
         fan = (13, 1)
@@ -467,18 +505,26 @@ def advisor_frame(state: str, frame: int) -> tuple:
     c.px(fx, fy + 3, C["feather_dark"])
     c.hline(fx, fx + 2, fy + 3, C["feather_dark"])
     c.px(fx + 1, fy + 1, C["feather_dark"])
-    return split_team(c)
+    return split_layers(c)
 
 
 def sheet(draw_frame, width: int, height: int) -> tuple:
-    base = Canvas(width * FRAMES, height * len(STATES))
-    team = Canvas(width * FRAMES, height * len(STATES))
+    """All states and frames of one sprite, one sheet per layer (base, team, and for officers hair
+    and accent)."""
+    layers = None
     for row, state in enumerate(STATES):
         for frame in range(FRAMES):
-            b, t = draw_frame(state, frame)
-            base.paste(b, frame * width, row * height)
-            team.paste(t, frame * width, row * height)
-    return base, team
+            parts = draw_frame(state, frame)
+            if layers is None:
+                layers = [Canvas(width * FRAMES, height * len(STATES)) for _ in parts]
+            for layer, part in zip(layers, parts):
+                layer.paste(part, frame * width, row * height)
+    return tuple(layers)
+
+
+def save_sheet(name: str, layers: tuple) -> None:
+    for layer, suffix in zip(layers, LAYER_SUFFIXES):
+        layer.save(f"units/{name}{suffix}.png")
 
 
 # --- Battlefield ----------------------------------------------------------------------------
@@ -633,12 +679,9 @@ def draw_all() -> None:
     base, team = sheet(cavalry_frame, 24, 22)
     base.save("units/general_guard.png")
     team.save("units/general_guard_team.png")
-    base, team = sheet(general_frame, 32, 32)
-    base.save("units/general.png")
-    team.save("units/general_team.png")
-    base, team = sheet(advisor_frame, 20, 24)
-    base.save("units/advisor.png")
-    team.save("units/advisor_team.png")
+    for gender, female in (("m", False), ("f", True)):
+        save_sheet(f"general_{gender}", sheet(lambda s, f, fe=female: general_frame(s, f, fe), 32, 32))
+        save_sheet(f"advisor_{gender}", sheet(lambda s, f, fe=female: advisor_frame(s, f, fe), 20, 24))
     mountains().save("battle/mountains.png")
     cloud().save("battle/cloud.png")
     battle_ground().save("battle/ground.png")

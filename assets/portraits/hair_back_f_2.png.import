@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dar82sb582ky0"
-path="res://.godot/imported/advisor_team.png-5bee4d1ffc3fc327470afd9feb53747e.ctex"
+uid="uid://ccrv1fcsa8xy8"
+path="res://.godot/imported/hair_back_f_2.png-4ae720c3822c287e4aeccb74ff13cbe9.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/units/advisor_team.png"
-dest_files=["res://.godot/imported/advisor_team.png-5bee4d1ffc3fc327470afd9feb53747e.ctex"]
+source_file="res://assets/portraits/hair_back_f_2.png"
+dest_files=["res://.godot/imported/hair_back_f_2.png-4ae720c3822c287e4aeccb74ff13cbe9.ctex"]
 
 [params]
 

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bm85mdro35ew8"
-path="res://.godot/imported/advisor.png-ed53e027615e32d33e96b21e4a5bf36b.ctex"
+uid="uid://b64qdh2jpefiu"
+path="res://.godot/imported/eyes_1_m.png-ec5f2fcadf02496617bf16be7996d517.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/units/advisor.png"
-dest_files=["res://.godot/imported/advisor.png-ed53e027615e32d33e96b21e4a5bf36b.ctex"]
+source_file="res://assets/portraits/eyes_1_m.png"
+dest_files=["res://.godot/imported/eyes_1_m.png-ec5f2fcadf02496617bf16be7996d517.ctex"]
 
 [params]
 

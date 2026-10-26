@@ -29,9 +29,7 @@ const FALL_MORALE_LOSS := 3.0
 const DEATH_CHANCE := 0.3
 const WOUND_TURNS := 3
 const GUARD_UNIT_PATH := "res://data/general_units/general_guard.tres"
-const FAMILY_NAMES: Array[String] = ["Trần", "Lê", "Phạm", "Hoàng", "Vũ", "Đặng", "Bùi", "Đỗ", "Ngô", "Dương",
-		"Đinh", "Mạc", "Phan", "Tôn", "Khúc", "Lạc", "Thạch", "Kiều"]
-const MIDDLE_NAMES: Array[String] = ["Văn", "Đức", "Minh", "Quốc", "Hữu", "Công", "Thành", "Bá", "Trọng", "Khắc"]
+## Male given names for generals (family, middle and female names are in Officer).
 const GIVEN_NAMES: Array[String] = ["Dũng", "Hùng", "Khải", "Bình", "Sơn", "Hải", "Long", "Thắng", "Kiên", "Phong",
 		"Vĩnh", "Trung", "Nghĩa", "Đạt", "Lâm", "Uy", "Hào", "Cường", "Hiển", "Tráng", "Bảo", "Chiến"]
 
@@ -58,8 +56,9 @@ func generate(stars: int) -> General:
 	var rank := ranks[clampi(stars, 1, ranks.size())]
 	var general := General.new()
 	general.stars = rank.stars
-	general.name = "%s %s %s" % [FAMILY_NAMES[rng.randi_range(0, FAMILY_NAMES.size() - 1)],
-			MIDDLE_NAMES[rng.randi_range(0, MIDDLE_NAMES.size() - 1)], GIVEN_NAMES[rng.randi_range(0, GIVEN_NAMES.size() - 1)]]
+	general.look = OfficerLook.random(rng)
+	general.name = Officer.random_name(rng, general.look.is_female(), GIVEN_NAMES)
+	GameArt.assign_portrait(general)
 	var total := rng.randi_range(rank.total_min, rank.total_max)
 	var low := maxi(STAT_MIN, total - STAT_MAX)
 	var high := mini(STAT_MAX, total - STAT_MIN)
@@ -230,6 +229,7 @@ func lead(side: BattleSide, board: BoardData, defending: bool) -> void:
 	guard.charge_mult += general.might * GUARD_MIGHT_ATTACK
 	guard.defense_mult += general.command * GUARD_COMMAND_DEFENSE
 	side.general_name = general.name
+	side.general_look = general.look
 	for unit in side.units:
 		if unit.ally != null:
 			continue

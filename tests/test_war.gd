@@ -83,6 +83,18 @@ func test_expand_east_keeps_coordinates() -> void:
 	check_eq(board.get_building_cells(Vector2i(5, 5)).size(), 4, "Castle stays put")
 
 
+## Annexing a clan grows the board: upgraded buildings must keep their level (bug after M11f).
+func test_expand_keeps_building_levels() -> void:
+	for direction: Vector2i in [Vector2i.UP, Vector2i.LEFT, Vector2i.RIGHT, Vector2i.DOWN]:
+		var board := BoardData.create_starting_board(12)
+		board.set_land(Vector2i(4, 3), &"hill", false)
+		board.place_building(&"mine", Vector2i(4, 3), Vector2i.ONE)
+		board.set_building_level(Vector2i(4, 3), 4)
+		var shift := Vector2i(4 if direction == Vector2i.LEFT else 0, 4 if direction == Vector2i.UP else 0)
+		board.expand(direction, 4)
+		check_eq(board.get_building_level(Vector2i(4, 3) + shift), 4, "Level kept growing %s" % direction)
+
+
 # --- Declaring war ------------------------------------------------------------------------
 
 func test_player_declares_war() -> void:
