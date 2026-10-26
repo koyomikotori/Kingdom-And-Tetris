@@ -4,7 +4,8 @@ extends Node2D
 const NO_SELECTION := -1
 const NO_BUILDING: StringName = &""
 const NO_MOVE := Vector2i(-1, -1)
-const TAB_TITLES: Array[String] = ["Mảnh đất", "Xây dựng", "Quân đội"]
+## Short titles: four tabs share the 300 px side panel.
+const TAB_TITLES: Array[String] = ["Đất", "Xây dựng", "Quân đội", "Tướng sĩ"]
 
 @export var board_size := 12
 ## 0 = random seed each run. Set a number to replay the same pieces while testing.
@@ -46,6 +47,8 @@ var _pending_victory := Victory.NO_PATH
 @onready var piece_list: Container = %PieceList
 @onready var build_panel: BuildPanel = %BuildPanel
 @onready var army_panel: ArmyPanel = %ArmyPanel
+## Built in code (_build_officers_tab).
+var officers_panel: OfficersPanel
 @onready var placement_status: Label = %PlacementStatus
 @onready var end_turn_button: Button = %EndTurnButton
 @onready var diplomacy_button: Button = %DiplomacyButton
@@ -60,6 +63,7 @@ func _ready() -> void:
 	_resource_types = ResourceTypeData.load_all()
 	var units := UnitData.load_all()
 	_build_resource_labels()
+	_build_officers_tab()
 	for i in TAB_TITLES.size():
 		tabs.set_tab_title(i, TAB_TITLES[i])
 
@@ -599,6 +603,25 @@ func _building_anchor(building: BuildingData) -> Vector2i:
 	return (building.size - Vector2i.ONE) / 2
 
 
+## The "Tướng sĩ" tab (GDD §13, M12c): built in code after the scene's three tabs.
+func _build_officers_tab() -> void:
+	var scroll := ScrollContainer.new()
+	scroll.name = "OfficersTab"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	tabs.add_child(scroll)
+	officers_panel = OfficersPanel.new()
+	officers_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	officers_panel.add_theme_constant_override("separation", 6)
+	officers_panel.officer_selected.connect(_open_officer)
+	scroll.add_child(officers_panel)
+
+
+func _open_officer(officer: Officer) -> void:
+	var window := OfficerWindow.new()
+	$UI.add_child(window)
+	window.open(state, officer)
+
+
 ## One icon + amount per resource on the wooden top bar; the name is in the tooltip.
 func _build_resource_labels() -> void:
 	for type in _resource_types:
@@ -636,6 +659,7 @@ func _refresh_economy() -> void:
 		label.tooltip_text = "\n".join(lines)
 	army_panel.refresh(state)
 	build_panel.refresh(state)
+	officers_panel.refresh(state)
 	board_view.castle_level = state.castle_level
 
 

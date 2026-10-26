@@ -50,8 +50,8 @@ func _initialize() -> void:
 	theme.set_color("font_outline_color", "Button", Color(0.17, 0.11, 0.07))
 	theme.set_constant("outline_size", "Button", 4)
 
-	var selected := _box("tab_selected.png", TAB_MARGIN, Vector4(8, 6, 8, 4))
-	var unselected := _box("tab_unselected.png", TAB_MARGIN, Vector4(8, 6, 8, 4))
+	var selected := _box("tab_selected.png", TAB_MARGIN, Vector4(5, 6, 5, 4))
+	var unselected := _box("tab_unselected.png", TAB_MARGIN, Vector4(5, 6, 5, 4))
 	theme.set_stylebox("tab_selected", "TabContainer", selected)
 	theme.set_stylebox("tab_unselected", "TabContainer", unselected)
 	theme.set_stylebox("tab_hovered", "TabContainer", unselected)

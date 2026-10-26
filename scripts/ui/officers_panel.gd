@@ -1,0 +1,83 @@
+class_name OfficersPanel
+extends VBoxContainer
+## The "Tướng sĩ" side tab (GDD §13, M12c, Ninja Village style): one row per general and advisor
+## with their battle sprite, name, stars, post, level and status. Tapping a row emits
+## `officer_selected`; the kingdom scene opens the officer's window. Read-only.
+
+signal officer_selected(officer: Officer)
+
+const ROW_HEIGHT := 76
+const WARNING_COLOR := UiPalette.WARNING
+
+
+func refresh(state: KingdomState) -> void:
+	for child in get_children():
+		remove_child(child)
+		child.queue_free()
+	var generals := state.generals
+	add_child(_header("Tướng (%d/%d)" % [generals.generals.size(), Generals.MAX_GENERALS]))
+	if generals.generals.is_empty():
+		add_child(_small("Chưa có tướng nào. Tuyển ở thành chính, tab Chiêu hiền."))
+	for general in generals.generals:
+		var role := "Tổng tướng" if general == generals.commander else "Dự bị"
+		add_child(_row(general, role))
+	var advisors := state.advisors
+	add_child(_header("Mưu sĩ (%d/%d)" % [advisors.advisors.size(), Advisors.MAX_ADVISORS]))
+	if advisors.advisors.is_empty():
+		add_child(_small("Chưa có mưu sĩ nào. Tuyển ở thành chính, tab Chiêu hiền."))
+	for advisor in advisors.advisors:
+		var role := Advisors.POST_NAMES[advisor.post] if advisor.post != Advisor.NO_POST else "Chưa giữ chức"
+		add_child(_row(advisor, role))
+
+
+## A tappable row: battle sprite, "Name ★★", "role · level", wounds and unspent points.
+func _row(officer: Officer, role: String) -> Control:
+	var panel := PanelContainer.new()
+	panel.theme_type_variation = &"InsetPanel"
+	panel.custom_minimum_size = Vector2(0, ROW_HEIGHT)
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	panel.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			officer_selected.emit(officer))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(row)
+	var figure := OfficerFigure.new()
+	figure.setup(officer, 2)
+	row.add_child(figure)
+	var column := VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(column)
+	column.add_child(_line("%s %s" % [officer.name, officer.star_text()], 14))
+	column.add_child(_line("%s · Cấp %d" % [role, officer.level], 12, UiPalette.MUTED))
+	if not officer.is_ready():
+		column.add_child(_line("Bị thương, còn %d lượt" % officer.wounded_turns, 12, WARNING_COLOR))
+	if officer.points > 0:
+		column.add_child(_line("Còn %d điểm cộng" % officer.points, 12, UiPalette.ACCENT))
+	return panel
+
+
+func _header(text: String) -> Label:
+	var label := _line(text, 15, UiPalette.HEADER)
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	return label
+
+
+func _small(text: String) -> Label:
+	var label := _line(text, 12, UiPalette.MUTED)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	return label
+
+
+func _line(text: String, font_size: int, color: Color = UiPalette.TEXT) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return label

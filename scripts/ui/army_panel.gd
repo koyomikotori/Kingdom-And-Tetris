@@ -74,7 +74,7 @@ func refresh(state: KingdomState) -> void:
 		leader = "Tổng tướng: %s %s · Võ lực %d · Thống suất %d%s" % [commander.name, commander.star_text(),
 				commander.might, commander.command,
 				"" if commander.is_ready() else " · bị thương, còn %d lượt" % commander.wounded_turns]
-	var strategist := "Mưu sĩ Quân sự: chưa có (giao chức ở thành chính, tab Mưu sĩ)."
+	var strategist := "Mưu sĩ Quân sự: chưa có (giao chức ở tab Tướng sĩ)."
 	var advisor := state.advisors.holder(&"military")
 	if advisor != null:
 		strategist = "Mưu sĩ Quân sự: %s %s · Mưu lược %d · %d mưu kế%s" % [advisor.name, advisor.star_text(),

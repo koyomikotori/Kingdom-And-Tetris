@@ -65,7 +65,7 @@ func test_every_unit_has_a_battle_sprite_sheet() -> void:
 	for unit in all_units:
 		var id := unit.get_sprite_id()
 		var sheet := GameArt.unit_sheet(id)
-		var team := GameArt.unit_sheet(id, true)
+		var team := GameArt.unit_sheet(id, "_team")
 		check(ResourceLoader.exists(GameArt.UNIT_DIR + String(id) + ".png"), "Own sheet for %s" % id)
 		check(sheet != null and team != null and sheet.get_size() == team.get_size(), "%s: sheet + team layer" % id)
 		if sheet != null:
@@ -97,10 +97,15 @@ func test_sides_wear_their_colors() -> void:
 
 
 func test_commander_and_strategist_have_their_own_sprites() -> void:
-	for id: StringName in [BattleView.GENERAL_SPRITE, BattleView.ADVISOR_SPRITE]:
-		check(ResourceLoader.exists(GameArt.UNIT_DIR + String(id) + ".png"), "%s sheet" % id)
-		check(ResourceLoader.exists(GameArt.UNIT_DIR + String(id) + "_team.png"), "%s team layer" % id)
-	var general := GameArt.unit_sheet(BattleView.GENERAL_SPRITE)
+	for kind: StringName in [BattleView.GENERAL_KIND, BattleView.ADVISOR_KIND]:
+		for gender: StringName in OfficerLook.GENDERS:
+			var look := OfficerLook.new()
+			look.gender = gender
+			var id := GameArt.officer_sprite(kind, look)
+			check_eq(id, StringName("%s_%s" % [kind, gender]), "Sprite id by gender")
+			for layer in GameArt.LAYERS:
+				check(ResourceLoader.exists(GameArt.UNIT_DIR + String(id) + layer + ".png"), "%s%s" % [id, layer])
+	var general := GameArt.unit_sheet(GameArt.officer_sprite(BattleView.GENERAL_KIND, null))
 	var soldier := GameArt.unit_sheet(&"swordsman")
 	check(GameArt.unit_frame(general, &"stand", 0).size.y > GameArt.unit_frame(soldier, &"stand", 0).size.y,
 			"The commander is bigger than a soldier")

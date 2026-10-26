@@ -37,7 +37,7 @@ const WOUND_TURNS := 3
 const POST_TURN_XP := 10
 const BATTLE_XP := 30
 const WIN_XP := 30
-## Given names for advisors (family and middle names are shared with Generals).
+## Male given names for advisors (family, middle and female names are in Officer).
 const ADVISOR_NAMES: Array[String] = ["Trí", "Mưu", "Luận", "Thông", "Hiền", "Tuệ", "Đoán", "Liêm", "Tri", "Kế",
 		"Lược", "Văn", "Học", "Sách", "Minh", "Đức"]
 
@@ -54,9 +54,9 @@ func generate(stars: int) -> Advisor:
 	var rank := ranks[clampi(stars, 1, ranks.size())]
 	var advisor := Advisor.new()
 	advisor.stars = rank.stars
-	advisor.name = "%s %s %s" % [Generals.FAMILY_NAMES[rng.randi_range(0, Generals.FAMILY_NAMES.size() - 1)],
-			Generals.MIDDLE_NAMES[rng.randi_range(0, Generals.MIDDLE_NAMES.size() - 1)],
-			ADVISOR_NAMES[rng.randi_range(0, ADVISOR_NAMES.size() - 1)]]
+	advisor.look = OfficerLook.random(rng)
+	advisor.name = Officer.random_name(rng, advisor.look.is_female(), ADVISOR_NAMES)
+	GameArt.assign_portrait(advisor)
 	var total := clampi(roundi(rng.randi_range(rank.total_min, rank.total_max) * STAT_TOTAL_FACTOR),
 			STAT_MIN * 3, STAT_MAX * 3)
 	var stats := [STAT_MIN, STAT_MIN, STAT_MIN]
@@ -151,16 +151,23 @@ func spend_point(advisor: Advisor, stat: StringName) -> bool:
 func can_spend_point(advisor: Advisor, stat: StringName) -> bool:
 	if advisor == null or advisor.points <= 0 or not STAT_IDS.has(stat):
 		return false
-	return _stat(advisor, stat) < STAT_MAX
+	return advisor.get_stat(stat) < STAT_MAX
 
 
-func _stat(advisor: Advisor, stat: StringName) -> int:
-	match stat:
+## What a post gives right now with `points` in its stat, for the UI.
+static func describe_post(post_id: StringName, points: int) -> String:
+	match post_id:
 		&"admin":
-			return advisor.admin
+			return "Đang cộng: +%d%% sản lượng công trình khai thác, −%d%% giá xây dựng và nâng cấp, −%d%% phí nuôi quân và tướng." % [
+					roundi(points * ADMIN_YIELD * 100), roundi(points * ADMIN_COST * 100), roundi(points * ADMIN_UPKEEP * 100)]
 		&"diplomacy":
-			return advisor.diplomacy
-	return advisor.strategy
+			return "Đang cộng: giao thương lợi hơn %d%%, +%d%% khả năng được chấp nhận, −%d%% cảnh giác, +%d%% quà tặng." % [
+					roundi(points * Diplomacy.ENVOY_PRICE * 100), roundi(points * Diplomacy.ENVOY_CHANCE * 100),
+					roundi(points * Diplomacy.ENVOY_WARINESS * 100), roundi(points * Diplomacy.ENVOY_GIFT * 100)]
+		&"military":
+			return "Đang cộng: +%.1f sĩ khí, +%d%% tấn công tầm xa; mỗi mưu kế %d%% thành công đầu trận." % [
+					points * MILITARY_MORALE, roundi(points * MILITARY_RANGE * 100), roundi(stratagem_chance(points) * 100)]
+	return ""
 
 
 func get_upkeep() -> Dictionary[StringName, int]:
@@ -217,6 +224,7 @@ func assist(side: BattleSide) -> void:
 	if advisor == null:
 		return
 	side.advisor_name = advisor.name
+	side.advisor_look = advisor.look
 	side.strategy = advisor.strategy
 	for id in advisor.stratagems:
 		if stratagems.has(id):

@@ -58,9 +58,10 @@ const STATE_FPS: Dictionary[StringName, float] = {&"stand": 2.0, &"walk": 7.0, &
 const SHOT_POSE_TIME := 0.8
 const EFFECT_TIME := 1.6
 const EFFECT_SCALE := 3.0
-## Sprite sheets of the commander (riding at the head of the bodyguard) and of the strategist.
-const GENERAL_SPRITE: StringName = &"general"
-const ADVISOR_SPRITE: StringName = &"advisor"
+## Officer sprite kinds (GameArt.officer_sprite picks the variant from the officer's look): the
+## commander rides at the head of the bodyguard, the strategist stands behind the army.
+const GENERAL_KIND: StringName = &"general"
+const ADVISOR_KIND: StringName = &"advisor"
 
 
 class Figure:
@@ -520,8 +521,13 @@ func _draw_unit(view: UnitView) -> void:
 				leader = figure
 				break
 	var base_id := view.unit.data.get_sprite_id()
+	var side := _simulator.record.sides[view.battle_side]
+	var leader_id := GameArt.officer_sprite(GENERAL_KIND, side.general_look)
+	var tints := GameArt.unit_tints(_clothes_color(view))
+	var leader_tints := GameArt.unit_tints(_clothes_color(view), side.general_look)
 	for figure in view.figures:
-		var sprite_id := GENERAL_SPRITE if figure == leader else base_id
+		var sprite_id := leader_id if figure == leader else base_id
+		var figure_tints := leader_tints if figure == leader else tints
 		match figure.state:
 			Figure.State.STAND:
 				var state := &"stand"
@@ -534,12 +540,12 @@ func _draw_unit(view: UnitView) -> void:
 				var frame := _frame(state, figure.phase)
 				if shooting and not fighting and not running and not cheering:
 					frame = 0 if _simulator.time - view.last_volley < SHOT_POSE_TIME * 0.5 else 1
-				_draw_sprite(sprite_id, view.pos + figure.offset, 0.0, facing, state, frame, 0.0, _clothes_color(view))
+				_draw_sprite(sprite_id, view.pos + figure.offset, 0.0, facing, state, frame, 0.0, figure_tints)
 			Figure.State.FLY:
-				_draw_sprite(sprite_id, figure.pos, figure.rotation, facing, &"fall", 0, 0.25, _clothes_color(view))
+				_draw_sprite(sprite_id, figure.pos, figure.rotation, facing, &"fall", 0, 0.25, figure_tints)
 			Figure.State.FLEE:
 				_draw_sprite(sprite_id, figure.pos, 0.0, -facing, &"walk", _frame(&"walk", figure.phase), 0.35,
-						_clothes_color(view))
+						figure_tints)
 	if view.unit.ally != null:
 		_draw_banner(view, facing, view.unit.ally.color, 18.0)
 	if leader != null:
@@ -560,7 +566,8 @@ func _draw_advisor(battle_side: int) -> void:
 		state = &"cheer"
 	elif _simulator.time - _advisor_cast[battle_side] < ADVISOR_CAST_TIME:
 		state = &"attack"
-	_draw_sprite(ADVISOR_SPRITE, foot, 0.0, _facing(screen_side), state, _frame(state, 0.0), 0.0, side.color)
+	_draw_sprite(GameArt.officer_sprite(ADVISOR_KIND, side.advisor_look), foot, 0.0, _facing(screen_side), state,
+			_frame(state, 0.0), 0.0, GameArt.unit_tints(side.color, side.advisor_look))
 
 
 func _frame(state: StringName, phase: float) -> int:
@@ -574,22 +581,12 @@ func _clothes_color(view: UnitView) -> Color:
 	return _simulator.record.sides[view.battle_side].color
 
 
-## One figure standing on `foot` (the sprite's bottom middle), facing right when facing > 0; its
-## clothes in `clothes`.
+## One figure standing on `foot` (the sprite's bottom middle), facing right when facing > 0, its
+## layers tinted with `tints` (GameArt.unit_tints).
 func _draw_sprite(sprite_id: StringName, foot: Vector2, rotation: float, facing: float, state: StringName,
-		frame: int, darken: float, clothes: Color) -> void:
-	var sheet := GameArt.unit_sheet(sprite_id)
-	var team := GameArt.unit_sheet(sprite_id, true)
-	if sheet == null:
-		draw_rect(Rect2(foot - Vector2(6, 24), Vector2(12, 24)), clothes.darkened(darken))
-		return
-	var region := GameArt.unit_frame(sheet, state, frame)
-	var rect := Rect2(Vector2(-region.size.x * 0.5, -region.size.y), region.size)
-	draw_set_transform(foot, rotation, Vector2(facing * SPRITE_SCALE, SPRITE_SCALE))
-	draw_texture_rect_region(sheet, rect, region, Color.WHITE.darkened(darken))
-	if team != null:
-		draw_texture_rect_region(team, rect, region, clothes.darkened(darken))
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		frame: int, darken: float, tints: Dictionary) -> void:
+	GameArt.draw_unit(self, sprite_id, foot, rotation, Vector2(facing * SPRITE_SCALE, SPRITE_SCALE), state, frame,
+			tints, darken)
 
 
 ## A pennant on a pole above the unit's first standing figure: the lending clan's color for allies,
