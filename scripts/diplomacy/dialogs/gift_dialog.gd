@@ -51,4 +51,6 @@ func _on_gift_pressed() -> void:
 	var gain := state.diplomacy.gift_gain(clan_id, _gift())
 	var result := state.diplomacy.give_gift(state.stockpile, clan_id, _gift())
 	var ok := result == Diplomacy.GiftResult.OK
+	if ok:
+		Sfx.play(&"coins")
 	set_status(Diplomacy.describe_gift(result) + (" Quan hệ +%d." % gain if ok else ""), ok)

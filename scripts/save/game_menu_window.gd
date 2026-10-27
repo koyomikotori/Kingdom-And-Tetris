@@ -1,10 +1,7 @@
 class_name GameMenuWindow
 extends ModalWindow
-## In-game menu from the top bar (GDD §10.1): keep playing, save, load, turn the map effects on or
-## off (GameSettings, M13c) or go back to the main menu.
-
-## The map effects setting changed: the kingdom scene applies it at once.
-signal settings_changed
+## In-game menu from the top bar (GDD §10.1): keep playing, save, load, settings (SettingsWindow,
+## M14a) or go back to the main menu.
 
 const ACCENT := UiPalette.ACCENT
 const TO_MENU_TEXT := "Về menu chính"
@@ -25,13 +22,10 @@ func open(state: KingdomState, system: SaveSystem, host: Node) -> void:
 	body.add_child(_menu_button("Tiếp tục chơi", close))
 	body.add_child(_menu_button("Lưu game", _open_slots.bind(SaveSlotWindow.Mode.SAVE)))
 	body.add_child(_menu_button("Tải game", _open_slots.bind(SaveSlotWindow.Mode.LOAD)))
-	var effects := _menu_button("", func() -> void: pass)
-	effects.text = _effects_text()
-	effects.pressed.connect(func() -> void:
-		GameSettings.set_map_effects(not GameSettings.map_effects())
-		effects.text = _effects_text()
-		settings_changed.emit())
-	body.add_child(effects)
+	body.add_child(_menu_button("Cài đặt", func() -> void:
+		var window := SettingsWindow.new()
+		_host.add_child(window)
+		window.open()))
 	_to_menu_button = _menu_button(TO_MENU_TEXT, _on_to_menu_pressed)
 	_to_menu_button.add_theme_color_override("font_color", UiPalette.WARNING_ON_WOOD)
 	body.add_child(_to_menu_button)
@@ -39,10 +33,6 @@ func open(state: KingdomState, system: SaveSystem, host: Node) -> void:
 	_last_save.add_theme_color_override("font_color", MUTED_COLOR)
 	body.add_child(_last_save)
 	_refresh_last_save()
-
-
-func _effects_text() -> String:
-	return "Hiệu ứng bản đồ: %s" % ("Bật" if GameSettings.map_effects() else "Tắt")
 
 
 func _menu_button(text: String, on_pressed: Callable) -> Button:

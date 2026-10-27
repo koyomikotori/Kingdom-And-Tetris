@@ -113,6 +113,7 @@ func _on_action(id: StringName) -> void:
 	var result := _state.recruit(id)
 	if result == RecruitmentRules.Result.OK:
 		set_status("Đã tuyển 1 đơn vị %s (+%d lính)." % [unit.display_name, unit.squad_size])
+		Sfx.play(&"recruit")
 	else:
 		set_status(RecruitmentRules.describe(result, unit, _state.buildings, _state.terrains), false)
 	refresh()

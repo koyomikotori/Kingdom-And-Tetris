@@ -95,6 +95,8 @@ func set_status(text: String, good: bool = true) -> void:
 	_status.text = text
 	_status.visible = not text.is_empty()
 	_status.add_theme_color_override("font_color", GOOD_COLOR if good else WARNING_COLOR)
+	if not good and not text.is_empty():
+		Sfx.play(&"error")
 
 
 ## A preview line: plain when the action is possible, in the warning color when it is not.

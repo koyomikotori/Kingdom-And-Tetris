@@ -1,12 +1,27 @@
 class_name GameSettings
 extends RefCounted
-## Player preferences kept on this computer (user://settings.cfg), apart from the saves (M13c).
-## Only "map_effects" so far: building animations and walkers on the kingdom map.
+## Player preferences kept on this computer (user://settings.cfg), apart from the saves: map effects
+## (building animations and walkers, M13c), music and sound volumes and full screen (M14a).
+## Changed in SettingsWindow; `changed` lets open scenes apply them at once.
 
 const PATH := "user://settings.cfg"
+const DEFAULT_MUSIC_VOLUME := 0.6
+const DEFAULT_SOUND_VOLUME := 0.8
 
+## Tests point this somewhere else (`use_file`) so they never touch the player's settings.
+static var file_path := PATH
 static var _loaded := false
 static var _map_effects := true
+static var _music_volume := DEFAULT_MUSIC_VOLUME
+static var _sound_volume := DEFAULT_SOUND_VOLUME
+static var _fullscreen := false
+## Emitted after any setting changed (a static signal: listeners connect to `GameSettings.notifier.changed`).
+static var notifier := Notifier.new()
+
+
+class Notifier:
+	extends RefCounted
+	signal changed
 
 
 static func map_effects() -> bool:
@@ -14,13 +29,59 @@ static func map_effects() -> bool:
 	return _map_effects
 
 
+static func music_volume() -> float:
+	_load()
+	return _music_volume
+
+
+static func sound_volume() -> float:
+	_load()
+	return _sound_volume
+
+
+static func fullscreen() -> bool:
+	_load()
+	return _fullscreen
+
+
 static func set_map_effects(on: bool) -> void:
 	_load()
 	_map_effects = on
+	_store("display", "map_effects", on)
+
+
+## 0..1.
+static func set_music_volume(volume: float) -> void:
+	_load()
+	_music_volume = clampf(volume, 0.0, 1.0)
+	_store("audio", "music_volume", _music_volume)
+
+
+## 0..1.
+static func set_sound_volume(volume: float) -> void:
+	_load()
+	_sound_volume = clampf(volume, 0.0, 1.0)
+	_store("audio", "sound_volume", _sound_volume)
+
+
+static func set_fullscreen(on: bool) -> void:
+	_load()
+	_fullscreen = on
+	_store("display", "fullscreen", on)
+
+
+## Reads and writes `path` from now on, forgetting what was read (tests use their own file).
+static func use_file(path: String) -> void:
+	file_path = path
+	_loaded = false
+
+
+static func _store(section: String, key: String, value: Variant) -> void:
 	var file := ConfigFile.new()
-	file.load(PATH)
-	file.set_value("display", "map_effects", on)
-	file.save(PATH)
+	file.load(file_path)
+	file.set_value(section, key, value)
+	file.save(file_path)
+	notifier.changed.emit()
 
 
 static func _load() -> void:
@@ -28,5 +89,8 @@ static func _load() -> void:
 		return
 	_loaded = true
 	var file := ConfigFile.new()
-	if file.load(PATH) == OK:
-		_map_effects = bool(file.get_value("display", "map_effects", true))
+	file.load(file_path)
+	_map_effects = bool(file.get_value("display", "map_effects", true))
+	_fullscreen = bool(file.get_value("display", "fullscreen", false))
+	_music_volume = clampf(float(file.get_value("audio", "music_volume", DEFAULT_MUSIC_VOLUME)), 0.0, 1.0)
+	_sound_volume = clampf(float(file.get_value("audio", "sound_volume", DEFAULT_SOUND_VOLUME)), 0.0, 1.0)

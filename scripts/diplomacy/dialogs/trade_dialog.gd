@@ -58,5 +58,6 @@ func _on_trade_pressed() -> void:
 	var ok := result == Diplomacy.TradeResult.OK
 	var text := Diplomacy.describe_trade(result)
 	if ok:
+		Sfx.play(&"coins")
 		text += " Nhận %d %s." % [state.stockpile.get_amount(get_id) - before, _resource_name(get_id)]
 	set_status(text, ok)

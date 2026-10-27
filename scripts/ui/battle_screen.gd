@@ -30,6 +30,9 @@ var _result_timer := -1.0
 ## Stratagems used at the start of the battle (GDD §8, M11f), shown over the battlefield.
 var _stratagem_label: Label
 var _stratagem_timer := 0.0
+## Real seconds between steel sounds while the lines fight (randomized a little).
+const CLASH_INTERVAL := 0.28
+var _clash_timer := 0.0
 
 
 ## `player_side` is the BattleRecord side the player commands; it is drawn on the left.
@@ -51,6 +54,7 @@ func start(simulator: BattleSimulator, player_side: int, title: String) -> void:
 	layout.add_child(_build_middle(simulator))
 	layout.add_child(_build_controls())
 	_select_speed(0)
+	Sfx.play(&"battle_start")
 
 
 func _process(delta: float) -> void:
@@ -59,6 +63,7 @@ func _process(delta: float) -> void:
 	var events := _playback.advance(delta)
 	var battle_delta := 0.0 if _playback.paused else delta * _playback.speed
 	_view.update_view(battle_delta, events)
+	_play_sounds(events, delta)
 	_show_stratagems(events, battle_delta)
 	for panel in _info_panels:
 		panel.refresh()
@@ -72,6 +77,33 @@ func _process(delta: float) -> void:
 			set_process(false)
 			finished.emit(_playback.simulator.record)
 			queue_free()
+
+
+## Sounds of the battle (M14a): one per simulator event, plus steel ringing now and then while the
+## lines are in melee (CLASH_INTERVAL real seconds, faster at higher speeds).
+func _play_sounds(events: Array[Dictionary], delta: float) -> void:
+	for event in events:
+		var side := _playback.simulator.record.sides[event.side]
+		var unit: BattleSide.Unit = side.units[event.unit] if event.unit >= 0 and event.unit < side.units.size() else null
+		match event.type:
+			&"gun_volley":
+				Sfx.play(&"cannon" if event.get("all_rows", false) else &"gun")
+			&"arrow_volley":
+				Sfx.play(&"crossbow" if unit != null and unit.data.armor_pierce > 0.0 else &"bow", -2.0)
+			&"charge":
+				Sfx.play(&"charge", -2.0)
+			&"broken", &"retreat":
+				Sfx.play(&"horn", -3.0)
+			&"general_fallen":
+				Sfx.play(&"general_fallen")
+			&"stratagem":
+				Sfx.play(&"stratagem")
+	if _playback.paused or _playback.is_finished() or not _playback.simulator.is_melee_started():
+		return
+	_clash_timer -= delta * sqrt(_playback.speed)
+	if _clash_timer <= 0.0:
+		_clash_timer = CLASH_INTERVAL * randf_range(0.6, 1.4)
+		Sfx.play(StringName("clash_%d" % randi_range(1, 3)), -6.0, 0.12)
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -256,5 +288,6 @@ func _show_result() -> void:
 		_result_label.text = "RÚT LUI"
 	else:
 		_result_label.text = "CHIẾN THẮNG" if won else "THẤT BẠI"
+	Sfx.sting(&"victory" if won and record.retreated_side != _player_side else &"defeat")
 	_result_label.add_theme_color_override("font_color", WIN_COLOR if won else LOSS_COLOR)
 	_result_label.visible = true
