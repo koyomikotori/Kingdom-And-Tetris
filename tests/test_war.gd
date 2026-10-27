@@ -233,7 +233,7 @@ func test_winning_attack_loots_and_can_annex() -> void:
 	check_eq(result.loot, {&"food": result.enemy_lost, &"wood": result.enemy_lost, &"stone": result.enemy_lost}, "1 of each per fallen enemy")
 	check(result.annexed, "Below 15%: the clan surrenders")
 	check(state.wars.fronts[&"south_farmers"].annexed, "Marked annexed")
-	check_eq([state.board.width, state.board.height], [12, 16], "Board grew 4 rows to the south")
+	check_eq([state.board.width, state.board.height], [12, 12 + Wars.ANNEX_EXPANSION], "Board grew to the south")
 	check_eq(state.wars.fronts[&"steppe_tribes"].direction, ClanData.Direction.SOUTH, "Steppe tribes are the new southern neighbour")
 	check_eq(state.wars.check_declare(&"steppe_tribes"), Wars.DeclareResult.OK, "...and can now be fought")
 	var stock: Dictionary[StringName, int] = {&"food": 50}
@@ -251,7 +251,7 @@ func test_winning_without_crushing_them_does_not_annex() -> void:
 	state.wars.fronts[&"south_farmers"].max_strength = 1000
 	var result := state.finish_attack(&"south_farmers", _run(state.start_attack(&"south_farmers")))
 	check(not result.annexed or state.wars.fronts[&"south_farmers"].strength < 150, "Annex only below 15% of maximum")
-	check_eq([state.board.width, state.board.height], [12, 12] if not result.annexed else [12, 16], "Board grows only on annexation")
+	check_eq([state.board.width, state.board.height], [12, 12] if not result.annexed else [12, 12 + Wars.ANNEX_EXPANSION], "Board grows only on annexation")
 
 
 # --- Peace ------------------------------------------------------------------------------

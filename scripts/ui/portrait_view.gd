@@ -1,21 +1,21 @@
 class_name PortraitView
 extends Control
-## An officer's pixel portrait (GDD §13, M12c), 64×64 drawn `art_scale` times: a hand-drawn / AI
+## An officer's pixel portrait (GDD §13, M12c), 96×96 drawn `art_scale` times: a hand-drawn / AI
 ## portrait from the pool (GameArt.officer_pool_portrait) or one named after the officer
 ## (GameArt.custom_portrait), on the background and inside the frame; otherwise parts from
 ## tools/art/portrait_art.py stacked and tinted from the officer's OfficerLook. Read-only.
 
-const SIZE := 64
+const SIZE := 96
 ## Stars from which the frame gets its gold border.
 const GOLD_FRAME_STARS := 4
 
-var art_scale := 3
+var art_scale := 2
 var _officer: Officer
 var _team := KingdomState.PLAYER_COLOR
 
 
 ## `team`: the armor cloth / robe color (the player's color for the kingdom's officers).
-func setup(officer: Officer, scale: int = 3, team: Color = KingdomState.PLAYER_COLOR) -> void:
+func setup(officer: Officer, scale: int = 2, team: Color = KingdomState.PLAYER_COLOR) -> void:
 	_officer = officer
 	art_scale = scale
 	_team = team

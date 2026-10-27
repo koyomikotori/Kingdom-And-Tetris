@@ -40,7 +40,7 @@ const ATTACK_DEFEAT_COMPENSATION := 0.25
 ## A clan whose army falls below this share of its maximum surrenders and is annexed.
 const ANNEX_THRESHOLD := 0.15
 ## Rows/columns of wild land the kingdom board gains on the annexed clan's side.
-const ANNEX_EXPANSION := 4
+const ANNEX_EXPANSION := 2
 const PEACE_BASE_CHANCE := 0.1
 const PEACE_LOSSES_WEIGHT := 0.8
 const PEACE_TRIBUTE_PER_POINT := 100.0

@@ -142,3 +142,10 @@ func test_without_pool_portraits_the_parts_are_used() -> void:
 	var look := OfficerLook.new()
 	look.portrait = "general_m_03.png"
 	check_eq(OfficerLook.from_save(look.to_save()).portrait, "general_m_03.png", "The given portrait is saved")
+
+
+func test_portrait_art_is_portrait_size() -> void:
+	for part: String in ["bg", "frame_0", "frame_1", "face_m", "helmet", "body_advisor"]:
+		var texture := GameArt.portrait_part(part)
+		check(texture != null and texture.get_size() == Vector2.ONE * PortraitView.SIZE,
+				"%s is %d×%d" % [part, PortraitView.SIZE, PortraitView.SIZE])

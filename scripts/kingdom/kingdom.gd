@@ -354,9 +354,11 @@ func _attack_clan(clan_id: StringName) -> void:
 		if not compensation.is_empty():
 			lines.append("Bồi thường chiến phí: %s." % compensation)
 		if result.annexed:
-			lines.append("%s đầu hàng và sáp nhập vào vương quốc! Lãnh thổ mở rộng thêm %d hàng đất hoang %s." % [
-					_clan_name(clan_id), Wars.ANNEX_EXPANSION,
-					ClanData.DIRECTION_NAMES[state.wars.fronts[clan_id].direction].to_lower()])
+			var direction := state.wars.fronts[clan_id].direction
+			var line_name := "cột" if direction in [ClanData.Direction.EAST, ClanData.Direction.WEST] else "hàng"
+			lines.append("%s đầu hàng và sáp nhập vào vương quốc! Bản đồ mở rộng thêm %d %s đất hoang %s." % [
+					_clan_name(clan_id), Wars.ANNEX_EXPANSION, line_name,
+					ClanData.DIRECTION_NAMES[direction].to_lower()])
 		var title_text := "Chiến thắng!" if result.won else "Thất bại!"
 		if result.annexed:
 			title_text = "%s đã bị sáp nhập!" % _clan_name(clan_id)

@@ -11,13 +11,15 @@ import random
 
 from pathlib import Path
 
+from PIL import Image
+
 from pixel import ASSETS, CLEAR, P, Canvas, hex_color
 
 S = 48
-# Portraits are 64×64 (the size of hand-drawn / AI portraits in assets/portraits/pool/). Background
-# and frames are drawn at that size; the 48×48 parts sit at PART_OFFSET, touching the bottom edge.
-F = 64
-PART_OFFSET = (8, 16)
+# Portraits are 96×96 (the size of hand-drawn / AI portraits in assets/portraits/pool/). Background
+# and frames are drawn at that size; the 48×48 parts are doubled to fill it.
+F = 96
+PART_SCALE = 2
 G_LIGHT, G_BASE, G_SHADE, G_DEEP = (hex_color("f5f5f5"), hex_color("cdcdcd"), hex_color("969696"),
                                     hex_color("696969"))
 K = {
@@ -340,35 +342,37 @@ def background() -> Canvas:
         c.hline(0, F - 1, y, color)
     far = hex_color("a9c0d4")
     for x in range(F):
-        peak = 42 + int(5 * abs(((x * 2) % 24) / 12 - 1))
+        peak = 63 + int(8 * abs(((x * 2) % 36) / 18 - 1))
         for y in range(peak, F):
             c.px(x, y, far)
-    for _ in range(6):
-        c.px(rng.randrange(F), rng.randrange(4, 28), hex_color("e8f2fa"))
+    for _ in range(9):
+        c.px(rng.randrange(F), rng.randrange(6, 42), hex_color("e8f2fa"))
     return c
 
 
 def frame(tier: int) -> Canvas:
-    """Wooden frame; tier 1 (4★ and up) adds a gold inner border and corner studs."""
+    """Wooden frame (outline, 2 px of wood); tier 1 (4★ and up) adds a gold inner border and
+    corner studs. It covers the outer 4 px of the portrait."""
     c = Canvas(F, F)
     for i in range(F):
         for x, y in ((i, 0), (i, F - 1), (0, i), (F - 1, i)):
             c.px(x, y, P["outline"])
-        for x, y in ((i, 1), (i, F - 2), (1, i), (F - 2, i)):
-            c.px(x, y, P["wood"])
+        for d in (1, 2):
+            for x, y in ((i, d), (i, F - 1 - d), (d, i), (F - 1 - d, i)):
+                c.px(x, y, P["wood"])
     if tier:
-        for i in range(2, F - 2):
-            for x, y in ((i, 2), (i, F - 3), (2, i), (F - 3, i)):
+        for i in range(3, F - 3):
+            for x, y in ((i, 3), (i, F - 4), (3, i), (F - 4, i)):
                 c.px(x, y, K["gold"])
-        for x, y in ((2, 2), (F - 3, 2), (2, F - 3), (F - 3, F - 3)):
+        for x, y in ((3, 3), (F - 4, 3), (3, F - 4), (F - 4, F - 4)):
             c.rect(x - 1, y - 1, 3, 3, K["gold_light"])
     return c
 
 
 def save_part(part: Canvas, relative: str) -> None:
-    """Saves a 48×48 part placed on the 64×64 portrait canvas."""
+    """Saves a 48×48 part doubled onto the 96×96 portrait canvas."""
     full = Canvas(F, F)
-    full.paste(part, *PART_OFFSET)
+    full.image.alpha_composite(part.image.resize((S * PART_SCALE, S * PART_SCALE), Image.NEAREST))
     full.save(relative)
 
 
