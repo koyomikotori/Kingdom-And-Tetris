@@ -13,6 +13,7 @@ from pathlib import Path
 
 from PIL import Image
 
+import item_art
 from pixel import ASSETS, CLEAR, P, Canvas, hex_color
 
 S = 48
@@ -350,23 +351,17 @@ def background() -> Canvas:
     return c
 
 
+# Frames by star tier (PortraitView.frame_part): 1–2★ bronze, 3★ green, 4★ blue with small
+# studs, 5★ purple with ornaments, 6★ gold with rich ornaments (the item frames' style, M12e).
+FRAME_TIERS = [(("bronze", "bronze_light", "bronze_dark"), 0), (("jade_dark", "jade", "jade_dark"), 0),
+               (("cloth", "cloth_light", "cloth_dark"), 1), (("purple", "purple_light", "purple_dark"), 2),
+               (("gold", "gold_light", "gold_dark"), 3)]
+
+
 def frame(tier: int) -> Canvas:
-    """Wooden frame (outline, 2 px of wood); tier 1 (4★ and up) adds a gold inner border and
-    corner studs. It covers the outer 4 px of the portrait."""
-    c = Canvas(F, F)
-    for i in range(F):
-        for x, y in ((i, 0), (i, F - 1), (0, i), (F - 1, i)):
-            c.px(x, y, P["outline"])
-        for d in (1, 2):
-            for x, y in ((i, d), (i, F - 1 - d), (d, i), (F - 1 - d, i)):
-                c.px(x, y, P["wood"])
-    if tier:
-        for i in range(3, F - 3):
-            for x, y in ((i, 3), (i, F - 4), (3, i), (F - 4, i)):
-                c.px(x, y, K["gold"])
-        for x, y in ((3, 3), (F - 4, 3), (3, F - 4), (F - 4, F - 4)):
-            c.rect(x - 1, y - 1, 3, 3, K["gold_light"])
-    return c
+    """The border covers the outer 4 px of the portrait; corner ornaments reach a little further."""
+    colors, pattern = FRAME_TIERS[tier]
+    return item_art.frame(F, colors, pattern, None, 3)
 
 
 def save_part(part: Canvas, relative: str) -> None:
@@ -378,7 +373,7 @@ def save_part(part: Canvas, relative: str) -> None:
 
 def draw_all() -> None:
     background().save("portraits/bg.png")
-    for tier in (0, 1):
+    for tier in range(len(FRAME_TIERS)):
         frame(tier).save(f"portraits/frame_{tier}.png")
     (Path(ASSETS) / "portraits" / "pool").mkdir(parents=True, exist_ok=True)
     for gender, female in (("m", False), ("f", True)):

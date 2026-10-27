@@ -13,6 +13,8 @@ const EXTRA_PER_CASTLE_LEVEL := 1
 static func limit(building: BuildingData, castle_level: int) -> int:
 	if building.max_count <= 0:
 		return 0
+	if building.fixed_count:
+		return building.max_count
 	return building.max_count + EXTRA_PER_CASTLE_LEVEL * (castle_level - 1)
 
 

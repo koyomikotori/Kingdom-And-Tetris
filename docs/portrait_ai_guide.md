@@ -19,7 +19,7 @@ Gợi ý: dùng **PixelLab hoặc Retro Diffusion** làm chính. Nếu muốn m�
 - **Ảnh gốc 96×96 pixel** (pixel thật, không phải ảnh lớn được làm giống pixel). Đủ chỗ cho mắt anime, tóc, mũ và hoa văn áo, mà vẫn đúng chất pixel.
 - Game hiện **nguyên lần**: ×1 (96 px) trong Chiêu hiền, ×2 (192 px) trong bảng chi tiết, nên giữ nét pixel sắc.
 - **PNG, nền trong suốt.** Game tự vẽ nền và khung (khung gỗ, khung vàng cho 4★ trở lên), nên ảnh không cần khung.
-- **Khung hình:** ngực trở lên (bust), mặt nhìn thẳng hoặc hơi nghiêng 3/4, đầu chiếm khoảng 1/2 chiều cao, chừa khoảng 5 pixel trống ở mép trên để mũ và lông trĩ không bị cắt. Khung của game đè lên **4 pixel ngoài cùng** mỗi cạnh.
+- **Khung hình:** ngực trở lên (bust), mặt nhìn thẳng hoặc hơi nghiêng 3/4, đầu chiếm khoảng 1/2 chiều cao, chừa khoảng 5 pixel trống ở mép trên để mũ và lông trĩ không bị cắt. Khung của game đè lên **4 pixel ngoài cùng** mỗi cạnh; khung tướng 5–6 sao có họa tiết ở góc lấn vào thêm vài pixel, nên đừng để chi tiết quan trọng sát góc.
 - **Tối đa khoảng 48 màu** mỗi ảnh, viền tối (nâu đen) 1 pixel.
 
 ## 3. Prompt mẫu

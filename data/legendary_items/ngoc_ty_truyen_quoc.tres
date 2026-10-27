@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LegendaryItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/equipment/legendary_item_data.gd" id="1_legendary"]
+
+[resource]
+script = ExtResource("1_legendary")
+item_id = &"ngoc_ty_truyen_quoc"
+display_name = "Ngọc tỷ truyền quốc"
+description = "Ấn ngọc của bậc đế vương, sứ giả các nước đều phải kính nể."
+kind = &"advisor"
+slot = &"accessory"
+weapon_type = &""
+effects = Array[StringName]([&"relation_gain", &"upkeep_cut"])

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LegendaryItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/equipment/legendary_item_data.gd" id="1_legendary"]
+
+[resource]
+script = ExtResource("1_legendary")
+item_id = &"thanh_long_dao"
+display_name = "Thanh long đao"
+description = "Đao lưỡi trăng khuyết nặng tám mươi hai cân, rồng xanh cuộn quanh cán."
+kind = &"general"
+slot = &"weapon"
+weapon_type = &"dao"
+effects = Array[StringName]([&"guard_attack", &"morale"])

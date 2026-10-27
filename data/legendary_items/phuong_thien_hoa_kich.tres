@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LegendaryItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/equipment/legendary_item_data.gd" id="1_legendary"]
+
+[resource]
+script = ExtResource("1_legendary")
+item_id = &"phuong_thien_hoa_kich"
+display_name = "Phương thiên họa kích"
+description = "Kích hai lưỡi trăng khuyết, vào trận như chốn không người."
+kind = &"general"
+slot = &"weapon"
+weapon_type = &"kich"
+effects = Array[StringName]([&"guard_attack", &"survival"])

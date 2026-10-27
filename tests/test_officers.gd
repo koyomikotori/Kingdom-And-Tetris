@@ -72,7 +72,7 @@ func test_portrait_layers_follow_the_look() -> void:
 	var parts := PortraitView.layers(general, Color.BLUE).map(func(e: Array) -> String: return e[0])
 	check(parts.has("beard_2"), "A bearded general")
 	check(parts.has("helmet") and parts.has("helmet_accent"), "Generals wear the helmet")
-	check(parts.has("body_general") and parts.back() == "frame_1", "Armor, gold frame from 4 stars")
+	check(parts.has("body_general") and parts.back() == "frame_3", "Armor, the purple frame at 5 stars")
 	var advisor := Advisor.new()
 	advisor.name = "B"
 	advisor.stars = 2
@@ -80,7 +80,7 @@ func test_portrait_layers_follow_the_look() -> void:
 	parts = PortraitView.layers(advisor, Color.BLUE).map(func(e: Array) -> String: return e[0])
 	check(not parts.any(func(p: String) -> bool: return p.begins_with("beard")), "No beard")
 	check(parts.has("hairpin") and parts.has("body_advisor"), "A woman advisor: hairpin and robe")
-	check_eq(parts.back(), "frame_0", "Wooden frame below 4 stars")
+	check_eq(parts.back(), "frame_0", "Bronze frame at 1–2 stars")
 	advisor.look.gender = &"m"
 	parts = PortraitView.layers(advisor, Color.BLUE).map(func(e: Array) -> String: return e[0])
 	check(parts.has("scholar_hat"), "A man advisor: the official's cap")
@@ -145,7 +145,7 @@ func test_without_pool_portraits_the_parts_are_used() -> void:
 
 
 func test_portrait_art_is_portrait_size() -> void:
-	for part: String in ["bg", "frame_0", "frame_1", "face_m", "helmet", "body_advisor"]:
+	for part: String in ["bg", "frame_0", "frame_1", "frame_2", "frame_3", "frame_4", "face_m", "helmet", "body_advisor"]:
 		var texture := GameArt.portrait_part(part)
 		check(texture != null and texture.get_size() == Vector2.ONE * PortraitView.SIZE,
 				"%s is %d×%d" % [part, PortraitView.SIZE, PortraitView.SIZE])

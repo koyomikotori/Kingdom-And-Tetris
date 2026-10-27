@@ -37,6 +37,7 @@ var victory := Victory.new()
 var events := EventSystem.new()
 var generals := Generals.new()
 var advisors := Advisors.new()
+var equipment := Equipment.new()
 ## Counters for the end-of-game screen: {"battles_won", "battles_lost"}.
 var stats := {"battles_won": 0, "battles_lost": 0}
 ## False when building upkeep could not be paid last turn; building effects pause.
@@ -63,13 +64,16 @@ func _init(p_board: BoardData, p_hand: PieceHand, p_terrains: Dictionary[StringN
 	rng.seed = seed_value
 	generals.rng.seed = seed_value + 1
 	advisors.rng.seed = seed_value + 2
+	equipment.rng.seed = seed_value + 3
 	generals.advisors = advisors
 	advisors.changed.connect(_sync_advisors)
+	equipment.changed.connect(_sync_advisors)
 
 
 ## The diplomacy advisor's skill lives in Diplomacy (its rules use it); keep it current.
 func _sync_advisors() -> void:
 	diplomacy.envoy = advisors.post_stat(&"diplomacy")
+	diplomacy.gift_bonus = advisors.post_effect(&"diplomacy", &"relation_gain")
 
 
 ## A new game's stockpile (KingdomState.STARTING_RESOURCES). The kingdom scene calls it for new
@@ -104,7 +108,8 @@ func to_save() -> Dictionary:
 			"castle_turns": castle_turns, "board": board.to_save(),
 			"hand": hand.to_save(), "stockpile": stockpile.to_save(), "army": army.to_save(),
 			"diplomacy": diplomacy.to_save(), "wars": wars.to_save(), "victory": victory.to_save(), "stats": stats.duplicate(),
-			"events": events.to_save(), "generals": generals.to_save(), "advisors": advisors.to_save()}
+			"events": events.to_save(), "generals": generals.to_save(), "advisors": advisors.to_save(),
+			"equipment": equipment.to_save()}
 
 
 ## Restores everything but the board from to_save() data. Random rolls are not saved: they come
@@ -134,6 +139,8 @@ func load_save(data: Dictionary) -> void:
 		generals.refresh_candidates(castle_level, turn)
 	# Saves from before M11f have no advisors.
 	advisors.load_save(data.get("advisors", []))
+	# Saves from before M12e have no items.
+	equipment.load_save(data.get("equipment", {}))
 
 
 ## What a save slot shows: {"turn", "cells", "soldiers"}.
@@ -157,6 +164,32 @@ func build(building_id: StringName, origin: Vector2i) -> BuildRules.Result:
 	if result == BuildRules.Result.OK and instant_construction:
 		finish_construction(origin)
 	return result
+
+
+# --- Equipment (GDD §8 "Trang bị", M12e) --------------------------------------------------
+
+const FORGE_ID: StringName = &"forge"
+
+
+## The working forge's level (finished, not being upgraded), 0 without one.
+func forge_level() -> int:
+	for cell in board.get_all_cells():
+		if cell.building_id == FORGE_ID and cell.coord == cell.building_origin and not cell.is_constructing():
+			return cell.building_level
+	return 0
+
+
+func start_forge(kind: StringName, slot: StringName) -> Equipment.Result:
+	return equipment.start_forge(stockpile, forge_level(), kind, slot)
+
+
+## Dismisses an officer; their items go back to storage (a general killed in battle loses them).
+func dismiss_officer(officer: Officer) -> void:
+	equipment.take_back(officer)
+	if officer is General:
+		generals.dismiss(officer)
+	else:
+		advisors.dismiss(officer)
 
 
 # --- Construction (GDD §8, M12d) ----------------------------------------------------------
@@ -239,6 +272,8 @@ func demolish(origin: Vector2i) -> Dictionary[StringName, int]:
 		return {}
 	if cell.building_upgrading:
 		return cancel_upgrade(origin)
+	if cell.building_id == FORGE_ID:
+		equipment.cancel_forge()
 	var refund := demolish_refund(cell.building_id)
 	board.remove_building(origin)
 	stockpile.add(refund)
@@ -265,7 +300,8 @@ func move_building(from_origin: Vector2i, to_origin: Vector2i) -> BuildRules.Res
 
 # --- Building levels (GDD §8, economy v2) -------------------------------------------------
 
-enum UpgradeResult { OK, NOT_UPGRADABLE, MAX_LEVEL, CASTLE_TOO_LOW, CANNOT_AFFORD, NO_BUILDERS, UNDER_CONSTRUCTION }
+enum UpgradeResult { OK, NOT_UPGRADABLE, MAX_LEVEL, CASTLE_TOO_LOW, CANNOT_AFFORD, NO_BUILDERS, UNDER_CONSTRUCTION,
+		FORGING }
 
 
 ## What raising the building at `origin` one level costs right now (Nội chính discount included).
@@ -287,7 +323,9 @@ func check_building_upgrade(origin: Vector2i) -> UpgradeResult:
 		return UpgradeResult.MAX_LEVEL
 	if cell.is_constructing():
 		return UpgradeResult.UNDER_CONSTRUCTION
-	if cell.building_level >= castle_level:
+	if cell.building_id == FORGE_ID and not equipment.forge_job.is_empty():
+		return UpgradeResult.FORGING
+	if cell.building_level + buildings[cell.building_id].castle_level_gap >= castle_level:
 		return UpgradeResult.CASTLE_TOO_LOW
 	if not has_free_builder():
 		return UpgradeResult.NO_BUILDERS
@@ -448,7 +486,8 @@ func get_turn_yield() -> Dictionary[StringName, int]:
 func advisor_yield_bonus() -> Dictionary[StringName, int]:
 	var bonus: Dictionary[StringName, int] = {}
 	if buildings_supplied:
-		bonus = Advisors.share_of(Economy.buildings_yield(board, buildings), advisors.post_stat(&"admin") * Advisors.ADMIN_YIELD)
+		bonus = Advisors.share_of(Economy.buildings_yield(board, buildings),
+				advisors.post_stat(&"admin") * Advisors.ADMIN_YIELD + advisors.post_effect(&"admin", &"admin_yield"))
 	return bonus
 
 
@@ -468,7 +507,8 @@ func get_army_upkeep() -> Dictionary[StringName, int]:
 func upkeep_discount() -> Dictionary[StringName, int]:
 	var base := army.get_upkeep(units)
 	Economy.add_into(base, generals.get_upkeep())
-	return Advisors.share_of(base, advisors.post_stat(&"admin") * Advisors.ADMIN_UPKEEP)
+	return Advisors.share_of(base, advisors.post_stat(&"admin") * Advisors.ADMIN_UPKEEP
+			+ advisors.post_effect(&"admin", &"upkeep_cut"))
 
 
 ## Every building's upkeep at its level (BuildingData.upkeep_at).
@@ -594,7 +634,7 @@ func get_net_income() -> Dictionary[StringName, int]:
 ## 6. bandits may raid at the start of the new turn.
 ## 4b. every construction gets one turn closer; finished buildings work from the next turn;
 ## Returns {"collected", "upkeep", "deserted", "buildings_supplied", "replenished", "agreements",
-## "completed" (_advance_construction)} plus
+## "completed" (_advance_construction), "forged" (an Item or null)} plus
 ## "treaties" (Alliances.end_turn events), "war_declared" (clan ids that declared war this turn),
 ## "victory" (Victory.Path won this turn, or Victory.NO_PATH), "castle_in_danger", "events" (new
 ## EventSystem.pending entries, answered through `events`) and,
@@ -618,6 +658,10 @@ func end_turn() -> Dictionary:
 		Economy.add_into(upkeep, building_upkeep)
 	var agreements := diplomacy.run_agreements(stockpile)
 	var completed := _advance_construction()
+	# An invasion may have taken the forge.
+	if board.count_buildings(FORGE_ID, true) == 0:
+		equipment.cancel_forge()
+	var forged := equipment.advance_forge()
 	var replenished := _replenish()
 	if can_replenish():
 		army.train()
@@ -632,6 +676,7 @@ func end_turn() -> Dictionary:
 	var report := {"collected": collected, "upkeep": upkeep, "deserted": deserted,
 			"buildings_supplied": buildings_supplied, "replenished": replenished, "agreements": agreements}
 	report["completed"] = completed
+	report["forged"] = forged
 	report["treaties"] = treaties
 	report["war_declared"] = declared
 	report["generals_healed"] = healed
@@ -673,6 +718,7 @@ func finish_raid(record: BattleRecord) -> Dictionary:
 	if result.won:
 		events.raid_won_turn = turn
 	result.merge(alliances.apply_battle(record, BattleRecord.DEFENDER))
+	result["item"] = equipment.roll_loot(false, stockpile) if result.won else {}
 	return result
 
 
@@ -740,7 +786,7 @@ func finish_invasion(clan_id: StringName, record: BattleRecord) -> Dictionary:
 		stockpile.spend(resources_lost)
 	result.merge({"record": record, "won": won, "clan_id": clan_id, "lost_cells": lost_cells,
 			"resources_lost": resources_lost, "enemy_lost": enemy_lost, "castle_fallen": castle_fallen,
-			"general": general, "advisor": advisor})
+			"general": general, "advisor": advisor, "item": equipment.roll_loot(false, stockpile) if won else {}})
 	return result
 
 
@@ -788,5 +834,6 @@ func finish_attack(clan_id: StringName, record: BattleRecord) -> Dictionary:
 				compensation[resource_id] = amount
 		stockpile.spend(compensation)
 	result.merge({"record": record, "won": won, "clan_id": clan_id, "enemy_lost": enemy_lost,
-			"loot": loot, "compensation": compensation, "annexed": annexed, "general": general, "advisor": advisor})
+			"loot": loot, "compensation": compensation, "annexed": annexed, "general": general, "advisor": advisor,
+			"item": equipment.roll_loot(true, stockpile) if won else {}})
 	return result

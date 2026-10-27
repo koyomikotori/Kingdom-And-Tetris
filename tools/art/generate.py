@@ -11,6 +11,7 @@ import random
 
 from pixel import ASSETS, CLEAR, P, UI_SCALE, Canvas, speckle, speckle_area
 import battle_art
+import item_art
 import portrait_art
 import world_art
 
@@ -580,6 +581,7 @@ def main() -> None:
     tab(True).save("ui/tab_selected.png", UI_SCALE)
     tab(False).save("ui/tab_unselected.png", UI_SCALE)
     battle_art.draw_all()
+    item_art.draw_all()
     portrait_art.draw_all()
     world_art.draw_all()
     print("Art written to", ASSETS)

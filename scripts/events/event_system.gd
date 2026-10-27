@@ -213,6 +213,12 @@ func _apply(state: KingdomState, outcome: EventOutcomeData, clan_id: StringName,
 					general.might, general.command])
 		else:
 			changes.append("Không còn chỗ cho thêm tướng")
+	if outcome.item_rarity >= 0:
+		var item := state.equipment.create_random(outcome.item_rarity)
+		var got := state.equipment.receive(item, state.stockpile)
+		var refund: Dictionary[StringName, int] = got.refund
+		changes.append("Nhận được %s (%s)%s" % [item.display_name, Item.RARITY_NAMES[item.rarity],
+				", kho đầy nên đã phân rã lấy %s" % _amounts(refund) if not refund.is_empty() else ""])
 
 
 func _amounts(amounts: Dictionary[StringName, int]) -> String:

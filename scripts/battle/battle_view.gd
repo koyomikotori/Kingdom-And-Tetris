@@ -522,7 +522,7 @@ func _draw_unit(view: UnitView) -> void:
 				break
 	var base_id := view.unit.data.get_sprite_id()
 	var side := _simulator.record.sides[view.battle_side]
-	var leader_id := GameArt.officer_sprite(GENERAL_KIND, side.general_look)
+	var leader_id := GameArt.officer_sprite(GENERAL_KIND, side.general_look, side.general_weapon)
 	var tints := GameArt.unit_tints(_clothes_color(view))
 	var leader_tints := GameArt.unit_tints(_clothes_color(view), side.general_look)
 	for figure in view.figures:

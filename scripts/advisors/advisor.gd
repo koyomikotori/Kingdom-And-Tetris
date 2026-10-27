@@ -14,19 +14,21 @@ var stratagems: Array[StringName] = []
 var post: StringName = NO_POST
 
 
-## The stat a post uses: &"admin" → admin, &"diplomacy" → diplomacy, &"military" → strategy.
+## The stat a post uses, worn items included: &"admin" → admin, &"diplomacy" → diplomacy,
+## &"military" → strategy.
 func stat_for(post_id: StringName) -> int:
 	match post_id:
 		&"admin":
-			return admin
+			return admin + item_bonus(&"admin")
 		&"diplomacy":
-			return diplomacy
+			return diplomacy + item_bonus(&"diplomacy")
 		&"military":
-			return strategy
+			return strategy + item_bonus(&"strategy")
 	return 0
 
 
-## A stat by its id (Advisors.STAT_IDS): &"admin", &"diplomacy" or &"strategy".
+## The advisor's own points in a stat (Advisors.STAT_IDS: &"admin", &"diplomacy", &"strategy"),
+## without items.
 func get_stat(stat: StringName) -> int:
 	match stat:
 		&"admin":

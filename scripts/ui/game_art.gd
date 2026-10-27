@@ -11,6 +11,7 @@ const BATTLE_DIR := "res://assets/battle/"
 const EFFECT_DIR := "res://assets/effects/"
 const PORTRAIT_DIR := "res://assets/portraits/"
 const WORLD_DIR := "res://assets/world/"
+const ITEM_DIR := "res://assets/items/"
 ## Hand-drawn portraits that replace the generated one: <officer name>.png.
 const CUSTOM_PORTRAIT_DIR := "res://assets/portraits/custom/"
 ## Hand-drawn / AI portraits (96×96, transparent, no frame) shared out to officers by group:
@@ -76,6 +77,16 @@ static func construction(part: String) -> Texture2D:
 	return _load(BUILDING_DIR + part + ".png")
 
 
+## An item's 16×16 icon (Item.icon_id(): a type such as &"dao", or a legendary's id, M12e).
+static func item_icon(icon_id: StringName) -> Texture2D:
+	return _load(ITEM_DIR + String(icon_id) + ".png")
+
+
+## The 24×24 frame of an item slot by rarity (Item.Rarity), -1 for an empty slot.
+static func item_frame(rarity: int) -> Texture2D:
+	return _load(ITEM_DIR + ("frame_empty" if rarity < 0 else "frame_%d" % rarity) + ".png")
+
+
 ## Plate with the turns a construction still needs (1–7).
 static func turns_badge(turns: int) -> Texture2D:
 	return _load(BUILDING_DIR + "turns_%d.png" % clampi(turns, 1, 7))
@@ -98,8 +109,10 @@ static func unit_sheet(sprite_id: StringName, layer: String = "") -> Texture2D:
 
 
 ## The battle sprite of a general (&"general") or an advisor (&"advisor") with this look.
-static func officer_sprite(kind: StringName, look: OfficerLook) -> StringName:
-	return StringName("%s_%s" % [kind, "f" if look != null and look.is_female() else "m"])
+## `weapon_type`: the general's worn weapon (Item.WEAPON_TYPES, M12e); &"" is a plain sword.
+static func officer_sprite(kind: StringName, look: OfficerLook, weapon_type: StringName = &"") -> StringName:
+	var id := "%s_%s" % [kind, "f" if look != null and look.is_female() else "m"]
+	return StringName(id + ("_" + String(weapon_type) if weapon_type != &"" else ""))
 
 
 ## Tints for draw_unit: the side's color, plus the officer's hair and accent colors.

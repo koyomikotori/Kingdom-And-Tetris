@@ -50,6 +50,9 @@ C = {
     "iron_dark": hex_color("4e5662"),
 }
 
+# The commander's sprite per worn weapon type (Item.WEAPON_TYPES; "" = a plain sword).
+GENERAL_WEAPONS = ["", "dao", "thuong", "kiem", "kich", "chuy"]
+
 # Each soldier type: weapon, headgear and whether the clothes are rags (bandits).
 SOLDIERS = {
     "swordsman": {"weapon": "sword", "hat": "conical", "gear": "pauldron"},
@@ -150,17 +153,18 @@ def weapon(c: Canvas, pose: Pose, kind: str) -> None:
         hand(c, 4, 6 - lift)
         hand(c, 11, 5 - lift)
         return
+    # Weapons stay one pixel inside the frame so their outline (and tips) are never cut off.
     if kind == "sword":
         if state == "attack" and frame == 0:
-            c.vline(8, 0, 4, C["steel"])
+            c.vline(8, 1, 4, C["steel"])
             c.px(8, 5, C["hilt"])
             hand(c, 8, 6)
         elif state == "attack":
-            c.hline(12, 15, 9, C["steel"])
-            c.px(11, 9, C["hilt"])
-            hand(c, 10, 9)
+            c.hline(11, 14, 9, C["steel"])
+            c.px(10, 9, C["hilt"])
+            hand(c, 9, 9)
         elif state == "cheer":
-            c.vline(10, 0, 2, C["steel"])
+            c.vline(10, 1, 2, C["steel"])
             c.px(10, 3, C["hilt"])
             hand(c, 10, 4)
         else:
@@ -169,13 +173,13 @@ def weapon(c: Canvas, pose: Pose, kind: str) -> None:
             hand(c, 11, 10 - lift)
     elif kind == "spear":
         if state == "attack":
-            x0 = 2 if frame == 0 else 6
+            x0 = 1 if frame == 0 else 4
             c.hline(x0, x0 + 8, 9, C["shaft"])
             c.hline(x0 + 9, x0 + 10, 9, C["steel"])
             c.px(x0 + 9, 8, C["steel"])
             hand(c, x0 + 6, 10)
         else:
-            top = 0 if state == "cheer" else 2 - lift
+            top = 1 if state == "cheer" else 2 - lift
             c.vline(11, top + 2, 14 - lift - (2 if state == "cheer" else 0), C["shaft"])
             c.vline(11, top, top + 1, C["steel"])
             hand(c, 11, 8 - lift - (2 if state == "cheer" else 0))
@@ -194,20 +198,20 @@ def weapon(c: Canvas, pose: Pose, kind: str) -> None:
         string_x = 9 if drawn else 11
         c.vline(string_x, y + 1, y + 6, C["string"])
         if drawn:
-            c.hline(9, 14, y + 3, C["shaft"])
-            c.px(15, y + 3, C["steel"])
+            c.hline(9, 13, y + 3, C["shaft"])
+            c.px(14, y + 3, C["steel"])
         hand(c, 12, y + 3)
         hand(c, string_x, y + 3)
     elif kind == "club":
         if state == "attack" and frame == 0:
-            c.rect(6, 0, 2, 4, C["club"])
+            c.rect(6, 1, 2, 3, C["club"])
             hand(c, 7, 5)
         elif state == "attack":
-            c.hline(11, 15, 10, C["club"])
-            c.hline(13, 15, 9, C["club"])
+            c.hline(11, 14, 10, C["club"])
+            c.hline(13, 14, 9, C["club"])
             hand(c, 10, 10)
         elif state == "cheer":
-            c.rect(10, 0, 2, 3, C["club"])
+            c.rect(10, 1, 2, 2, C["club"])
             hand(c, 10, 3)
         else:
             c.vline(12, 5 - lift, 8 - lift, C["club"])
@@ -333,10 +337,11 @@ def cavalry_frame(state: str, frame: int) -> tuple:
     return split_team(c)
 
 
-def general_frame(state: str, frame: int, female: bool = False) -> tuple:
+def general_frame(state: str, frame: int, female: bool = False, weapon_type: str = "") -> tuple:
     """The commander (32×32): a barded warhorse with a plated chamfron and red tassels, the rider
-    in gilded armor with a flowing cape, a gold helmet with two long pheasant feathers, and a
-    crescent-bladed glaive. Clothes, barding and cape take the side's color."""
+    in gilded armor with a flowing cape, a gold helmet with two long pheasant feathers, and the
+    weapon they wear (general_weapon: a plain sword without one). Clothes, barding and cape take
+    the side's color."""
     c = Canvas(32, 32)
     gallop = state in ("walk", "attack") and frame == 1
     lift = 1 if (state == "cheer" and frame == 1) or (state == "walk" and frame == 1) else 0
@@ -350,24 +355,24 @@ def general_frame(state: str, frame: int, female: bool = False) -> tuple:
         c.vline(x, 23, 29 - bend, C["horse_dark"] if i in (1, 2) else C["horse"])
         c.vline(x + 1, 23, 29 - bend, C["horse_dark"])
         c.hline(x, x + 1, 30 - bend, C["boot"])
-    # Body, neck and head.
+    # Body, a short arched neck and a small head (kept one pixel inside the frame for its outline).
     c.rect(8, 16, 16, 7, C["horse"])
     c.hline(9, 22, 22, C["horse_dark"])
-    for row, x0 in enumerate((22, 23, 23, 24, 24, 25, 25)):  # neck reaching forward
-        c.hline(x0, x0 + 3, 16 - row, C["horse"])
-    c.rect(25, 7, 5, 4, C["horse"])
-    c.rect(28, 9, 4, 3, C["horse"])
-    c.hline(29, 31, 11, C["horse_dark"])
-    c.px(31, 10, C["eye"])
-    c.px(27, 8, C["eye"])
-    c.px(26, 6, C["horse_dark"])
-    c.px(27, 5, C["horse_dark"])
-    c.rect(25, 7, 3, 2, C["iron"])  # chamfron
-    c.px(26, 7, C["iron_light"])
-    for x, y in ((24, 8), (23, 9), (23, 10)):
+    for row, x0 in enumerate((22, 22, 23, 23, 24)):  # neck rising forward
+        c.hline(x0, x0 + 2, 16 - row, C["horse"])
+    c.rect(24, 9, 4, 3, C["horse"])  # head
+    c.rect(27, 10, 2, 3, C["horse"])  # muzzle
+    c.px(29, 12, C["horse_dark"])
+    c.hline(27, 28, 12, C["horse_dark"])
+    c.px(26, 10, C["eye"])
+    c.px(24, 8, C["horse_dark"])  # ears
+    c.px(25, 8, C["horse_dark"])
+    c.rect(24, 9, 2, 2, C["iron"])  # chamfron
+    c.px(25, 9, C["iron_light"])
+    for x, y in ((23, 10), (23, 11), (22, 12)):
         c.px(x, y, C["tassel"])
-    for y in range(9, 17):  # mane along the neck
-        c.px(22 + (y - 9) // 3, y, C["mane"])
+    for y in range(12, 17):  # mane along the neck
+        c.px(21 + (y - 12) // 3, y, C["mane"])
     # Barding over the back and flanks: side color, scale pattern, gold hem and tassels.
     c.rect(9, 15, 13, 5, TEAM)
     for y in (16, 18):
@@ -404,19 +409,75 @@ def general_frame(state: str, frame: int, female: bool = False) -> tuple:
     if female:  # long hair flowing from under the helmet
         for y in range(top - 3, top + 4):
             c.hline(10 - (y - top) // 3 - frame, 12, y, HAIR if y < top + 2 else HAIR_DARK)
-    # Thanh long đao: a long lacquered shaft and a slim curved blade (drawn upright once by
-    # guandao(), then placed or turned for each pose so the proportions never change).
-    weapon = guandao(frame)
+    # The weapon is drawn upright once (general_weapon) and placed or turned for each pose so its
+    # proportions never change; `grip` is the row the hand holds.
+    weapon, grip = general_weapon(weapon_type, frame)
     if state == "attack" and frame == 0:  # wind-up: raised behind the rider
-        c.paste(weapon, 9, 0)
+        c.paste(weapon, 9, max(0, top + 1 - grip) if grip > 12 else 0)
         c.px(12, top + 1, C["skin"])
     elif state == "attack":  # swung forward, blade leading
-        c.paste(guandao_turned(weapon), 5, top)
+        # The hand stays at x 18; the tip never reaches the right edge (room for the outline).
+        c.paste(guandao_turned(weapon), max(1, min(18 - (weapon.height - 1 - grip), c.width - 1 - weapon.height)), top + 1)
         c.px(18, top + 2, C["skin"])
     else:
-        c.paste(weapon, 18, (1 if state == "cheer" else 3) - lift + (1 if state == "cheer" and lift else 0))
-        c.px(19, top + 3, C["skin"])
+        hand_y = top + 3 - (2 if state == "cheer" else 0)
+        c.paste(weapon, 18, max(0, hand_y - grip))
+        c.px(19, hand_y, C["skin"])
     return split_layers(c)
+
+
+def general_weapon(weapon_type: str, frame: int) -> tuple:
+    """The commander's weapon upright, with the row the hand holds: a plain sword (none worn),
+    or a đao / thương / kiếm / kích / chùy (Item.WEAPON_TYPES)."""
+    if weapon_type == "dao":
+        return guandao(frame), 9
+    if weapon_type == "thuong":
+        w = Canvas(5, 27)
+        for y, (x0, x1) in enumerate(((2, 2), (1, 3), (1, 3), (1, 3), (2, 2))):  # leaf tip
+            w.hline(x0, x1, y, C["steel"])
+        w.px(3, 1, C["steel_edge"])
+        w.vline(2, 5, 25, C["shaft"])
+        for x, y in ((1, 6), (3, 6), (0, 7), (4, 7), (1 + frame, 8)):  # red tassel
+            w.px(x, y, C["tassel"])
+        w.px(2, 26, C["iron"])
+        return w, 10
+    if weapon_type == "kich":
+        w = Canvas(6, 27)
+        for y in range(4):
+            w.px(2, y, C["steel"])
+        w.px(3, 1, C["steel_edge"])
+        for x, y in ((3, 5), (4, 4), (5, 5), (5, 6), (4, 7), (3, 7)):  # crescent side blade
+            w.px(x, y, C["steel"])
+        w.px(5, 5, C["steel_edge"])
+        w.vline(2, 4, 25, C["lacquer"])
+        w.px(1, 8, C["tassel"])
+        w.px(1 - (frame == 1), 9, C["tassel"])
+        w.px(2, 26, C["iron"])
+        return w, 10
+    if weapon_type == "chuy":
+        w = Canvas(7, 18)
+        w.ellipse(3.5, 3.0, 3.0, 3.0, C["iron"])
+        w.ellipse(4.0, 3.6, 1.5, 1.5, C["iron_dark"])
+        for x, y in ((3, 0), (0, 3), (6, 3), (3, 6)):
+            w.px(x, y, C["iron_light"])
+        w.vline(3, 6, 17, C["shaft"])
+        w.px(3, 12, C["gold"])
+        return w, 13
+    if weapon_type == "kiem":
+        w = Canvas(5, 17)
+        w.vline(2, 0, 11, C["steel"])
+        w.vline(3, 1, 11, C["steel_edge"])
+        w.hline(0, 4, 12, C["gold"])
+        w.vline(2, 13, 15, C["lacquer"])
+        w.px(2, 16, C["gold"])
+        w.px(1 + frame, 16, C["tassel"])
+        return w, 14
+    w = Canvas(5, 14)  # a plain sword
+    w.vline(2, 0, 9, C["steel"])
+    w.vline(3, 1, 9, C["steel_dark"])
+    w.hline(1, 3, 10, C["hilt"])
+    w.vline(2, 11, 13, C["belt"])
+    return w, 12
 
 
 def guandao(frame: int = 0) -> Canvas:
@@ -680,7 +741,9 @@ def draw_all() -> None:
     base.save("units/general_guard.png")
     team.save("units/general_guard_team.png")
     for gender, female in (("m", False), ("f", True)):
-        save_sheet(f"general_{gender}", sheet(lambda s, f, fe=female: general_frame(s, f, fe), 32, 32))
+        for weapon_type in GENERAL_WEAPONS:
+            name = f"general_{gender}" + (f"_{weapon_type}" if weapon_type else "")
+            save_sheet(name, sheet(lambda s, f, fe=female, w=weapon_type: general_frame(s, f, fe, w), 32, 32))
         save_sheet(f"advisor_{gender}", sheet(lambda s, f, fe=female: advisor_frame(s, f, fe), 20, 24))
     mountains().save("battle/mountains.png")
     cloud().save("battle/cloud.png")

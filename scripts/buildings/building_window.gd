@@ -35,6 +35,10 @@ var _pending := Action.NONE
 ## What CUSTOM does once confirmed (recruit, refresh, appoint, dismiss).
 var _custom: Callable
 var _recruit_box: VBoxContainer
+## The forge's "Rèn" tab (GDD §8 "Trang bị", M12e) and what it is set to make.
+var _forge_box: VBoxContainer
+var _forge_kind: StringName = &"general"
+var _forge_slot: StringName = &"weapon"
 
 
 func open(state: KingdomState, origin: Vector2i) -> void:
@@ -62,6 +66,10 @@ func open(state: KingdomState, origin: Vector2i) -> void:
 	body.add_child(_tabs)
 	_info = _tab_label("Thông tin")
 	_upgrade = _tab_label("Nâng cấp")
+	if cell.building_id == KingdomState.FORGE_ID:
+		_forge_box = _tab_box("Rèn")
+		_tabs.current_tab = 2
+		state.equipment.changed.connect(_refresh)
 	if _is_castle:
 		_recruit_box = _tab_box("Chiêu hiền")
 		state.generals.changed.connect(_refresh)
@@ -163,6 +171,8 @@ func _refresh() -> void:
 	_info.text = "\n".join(lines)
 	if not _is_castle:
 		_refresh_building_upgrade(cell)
+		if _forge_box != null:
+			_refresh_forge()
 		return
 	_refresh_generals()
 	var next := _state.next_castle_level()
@@ -199,11 +209,15 @@ func _refresh_building_upgrade(cell: CellData) -> void:
 			UiFormat.amounts(_building.upkeep_at(level + 1), _resource_types)]
 	match result:
 		KingdomState.UpgradeResult.CASTLE_TOO_LOW:
-			text += "\nCần thành chính cấp %d (cấp công trình không vượt cấp thành)." % (level + 1)
+			text += "\nCần thành chính cấp %d (cấp công trình không vượt cấp thành%s)." % [
+					level + 1 + _building.castle_level_gap,
+					", xưởng rèn thấp hơn thành %d cấp" % _building.castle_level_gap if _building.castle_level_gap > 0 else ""]
 		KingdomState.UpgradeResult.CANNOT_AFFORD:
 			text += "\nChưa đủ tài nguyên."
 		KingdomState.UpgradeResult.NO_BUILDERS:
 			text += "\nKhông còn đội thợ rảnh: chờ một công trình xây xong."
+		KingdomState.UpgradeResult.FORGING:
+			text += "\nXưởng đang rèn: chờ rèn xong rồi mới nâng cấp."
 	_upgrade.text = text
 	_upgrade_button.disabled = result != KingdomState.UpgradeResult.OK
 
@@ -276,6 +290,87 @@ func _ask_custom(text: String, on_confirm: Callable) -> void:
 	_custom = on_confirm
 	_confirm_text.text = text
 	_confirm_box.visible = true
+
+
+# --- Forge -------------------------------------------------------------------------------
+
+## Who and which slot to forge for, the cost and odds at this forge level, the job in progress.
+func _refresh_forge() -> void:
+	for child in _forge_box.get_children():
+		_forge_box.remove_child(child)
+		child.queue_free()
+	var equipment := _state.equipment
+	var level := _state.forge_level()
+	if not equipment.forge_job.is_empty():
+		_show_forge_job(equipment.forge_job)
+		return
+	var kinds := _row([_label("Rèn cho:", 14, false)])
+	for kind in Item.KINDS:
+		kinds.add_child(_choice_button("Tướng" if kind == &"general" else "Mưu sĩ", _forge_kind == kind, func() -> void:
+			_forge_kind = kind
+			_refresh_forge()))
+	_forge_box.add_child(kinds)
+	var slots := _row([_label("Món:", 14, false)])
+	for slot in Item.SLOTS:
+		slots.add_child(_choice_button(_forge_slot_name(_forge_kind, slot), _forge_slot == slot, func() -> void:
+			_forge_slot = slot
+			_refresh_forge()))
+	_forge_box.add_child(slots)
+	var odds := Equipment.forge_odds(level)
+	var total := 0
+	for weight: int in odds:
+		total += weight
+	var parts: Array[String] = []
+	for rarity in odds.size():
+		parts.append("%s %d%%" % [Item.RARITY_NAMES[rarity], roundi(100.0 * odds[rarity] / total)])
+	_forge_box.add_child(_label("Giá: %s. Xong sau %d lượt, ra 1 món ngẫu nhiên độ hiếm:\n%s.\nNâng cấp xưởng để dễ ra đồ hiếm; Huyền thoại chỉ có từ chiến lợi phẩm và sự kiện." % [
+			UiFormat.amounts(Equipment.forge_cost(level), _resource_types), Equipment.FORGE_TURNS, ", ".join(parts)], 14))
+	_forge_box.add_child(_label("Kho đồ: %d/%d món." % [equipment.items.size(), Equipment.MAX_STORAGE], 13))
+	var result := equipment.check_forge(_state.stockpile, level)
+	var start := _button("Rèn", func() -> void:
+		var started := _state.start_forge(_forge_kind, _forge_slot)
+		if started == Equipment.Result.OK:
+			set_status("Bắt đầu rèn, xong sau %d lượt." % Equipment.FORGE_TURNS)
+		else:
+			set_status(Equipment.describe(started), false))
+	start.custom_minimum_size = Vector2(140, 40)
+	start.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	start.disabled = result != Equipment.Result.OK
+	_forge_box.add_child(start)
+	if result != Equipment.Result.OK:
+		var reason := _label(Equipment.describe(result), 13)
+		reason.add_theme_color_override("font_color", WARNING_COLOR)
+		_forge_box.add_child(reason)
+
+
+## The job in progress: what is being made, for whom, when it is ready and the odds it was rolled with.
+func _show_forge_job(job: Dictionary) -> void:
+	var icon := ItemIcon.new()
+	# A general's weapon type is rolled when it is finished: show a sword meanwhile.
+	icon.setup_type(&"kiem" if job.kind == &"general" and job.slot == &"weapon" else StringName("%s_%s" % [job.kind, job.slot]), 3)
+	var column := VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_child(_label("Đang rèn: %s cho %s" % [_forge_slot_name(job.kind, job.slot),
+			"tướng" if job.kind == &"general" else "mưu sĩ"], 16))
+	column.add_child(_label("Xong sau %d lượt (lượt %d). Độ hiếm biết khi rèn xong; món mới vào kho đồ." % [job.turns,
+			_state.turn + job.turns], 14))
+	_forge_box.add_child(_row([icon, column]))
+	_forge_box.add_child(_label("Mỗi lúc chỉ rèn được 1 món; chọn món tiếp theo khi món này xong.", 13))
+
+
+## "Vũ khí (đao, thương…)" for generals, "Quạt / Bút" … for advisors.
+func _forge_slot_name(kind: StringName, slot: StringName) -> String:
+	if kind == &"advisor":
+		return {&"weapon": "Quạt / Bút", &"armor": "Áo bào", &"accessory": "Ấn / Ngọc bội"}[slot]
+	return Item.SLOT_NAMES[slot]
+
+
+func _choice_button(text: String, chosen: bool, on_pressed: Callable) -> Button:
+	var button := _button(text, on_pressed)
+	button.toggle_mode = true
+	button.button_pressed = chosen
+	button.custom_minimum_size = Vector2(110, 36)
+	return button
 
 
 # --- Generals (castle only) ---------------------------------------------------------------

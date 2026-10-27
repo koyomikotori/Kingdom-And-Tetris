@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LegendaryItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/equipment/legendary_item_data.gd" id="1_legendary"]
+
+[resource]
+script = ExtResource("1_legendary")
+item_id = &"bat_quai_dao_bao"
+display_name = "Bát quái đạo bào"
+description = "Áo đạo thêu bát quái, người mặc thông tỏ trời đất."
+kind = &"advisor"
+slot = &"armor"
+weapon_type = &""
+effects = Array[StringName]([&"admin_yield", &"build_discount"])
