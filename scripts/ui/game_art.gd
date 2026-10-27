@@ -70,6 +70,17 @@ static func level_badge(level: int) -> Texture2D:
 	return _load(BUILDING_DIR + "level_%d.png" % level)
 
 
+## Construction art (GDD §8, M12d): "foundation" (a new building's cells), "scaffold" (laid over
+## every cell under construction).
+static func construction(part: String) -> Texture2D:
+	return _load(BUILDING_DIR + part + ".png")
+
+
+## Plate with the turns a construction still needs (1–7).
+static func turns_badge(turns: int) -> Texture2D:
+	return _load(BUILDING_DIR + "turns_%d.png" % clampi(turns, 1, 7))
+
+
 ## Resource icon (24×24 on screen).
 static func icon(resource_id: StringName) -> Texture2D:
 	return _load(ICON_DIR + String(resource_id) + ".png")

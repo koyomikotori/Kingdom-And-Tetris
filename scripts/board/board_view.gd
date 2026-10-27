@@ -25,6 +25,15 @@ const GHOST_ALPHA := 0.75
 const GHOST_VALID_COLOR := Color(0.45, 1.0, 0.45)
 const GHOST_INVALID_COLOR := Color(1.0, 0.3, 0.3)
 
+## A building being upgraded shows through its scaffolding this much.
+const UPGRADING_ALPHA := 0.6
+## Turns left on the castle's upgrade (KingdomState.castle_turns), set by the kingdom scene.
+var castle_turns := 0:
+	set(value):
+		if castle_turns != value:
+			castle_turns = value
+			queue_redraw()
+
 ## Shows "x,y" in every cell. Toggled with G in the kingdom scene (off now that cells have art).
 var show_coords := false:
 	set(value):
@@ -256,17 +265,38 @@ func _draw_buildings() -> void:
 		var is_castle := cell.building_id == BoardData.CASTLE_ID
 		var texture := GameArt.castle(castle_level) if is_castle else GameArt.building(cell.building_id)
 		var building: BuildingData = _buildings.get(cell.building_id)
-		if texture != null:
-			draw_texture_rect(texture, bounds, false)
+		var turns := castle_turns if is_castle else cell.building_turns
+		var new_building := turns > 0 and not is_castle and not cell.building_upgrading
+		if new_building:
+			_tile_over(cell.building_origin, GameArt.construction("foundation"))
+		elif texture != null:
+			draw_texture_rect(texture, bounds, false, Color(1, 1, 1, UPGRADING_ALPHA) if turns > 0 else Color.WHITE)
 		else:
 			draw_rect(bounds.grow(-4), building.color if building != null else Color.WHITE)
+		if turns > 0:
+			_tile_over(cell.building_origin, GameArt.construction("scaffold"))
 
 
-## Each production building's level on a small plate in its bottom-right corner, drawn last so
-## the key cell frames never hide it.
+## `texture` drawn on every cell of the building at `origin`.
+func _tile_over(origin: Vector2i, texture: Texture2D) -> void:
+	if texture == null:
+		return
+	for covered in _board.get_building_cells(origin):
+		draw_texture_rect(texture, _cell_rect(covered.coord), false)
+
+
+## Each production building's level on a small plate in its bottom-right corner, and the turns
+## a construction still needs in its top-left corner, drawn last so the key cell frames never hide them.
 func _draw_level_badges() -> void:
 	for cell in _board.get_all_cells():
 		if not cell.has_building() or cell.coord != cell.building_origin:
+			continue
+		var turns := castle_turns if cell.building_id == BoardData.CASTLE_ID else cell.building_turns
+		var plate := GameArt.turns_badge(turns) if turns > 0 else null
+		if plate != null:
+			draw_texture_rect(plate, Rect2(_cell_rect(cell.coord).position - Vector2(2, 2),
+					plate.get_size() * GameArt.ART_SCALE), false)
+		if cell.is_constructing() and not cell.building_upgrading:
 			continue
 		var building: BuildingData = _buildings.get(cell.building_id)
 		var badge := GameArt.level_badge(cell.building_level)

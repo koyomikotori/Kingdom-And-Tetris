@@ -43,6 +43,10 @@ var stats := {"battles_won": 0, "battles_lost": 0}
 var buildings_supplied := true
 ## Castle level, 1..castle_levels.size() (GDD §8, M11c).
 var castle_level := 1
+## Turns left on the castle's upgrade to castle_level + 1 (GDD §8, M12d); 0 = none.
+var castle_turns := 0
+## Tests and previews: building and upgrading finish at once instead of taking turns.
+static var instant_construction := false
 var castle_levels: Array[CastleLevelData] = CastleLevelData.load_all()
 var rng := RandomNumberGenerator.new()
 
@@ -96,7 +100,8 @@ func _record_battle(won: bool) -> void:
 ## The whole game as JSON-safe data. The board is restored separately (BoardData.from_save),
 ## because the state is built around it.
 func to_save() -> Dictionary:
-	return {"turn": turn, "buildings_supplied": buildings_supplied, "castle_level": castle_level, "board": board.to_save(),
+	return {"turn": turn, "buildings_supplied": buildings_supplied, "castle_level": castle_level,
+			"castle_turns": castle_turns, "board": board.to_save(),
 			"hand": hand.to_save(), "stockpile": stockpile.to_save(), "army": army.to_save(),
 			"diplomacy": diplomacy.to_save(), "wars": wars.to_save(), "victory": victory.to_save(), "stats": stats.duplicate(),
 			"events": events.to_save(), "generals": generals.to_save(), "advisors": advisors.to_save()}
@@ -109,6 +114,7 @@ func load_save(data: Dictionary) -> void:
 	buildings_supplied = bool(data.buildings_supplied)
 	# Saves from before M11c have no castle level.
 	castle_level = clampi(int(data.get("castle_level", 1)), 1, castle_levels.size())
+	castle_turns = int(data.get("castle_turns", 0)) if castle_level < castle_levels.size() else 0
 	hand.load_save(data.hand)
 	stockpile.load_save(data.stockpile)
 	army.load_save(data.army, units)
@@ -143,9 +149,64 @@ func place_piece(index: int, origin: Vector2i) -> PlacementRules.Result:
 	return result
 
 
+## Lays the foundation; the building is finished after its build_turns (GDD §8, M12d).
 func build(building_id: StringName, origin: Vector2i) -> BuildRules.Result:
 	var building := buildings[building_id]
-	return BuildRules.apply(board, stockpile, building, origin, castle_level, building_cost(building))
+	var result := BuildRules.apply(board, stockpile, building, origin, castle_level, building_cost(building),
+			has_free_builder())
+	if result == BuildRules.Result.OK and instant_construction:
+		finish_construction(origin)
+	return result
+
+
+# --- Construction (GDD §8, M12d) ----------------------------------------------------------
+
+## Builder teams: how many buildings (the castle included) may be built or upgraded at once.
+func builder_limit() -> int:
+	return 1 + castle_level
+
+
+func builders_busy() -> int:
+	return board.get_construction_origins().size() + (1 if castle_turns > 0 else 0)
+
+
+func has_free_builder() -> bool:
+	return builders_busy() < builder_limit()
+
+
+## Finishes the construction at `origin` now (instant_construction; an upgrade gains its level).
+func finish_construction(origin: Vector2i) -> void:
+	var cell := board.get_cell(origin)
+	if cell == null or not cell.is_constructing():
+		return
+	if cell.building_upgrading:
+		board.set_building_level(origin, cell.building_level + 1)
+	board.set_construction(origin, 0)
+
+
+## One turn of work on every construction; finished ones start working. Returns what was finished:
+## [{"name": String, "level": int, "upgrade": bool}].
+func _advance_construction() -> Array[Dictionary]:
+	var finished: Array[Dictionary] = []
+	for origin in board.get_construction_origins():
+		var cell := board.get_cell(origin)
+		var turns_left := cell.building_turns - 1
+		var upgrading := cell.building_upgrading
+		board.set_construction(origin, turns_left, upgrading)
+		if turns_left > 0:
+			continue
+		if upgrading:
+			board.set_building_level(origin, cell.building_level + 1)
+		var data: BuildingData = buildings.get(cell.building_id)
+		finished.append({"name": data.display_name if data != null else String(cell.building_id),
+				"level": cell.building_level, "upgrade": upgrading})
+	if castle_turns > 0:
+		castle_turns -= 1
+		if castle_turns == 0:
+			castle_level += 1
+			finished.append({"name": "Thành chính", "level": castle_level, "upgrade": true})
+			castle_changed.emit()
+	return finished
 
 
 ## What a building costs right now: its cost less the Nội chính discount (Advisors.discounted).
@@ -169,12 +230,15 @@ func demolish_refund(building_id: StringName) -> Dictionary[StringName, int]:
 	return refund
 
 
-## Removes the building whose origin is `origin` and refunds half its cost. The castle cannot be
-## demolished. Returns the refund ({} when nothing was demolished).
+## Removes the building whose origin is `origin` (finished, or still a foundation) and refunds
+## half its cost. The castle cannot be demolished; an upgrade is called off with cancel_upgrade().
+## Returns the refund ({} when nothing was demolished).
 func demolish(origin: Vector2i) -> Dictionary[StringName, int]:
 	var cell := board.get_cell(origin)
 	if cell == null or not cell.has_building() or cell.building_id == BoardData.CASTLE_ID or cell.building_origin != origin:
 		return {}
+	if cell.building_upgrading:
+		return cancel_upgrade(origin)
 	var refund := demolish_refund(cell.building_id)
 	board.remove_building(origin)
 	stockpile.add(refund)
@@ -182,11 +246,13 @@ func demolish(origin: Vector2i) -> Dictionary[StringName, int]:
 
 
 ## Moves the building whose origin is `from_origin` for free. Nothing changes unless
-## BuildRules.check_move() is OK; the castle never moves.
+## BuildRules.check_move() is OK; the castle and buildings under construction never move.
 func move_building(from_origin: Vector2i, to_origin: Vector2i) -> BuildRules.Result:
 	var cell := board.get_cell(from_origin)
 	if cell == null or not buildings.has(cell.building_id) or cell.building_origin != from_origin:
 		return BuildRules.Result.OCCUPIED
+	if cell.is_constructing():
+		return BuildRules.Result.UNDER_CONSTRUCTION
 	var building := buildings[cell.building_id]
 	var result := BuildRules.check_move(board, building, from_origin, to_origin)
 	if result == BuildRules.Result.OK:
@@ -199,7 +265,7 @@ func move_building(from_origin: Vector2i, to_origin: Vector2i) -> BuildRules.Res
 
 # --- Building levels (GDD §8, economy v2) -------------------------------------------------
 
-enum UpgradeResult { OK, NOT_UPGRADABLE, MAX_LEVEL, CASTLE_TOO_LOW, CANNOT_AFFORD }
+enum UpgradeResult { OK, NOT_UPGRADABLE, MAX_LEVEL, CASTLE_TOO_LOW, CANNOT_AFFORD, NO_BUILDERS, UNDER_CONSTRUCTION }
 
 
 ## What raising the building at `origin` one level costs right now (Nội chính discount included).
@@ -219,22 +285,57 @@ func check_building_upgrade(origin: Vector2i) -> UpgradeResult:
 		return UpgradeResult.NOT_UPGRADABLE
 	if cell.building_level >= buildings[cell.building_id].max_level():
 		return UpgradeResult.MAX_LEVEL
+	if cell.is_constructing():
+		return UpgradeResult.UNDER_CONSTRUCTION
 	if cell.building_level >= castle_level:
 		return UpgradeResult.CASTLE_TOO_LOW
+	if not has_free_builder():
+		return UpgradeResult.NO_BUILDERS
 	if not stockpile.can_afford(building_upgrade_cost(origin)):
 		return UpgradeResult.CANNOT_AFFORD
 	return UpgradeResult.OK
 
 
-## Pays and raises the building one level. Nothing changes unless check_building_upgrade() is OK.
+## Turns the next upgrade of the building at `origin` takes.
+func building_upgrade_turns(origin: Vector2i) -> int:
+	return BuildingData.upgrade_turns(board.get_building_level(origin) + 1)
+
+
+## Pays and starts the upgrade; the building stops working and reaches the next level after
+## building_upgrade_turns(). Nothing changes unless check_building_upgrade() is OK.
 func upgrade_building(origin: Vector2i) -> UpgradeResult:
 	var result := check_building_upgrade(origin)
 	if result == UpgradeResult.OK:
-		# Level first: paying emits stockpile.changed, and the income shown must already count the
-		# new level.
+		# Construction first: paying emits stockpile.changed, and the income shown must already
+		# leave the building out.
 		var cost := building_upgrade_cost(origin)
-		board.set_building_level(origin, board.get_building_level(origin) + 1)
+		board.set_construction(origin, building_upgrade_turns(origin), true)
+		if instant_construction:
+			finish_construction(origin)
 		stockpile.spend(cost)
+	return result
+
+
+## Calls off the upgrade of the building at `origin`: it keeps its level and half the upgrade's
+## cost comes back. Returns the refund ({} when there was no upgrade).
+func cancel_upgrade(origin: Vector2i) -> Dictionary[StringName, int]:
+	var cell := board.get_cell(origin)
+	var refund: Dictionary[StringName, int] = {}
+	if cell == null or not cell.building_upgrading or not buildings.has(cell.building_id):
+		return refund
+	refund = half_refund(buildings[cell.building_id].upgrade_cost(cell.building_level + 1))
+	board.set_construction(origin, 0)
+	stockpile.add(refund)
+	return refund
+
+
+## Half of `amounts` (DEMOLISH_REFUND), rounded down, without the zeros.
+func half_refund(amounts: Dictionary[StringName, int]) -> Dictionary[StringName, int]:
+	var result: Dictionary[StringName, int] = {}
+	for resource_id in amounts:
+		var amount := floori(amounts[resource_id] * DEMOLISH_REFUND)
+		if amount > 0:
+			result[resource_id] = amount
 	return result
 
 
@@ -261,7 +362,7 @@ func get_squad_capacity() -> int:
 
 # --- Castle (GDD §8, M11c) ----------------------------------------------------------------
 
-enum CastleResult { OK, MAX_LEVEL, CANNOT_AFFORD }
+enum CastleResult { OK, MAX_LEVEL, CANNOT_AFFORD, NO_BUILDERS, IN_PROGRESS }
 
 
 ## The level the castle would reach next, or null at the top.
@@ -283,19 +384,47 @@ func check_castle_upgrade() -> CastleResult:
 	var next := next_castle_level()
 	if next == null:
 		return CastleResult.MAX_LEVEL
+	if castle_turns > 0:
+		return CastleResult.IN_PROGRESS
+	if not has_free_builder():
+		return CastleResult.NO_BUILDERS
 	if not stockpile.can_afford(castle_upgrade_cost()):
 		return CastleResult.CANNOT_AFFORD
 	return CastleResult.OK
 
 
-## Pays and raises the castle one level, at once. Nothing changes unless check_castle_upgrade() is OK.
+## Turns the castle's next upgrade takes: the new level + 1.
+func castle_upgrade_turns() -> int:
+	return castle_level + 2
+
+
+## Pays and starts the castle's upgrade; it keeps the current level's limits until it is finished
+## (castle_upgrade_turns() later) and Chiêu hiền is closed meanwhile. Nothing changes unless
+## check_castle_upgrade() is OK.
 func upgrade_castle() -> CastleResult:
 	var result := check_castle_upgrade()
 	if result == CastleResult.OK:
-		stockpile.spend(castle_upgrade_cost())
-		castle_level += 1
+		var cost := castle_upgrade_cost()
+		castle_turns = castle_upgrade_turns()
+		if instant_construction:
+			castle_turns = 0
+			castle_level += 1
+		stockpile.spend(cost)
 		castle_changed.emit()
 	return result
+
+
+## Calls off the castle's upgrade and gives half its cost back. Returns the refund.
+func cancel_castle_upgrade() -> Dictionary[StringName, int]:
+	var refund: Dictionary[StringName, int] = {}
+	var next := next_castle_level()
+	if castle_turns <= 0 or next == null:
+		return refund
+	refund = half_refund(next.cost)
+	castle_turns = 0
+	stockpile.add(refund)
+	castle_changed.emit()
+	return refund
 
 
 func can_replenish() -> bool:
@@ -346,14 +475,15 @@ func upkeep_discount() -> Dictionary[StringName, int]:
 func get_building_upkeep() -> Dictionary[StringName, int]:
 	var total: Dictionary[StringName, int] = {}
 	for building_id in buildings:
-		Economy.add_into(total, _upkeep_of_type(building_id))
+		Economy.add_into(total, building_type_upkeep(building_id))
 	return total
 
 
-func _upkeep_of_type(building_id: StringName) -> Dictionary[StringName, int]:
+## Upkeep of every finished building of this type, at its level (buildings under construction pay none).
+func building_type_upkeep(building_id: StringName) -> Dictionary[StringName, int]:
 	var total: Dictionary[StringName, int] = {}
 	for cell in board.get_all_cells():
-		if cell.building_id == building_id and cell.coord == cell.building_origin:
+		if cell.building_id == building_id and cell.coord == cell.building_origin and not cell.is_constructing():
 			Economy.add_into(total, buildings[building_id].upkeep_at(cell.building_level))
 	return total
 
@@ -420,7 +550,8 @@ func get_income_breakdown() -> Dictionary[StringName, Array]:
 	if buildings_supplied:
 		var produced := {}  # building_id -> amounts
 		for cell in board.get_all_cells():
-			if cell.has_building() and cell.coord == cell.building_origin and buildings.has(cell.building_id):
+			if cell.has_building() and cell.coord == cell.building_origin and buildings.has(cell.building_id) \
+					and not cell.is_constructing():
 				var amounts: Dictionary[StringName, int] = produced.get_or_add(cell.building_id, {} as Dictionary[StringName, int])
 				Economy.add_into(amounts, Economy.building_yield(buildings[cell.building_id], cell.is_key, cell.building_level))
 		for building_id in produced:
@@ -430,7 +561,7 @@ func get_income_breakdown() -> Dictionary[StringName, Array]:
 	# Building upkeep, per building type.
 	for building_id in buildings:
 		var count := board.count_buildings(building_id)
-		var type_upkeep := _upkeep_of_type(building_id)
+		var type_upkeep := building_type_upkeep(building_id)
 		for resource_id in type_upkeep:
 			add.call(resource_id, {"source": &"building", "id": building_id,
 					"amount": -type_upkeep[resource_id], "count": count})
@@ -461,7 +592,9 @@ func get_net_income() -> Dictionary[StringName, int]:
 ##    need a barracks); clan relations drift;
 ## 5. advance the turn and deal a fresh hand (unplaced pieces are discarded);
 ## 6. bandits may raid at the start of the new turn.
-## Returns {"collected", "upkeep", "deserted", "buildings_supplied", "replenished", "agreements"} plus
+## 4b. every construction gets one turn closer; finished buildings work from the next turn;
+## Returns {"collected", "upkeep", "deserted", "buildings_supplied", "replenished", "agreements",
+## "completed" (_advance_construction)} plus
 ## "treaties" (Alliances.end_turn events), "war_declared" (clan ids that declared war this turn),
 ## "victory" (Victory.Path won this turn, or Victory.NO_PATH), "castle_in_danger", "events" (new
 ## EventSystem.pending entries, answered through `events`) and,
@@ -484,6 +617,7 @@ func end_turn() -> Dictionary:
 	if buildings_supplied:
 		Economy.add_into(upkeep, building_upkeep)
 	var agreements := diplomacy.run_agreements(stockpile)
+	var completed := _advance_construction()
 	var replenished := _replenish()
 	if can_replenish():
 		army.train()
@@ -497,6 +631,7 @@ func end_turn() -> Dictionary:
 	hand.deal_new_hand()
 	var report := {"collected": collected, "upkeep": upkeep, "deserted": deserted,
 			"buildings_supplied": buildings_supplied, "replenished": replenished, "agreements": agreements}
+	report["completed"] = completed
 	report["treaties"] = treaties
 	report["war_declared"] = declared
 	report["generals_healed"] = healed

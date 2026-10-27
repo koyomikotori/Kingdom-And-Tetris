@@ -324,6 +324,7 @@ DIGITS = {
     1: ["010", "110", "010", "010", "111"], 2: ["110", "001", "010", "100", "111"],
     3: ["110", "001", "010", "001", "110"], 4: ["101", "101", "111", "001", "001"],
     5: ["111", "100", "110", "001", "110"], 6: ["011", "100", "110", "101", "010"],
+    7: ["111", "001", "010", "010", "010"],
 }
 
 
@@ -336,6 +337,51 @@ def level_badge(level: int) -> Canvas:
             if bit == "1":
                 c.px(2 + col, 2 + row, P["gold"])
     c.outline()
+    return c
+
+
+def turns_badge(turns: int) -> Canvas:
+    """A small stone plate with the turns a construction still needs, in dark ink."""
+    c = Canvas(7, 9)
+    c.rect(1, 1, 5, 7, P["stone_light"])
+    for row, line in enumerate(DIGITS[turns]):
+        for col, bit in enumerate(line):
+            if bit == "1":
+                c.px(2 + col, 2 + row, P["outline"])
+    c.outline()
+    return c
+
+
+def foundation() -> Canvas:
+    """A cell of a new building's foundation: packed earth, corner stones and string lines."""
+    rng = random.Random(9)
+    c = Canvas(16, 16, P["dirt"])
+    speckle(c, rng, [P["dirt_dark"], P["dirt_light"]], 30)
+    for x, y in ((1, 1), (12, 1), (1, 12), (12, 12)):
+        c.rect(x, y, 3, 3, P["stone"])
+        c.hline(x, x + 2, y, P["stone_light"])
+        c.hline(x, x + 2, y + 2, P["stone_dark"])
+    c.hline(4, 11, 2, P["wood_light"])
+    c.hline(4, 11, 13, P["wood_light"])
+    c.vline(2, 4, 11, P["wood_light"])
+    c.vline(13, 4, 11, P["wood_light"])
+    return c
+
+
+def scaffold() -> Canvas:
+    """Bamboo scaffolding laid over a cell under construction (transparent between the poles)."""
+    c = Canvas(16, 16)
+    for x in (1, 14):
+        c.vline(x, 0, 15, P["wood_dark"])
+        c.vline(x + 1 if x == 1 else x - 1, 0, 15, P["wood"])
+    for y in (4, 11):
+        c.hline(0, 15, y, P["wood_light"])
+        c.hline(0, 15, y + 1, P["wood_dark"])
+    for i in range(10):
+        c.px(3 + i, 5 + i // 2 if i < 12 else 10, P["wood"])
+    for x in (1, 2, 13, 14):
+        for y in (4, 11):
+            c.px(x, y, P["rope"])
     return c
 
 
@@ -514,6 +560,10 @@ def main() -> None:
     for level in range(1, 7):
         castle(level).save(f"buildings/castle_{level}.png")
         level_badge(level).save(f"buildings/level_{level}.png")
+    for turns in range(1, 8):
+        turns_badge(turns).save(f"buildings/turns_{turns}.png")
+    foundation().save("buildings/foundation.png")
+    scaffold().save("buildings/scaffold.png")
     barracks().save("buildings/barracks.png")
     watchtower().save("buildings/watchtower.png")
     farm().save("buildings/farm.png")

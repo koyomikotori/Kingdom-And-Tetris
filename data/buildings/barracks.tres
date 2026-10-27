@@ -13,3 +13,5 @@ max_count = 3
 color = Color(0.45, 0.3, 0.2, 1)
 squad_capacity = 4
 enables_replenishment = true
+category = 1
+build_turns = 2

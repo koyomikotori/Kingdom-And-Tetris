@@ -2,6 +2,10 @@ class_name BuildingData
 extends Resource
 ## Static definition of a building the player can construct. One .tres per building in data/buildings/.
 
+## The build window's tabs (GDD §8, M12d).
+enum Category { PRODUCTION, MILITARY, ADMIN }
+const CATEGORY_NAMES: Array[String] = ["Sản xuất", "Quân sự", "Hành chính"]
+
 @export var building_id: StringName
 @export var display_name: String
 @export_multiline var description: String
@@ -29,6 +33,9 @@ extends Resource
 @export var level_yields: Array[Dictionary] = []
 ## Castle level needed to build it.
 @export var required_castle_level: int = 1
+@export var category: Category = Category.PRODUCTION
+## Turns a new one takes to build (GDD §8, M12d). Upgrades take upgrade_turns().
+@export var build_turns: int = 2
 
 
 ## Upgrade cost: to level N, N × the build cost; from level 3 also (N − 2) × each UPGRADE_EXTRA.
@@ -50,6 +57,11 @@ func max_level() -> int:
 
 func is_upgradable() -> bool:
 	return max_level() > 1
+
+
+## Turns an upgrade to `level` takes: as many as the new level.
+static func upgrade_turns(level: int) -> int:
+	return level
 
 
 ## What one building of this level produces per turn (before the key cell bonus).

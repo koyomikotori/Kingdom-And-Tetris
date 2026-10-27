@@ -21,10 +21,13 @@ const TEST_FILES := [
 	"res://tests/test_advisors.gd",
 	"res://tests/test_art.gd",
 	"res://tests/test_officers.gd",
+	"res://tests/test_construction.gd",
 ]
 
 
 func _initialize() -> void:
+	# Older tests expect buildings at once; test_construction.gd switches this off for its own tests.
+	KingdomState.instant_construction = true
 	var total := 0
 	var failed := 0
 	for path in TEST_FILES:

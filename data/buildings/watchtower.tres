@@ -13,3 +13,5 @@ max_count = 3
 color = Color(0.35, 0.4, 0.6, 1)
 upkeep = Dictionary[StringName, int]({&"food": 1})
 raid_chance_reduction = 0.04
+category = 2
+build_turns = 1
