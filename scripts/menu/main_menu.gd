@@ -5,7 +5,7 @@ extends Control
 const BACKGROUND_COLOR := UiPalette.BACKDROP
 const TITLE_COLOR := UiPalette.ACCENT
 const WARNING_COLOR := UiPalette.WARNING
-## The castle picture above the title, ×4 (×2 on a short screen such as a phone's).
+## The castle picture above the title, ×4 (×2 in a short game window).
 const CASTLE_SCALE := 4
 const SHORT_CASTLE_SCALE := 2
 ## Below this height (design pixels) the menu uses the compact sizes.
@@ -20,8 +20,6 @@ var _status: Label
 
 
 func _ready() -> void:
-	# The game opens here: enlarge the UI once on phones (GDD §10.2).
-	MobileSupport.apply_ui_scale(get_window())
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var background := ColorRect.new()
 	background.color = BACKGROUND_COLOR
@@ -32,8 +30,8 @@ func _ready() -> void:
 	add_child(center)
 	var paper := PanelContainer.new()
 	center.add_child(paper)
-	# A short phone screen shrinks the menu so every button (Thoát too) stays visible.
-	paper.resized.connect(func() -> void: MobileSupport.shrink_to_fit(paper, get_viewport_rect().size))
+	# A short game window shrinks the menu so every button (Thoát too) stays visible.
+	paper.resized.connect(func() -> void: ScreenFit.shrink_to_fit(paper, get_viewport_rect().size))
 	var margin := MarginContainer.new()
 	for edge in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + edge, 24)
@@ -127,8 +125,3 @@ func _spacer(height: float) -> Control:
 	spacer.custom_minimum_size = Vector2(0, height)
 	return spacer
 
-
-## Android's Back button leaves the game from the main menu.
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
-		get_tree().quit()

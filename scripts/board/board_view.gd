@@ -1,21 +1,18 @@
 class_name BoardView
 extends Node2D
-## Draws a BoardData with the generated pixel art (GameArt, GDD §13) and turns pointer input
-## (mouse, or a finger: Godot turns the first finger into mouse events) into cell coordinates
-## (GDD §10.2, M13): a tap, dragging the locked ghost, or dragging the map. Read-only: it never
-## modifies the board, it only emits signals.
+## Draws a BoardData with the generated pixel art (GameArt, GDD §13) and turns mouse input into
+## cell coordinates: a click (press and release without moving), or a left-button drag that moves
+## the map. Read-only: it never modifies the board, it only emits signals.
 
 signal cell_hovered(coord: Vector2i)
 ## A press and release without moving (more than TAP_SLOP) on a cell.
 signal cell_tapped(coord: Vector2i)
-## The pointer, pressed on (or right beside) the locked ghost, moved by `step` cells.
-signal ghost_dragged(step: Vector2i)
-## A drag that is not on the locked ghost: the map should follow (screen pixels).
+## A left-button drag: the map should follow (screen pixels).
 signal pan_dragged(relative: Vector2)
 
 const TILE_SIZE := 32
 const OFF_BOARD := Vector2i(-1, -1)
-## Screen pixels a press may move and still count as a tap.
+## Screen pixels a press may move and still count as a click.
 const TAP_SLOP := 12.0
 const SELECTED_COLOR := Color(1.0, 0.9, 0.45)
 
@@ -44,9 +41,7 @@ var castle_turns := 0:
 			castle_turns = value
 			queue_redraw()
 
-## The ghost stays where the player tapped (waiting for Đặt / Hủy); dragging on it moves it.
-var ghost_locked := false
-## The cell whose information is shown (tapped with nothing selected), or OFF_BOARD.
+## The cell whose information is shown (clicked with nothing selected), or OFF_BOARD.
 var selected_cell := OFF_BOARD:
 	set(value):
 		selected_cell = value
@@ -54,11 +49,6 @@ var selected_cell := OFF_BOARD:
 var _pressing := false
 var _press_position := Vector2.ZERO
 var _panning := false
-var _dragging_ghost := false
-## The cell the ghost drag was last at (moves are sent as steps from it).
-var _drag_cell := OFF_BOARD
-## Fingers down (InputEventScreenTouch); a second finger means a pinch, never a tap or a pan.
-var _touches: Dictionary[int, bool] = {}
 
 ## Shows "x,y" in every cell. Toggled with G in the kingdom scene (off now that cells have art).
 var show_coords := false:
@@ -142,52 +132,23 @@ func get_board_rect() -> Rect2:
 func _unhandled_input(event: InputEvent) -> void:
 	if _board == null:
 		return
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			_touches[event.index] = true
-		else:
-			_touches.erase(event.index)
-		if _touches.size() > 1:
-			_pressing = false
-	elif event is InputEventMouseMotion:
+	if event is InputEventMouseMotion:
 		_update_hover(event.position)
 		if not _pressing:
 			return
-		if _dragging_ghost:
-			var cell := _cell_at(event.position)
-			if cell != _drag_cell:
-				ghost_dragged.emit(cell - _drag_cell)
-				_drag_cell = cell
-		elif _panning or event.position.distance_to(_press_position) > TAP_SLOP:
+		if _panning or event.position.distance_to(_press_position) > TAP_SLOP:
 			_panning = true
 			pan_dragged.emit(event.relative)
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		var coord := _cell_at(event.position)
 		if event.pressed:
-			_pressing = _touches.size() <= 1
+			_pressing = true
 			_press_position = event.position
 			_panning = false
-			_dragging_ghost = ghost_locked and _is_on_ghost(coord)
-			_drag_cell = coord
 		elif _pressing:
 			_pressing = false
-			if not _panning and not _dragging_ghost and _board.is_in_bounds(coord):
+			if not _panning and _board.is_in_bounds(coord):
 				cell_tapped.emit(coord)
-
-
-## Whether `coord` is on the ghost or within one cell of it (thin pieces are easy to grab).
-func _is_on_ghost(coord: Vector2i) -> bool:
-	var cells: Array[Vector2i] = []
-	if _ghost_piece != null:
-		cells = _ghost_piece.get_board_coords(_ghost_origin)
-	elif _ghost_building != null:
-		for y in _ghost_building.size.y:
-			for x in _ghost_building.size.x:
-				cells.append(_ghost_origin + Vector2i(x, y))
-	for cell in cells:
-		if absi(cell.x - coord.x) <= 1 and absi(cell.y - coord.y) <= 1:
-			return true
-	return false
 
 
 ## The cell under a viewport position (an input event's), possibly off the board.

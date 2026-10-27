@@ -38,8 +38,8 @@ func build_frame(title_text: String, accent: Color, width_share: float = WIDTH_S
 	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
 	# The paper panel comes from the project theme (GDD §13).
 	add_child(panel)
-	# Small screens (phones): a window taller or wider than the screen shrinks to fit (GDD §10.2).
-	panel.resized.connect(func() -> void: MobileSupport.shrink_to_fit(panel, get_viewport_rect().size))
+	# A small game window: a window taller or wider than it shrinks to fit (GDD §10.2).
+	panel.resized.connect(func() -> void: ScreenFit.shrink_to_fit(panel, get_viewport_rect().size))
 	var margin := MarginContainer.new()
 	for edge in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + edge, 20)

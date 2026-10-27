@@ -1,7 +1,7 @@
 class_name CameraController
 extends Camera2D
-## Mouse wheel or a two-finger pinch zooms toward the cursor / fingers; right or middle mouse drag
-## pans (the board view asks for one-finger / left-button pans through pan()). GDD §10.2, M13.
+## Mouse wheel (or a trackpad pinch) zooms toward the cursor; right or middle mouse drag pans, and
+## the board view asks for left-button pans through pan().
 
 @export var min_zoom := 0.75
 @export var max_zoom := 4.0
@@ -9,8 +9,6 @@ extends Camera2D
 
 var _dragging := false
 var _bounds := Rect2()
-## Finger positions by touch index, for the pinch.
-var _fingers: Dictionary[int, Vector2] = {}
 
 
 ## Centers the camera on `rect` and picks a zoom that fits it.
@@ -25,24 +23,13 @@ func focus_on(rect: Rect2, reserved_right: float = 0.0, reserved_top: float = 0.
 	position = rect.get_center() + Vector2(reserved_right * 0.5, -reserved_top * 0.5) / z
 
 
-## Moves the view by a drag of `screen_relative` pixels (the map follows the finger).
+## Moves the view by a drag of `screen_relative` pixels (the map follows the mouse).
 func pan(screen_relative: Vector2) -> void:
-	if _fingers.size() > 1:
-		return
 	position -= screen_relative / zoom.x
 	_clamp_to_bounds()
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			_fingers[event.index] = event.position
-		else:
-			_fingers.erase(event.index)
-		return
-	if event is InputEventScreenDrag and _fingers.has(event.index):
-		_pinch(event.index, event.position)
-		return
 	if event is InputEventMagnifyGesture:
 		_zoom_at(event.position, event.factor)
 		return
@@ -63,19 +50,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseMotion and _dragging:
 		position -= event.relative / zoom.x
 		_clamp_to_bounds()
-
-
-## Two fingers: zoom by how much their distance changed, around their middle.
-func _pinch(index: int, new_position: Vector2) -> void:
-	if _fingers.size() != 2:
-		_fingers[index] = new_position
-		return
-	var other: int = _fingers.keys()[0] if _fingers.keys()[0] != index else _fingers.keys()[1]
-	var before := _fingers[index].distance_to(_fingers[other])
-	_fingers[index] = new_position
-	var after := new_position.distance_to(_fingers[other])
-	if before > 1.0:
-		_zoom_at((new_position + _fingers[other]) * 0.5, after / before)
 
 
 ## Keeps the world point under the cursor fixed while zooming.
