@@ -550,7 +550,21 @@ def tab(selected: bool) -> Canvas:
     return c
 
 
+def app_icon() -> Canvas:
+    """The game's icon (Android launcher, window): the level 6 castle on a sky and grass tile."""
+    c = Canvas(48, 48)
+    for y in range(48):
+        c.hline(0, 47, y, P["roof_light"] if y < 30 else P["grass"])
+    c.hline(0, 47, 30, P["grass_dark"] if "grass_dark" in P else P["grass"])
+    c.paste(castle(6), 8, 10)
+    for i in range(48):
+        for x, y in ((i, 0), (i, 47), (0, i), (47, i)):
+            c.px(x, y, P["outline"])
+    return c
+
+
 def main() -> None:
+    app_icon().save("ui/app_icon.png", 4)
     tile_grass().save("tiles/grass.png")
     tile_farmland().save("tiles/farmland.png")
     tile_forest().save("tiles/forest.png")

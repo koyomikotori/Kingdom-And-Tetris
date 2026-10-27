@@ -5,8 +5,11 @@ extends Control
 const BACKGROUND_COLOR := UiPalette.BACKDROP
 const TITLE_COLOR := UiPalette.ACCENT
 const WARNING_COLOR := UiPalette.WARNING
-## The castle picture above the title, ×4.
+## The castle picture above the title, ×4 (×2 on a short screen such as a phone's).
 const CASTLE_SCALE := 4
+const SHORT_CASTLE_SCALE := 2
+## Below this height (design pixels) the menu uses the compact sizes.
+const SHORT_SCREEN := 700.0
 const NEW_GAME_TEXT := "Ván mới"
 
 var _system := SaveSystem.new()
@@ -17,6 +20,8 @@ var _status: Label
 
 
 func _ready() -> void:
+	# The game opens here: enlarge the UI once on phones (GDD §10.2).
+	MobileSupport.apply_ui_scale(get_window())
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var background := ColorRect.new()
 	background.color = BACKGROUND_COLOR
@@ -27,6 +32,8 @@ func _ready() -> void:
 	add_child(center)
 	var paper := PanelContainer.new()
 	center.add_child(paper)
+	# A short phone screen shrinks the menu so every button (Thoát too) stays visible.
+	paper.resized.connect(func() -> void: MobileSupport.shrink_to_fit(paper, get_viewport_rect().size))
 	var margin := MarginContainer.new()
 	for edge in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + edge, 24)
@@ -37,18 +44,19 @@ func _ready() -> void:
 	margin.add_child(column)
 	var castle := TextureRect.new()
 	castle.texture = GameArt.castle(6)
-	castle.custom_minimum_size = Vector2(32, 32) * CASTLE_SCALE
+	var short := get_viewport_rect().size.y < SHORT_SCREEN
+	castle.custom_minimum_size = Vector2(32, 32) * (SHORT_CASTLE_SCALE if short else CASTLE_SCALE)
 	castle.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	castle.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	column.add_child(castle)
 
-	var title := _label("Kingdom Tiles", 48)
+	var title := _label("Kingdom Tiles", 36 if short else 48)
 	title.add_theme_color_override("font_color", TITLE_COLOR)
 	column.add_child(title)
 	var subtitle := _label("Rise Of Realms", 22)
 	subtitle.add_theme_color_override("font_color", UiPalette.MUTED)
 	column.add_child(subtitle)
-	column.add_child(_spacer(24))
+	column.add_child(_spacer(8 if short else 24))
 
 	_continue_button = _button("Tiếp tục", _on_continue_pressed)
 	column.add_child(_continue_button)
@@ -118,3 +126,9 @@ func _spacer(height: float) -> Control:
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(0, height)
 	return spacer
+
+
+## Android's Back button leaves the game from the main menu.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		get_tree().quit()

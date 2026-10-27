@@ -14,8 +14,10 @@ signal demolished(building_name: String, refund: Dictionary)
 signal construction_started(text: String)
 
 const ACCENT := UiPalette.ACCENT
-## Height of the scrolling list in the castle's Chiêu hiền tab.
+## Height of the scrolling list in the castle's Chiêu hiền tab, on a tall enough screen.
 const TAB_LIST_HEIGHT := 440
+## Screen height the rest of the window needs (ModalWindow.fit_height).
+const TAB_LIST_RESERVED := 330
 const CANDIDATE_PORTRAIT_SCALE := 1
 
 enum Action { NONE, UPGRADE, MOVE, DEMOLISH, CUSTOM, CANCEL_UPGRADE }
@@ -120,7 +122,7 @@ func _tab_box(title: String) -> VBoxContainer:
 	_tabs.add_child(margin)
 	# Long lists (three advisors with their stratagems) scroll instead of growing off screen.
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(0, TAB_LIST_HEIGHT)
+	scroll.custom_minimum_size = Vector2(0, fit_height(TAB_LIST_HEIGHT, TAB_LIST_RESERVED))
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	margin.add_child(scroll)
 	var box := VBoxContainer.new()

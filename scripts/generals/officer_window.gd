@@ -8,6 +8,8 @@ extends ModalWindow
 const STAT_BAR_WIDTH := 160
 ## The tab pages keep this height whatever they show (their content scrolls).
 const TABS_HEIGHT := 480
+## Screen height the rest of the window needs (ModalWindow.fit_height).
+const TABS_RESERVED := 260
 
 var _state: KingdomState
 var _officer: Officer
@@ -41,7 +43,7 @@ func open(state: KingdomState, officer: Officer) -> void:
 	left.add_child(_role)
 	var tabs := TabContainer.new()
 	tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tabs.custom_minimum_size = Vector2(0, TABS_HEIGHT)
+	tabs.custom_minimum_size = Vector2(0, fit_height(TABS_HEIGHT, TABS_RESERVED))
 	row.add_child(tabs)
 	_stats = _tab(tabs, "Chỉ số")
 	_equip_box = _tab(tabs, "Trang bị")

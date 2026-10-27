@@ -686,6 +686,19 @@ Thống kê trận thắng/thua và trạng thái thắng/thua được lưu cù
   - Mỗi file có `save_version`. Bản cũ hơn được nâng cấp từng bước (`v1 → v2 → …`) khi tải. Bản mới hơn phiên bản game thì báo lỗi, không tải.
   - Chỉ lưu trạng thái ván. Dữ liệu tĩnh (địa hình, lính, gia tộc…) đọc lại từ `data/`. Gia tộc hay loại lính không còn trong dữ liệu thì bỏ qua; gia tộc mới thêm vào dữ liệu thì dùng giá trị ban đầu.
 
+### 10.2 Cảm ứng và Android (M13, đã chốt)
+
+**Một cách điều khiển chung** cho điện thoại và máy tính (chuột coi như một ngón tay):
+- **Đặt mảnh đất / xây / di chuyển công trình:** chọn mảnh hoặc công trình, rồi chạm (bấm) một ô: bóng mờ dừng ở đó và **thanh xác nhận** hiện ra với nút **Đặt** (hoặc Xây / Chuyển tới) và **Hủy**, kèm sản lượng hay lý do chưa đặt được (nút Đặt khóa khi không hợp lệ). Chạm ô khác để dời; kéo ngón tay trên bóng thì bóng chạy theo. Trên máy tính, rê chuột vẫn hiện bóng xem trước khi chưa chạm; Enter = Đặt khi thanh xác nhận đang mở, Esc = Hủy.
+- **Xem ô:** khi không cầm gì, chạm ô trống thì ô được viền sáng và khung thông tin góc dưới hiện ô đó (khung thu gọn được); chạm công trình mở bảng công trình như trước.
+- **Bản đồ:** kéo một ngón để cuộn (chuột phải / giữa vẫn kéo được), chụm hai ngón để zoom (con lăn vẫn zoom). Bảng, cửa sổ và danh sách cuộn bằng vuốt.
+- **Thanh tài nguyên:** chạm một tài nguyên mở khung nhỏ chi tiết thu / chi (thay cho tooltip khi rê chuột).
+- **Phím tắt:** đều đã có nút (mảnh đất 1–3 = thẻ mảnh, Enter = Kết thúc lượt, Space = Tạm dừng trận); nút Back của Android = Esc (đóng cửa sổ, bỏ chọn). G (tọa độ) chỉ còn trên máy tính.
+
+**Màn hình:** chỉ nằm ngang. Bố cục giữ như hiện tại; trên điện thoại chữ và nút được phóng to cho vừa ngón tay (nút tối thiểu ~48 px theo kích thước thật của màn hình).
+
+**Xuất APK:** file cấu hình xuất Android trong project (`export_presets.cfg`: tên "Kingdom Tiles: Rise of Realms", gói `com.koyomikotori.kingdomtiles`, màn ngang, icon thành trì pixel). Người chơi tự cài export templates của Godot 4.5.1, JDK 17 và Android SDK theo `docs/android_export_guide.md`; xuất bản debug để cài thử.
+
 ## 11. Lộ trình
 
 | Mốc | Nội dung | Trạng thái |
@@ -712,8 +725,8 @@ Thống kê trận thắng/thua và trạng thái thắng/thua được lưu cù
 | M12b | **Đồ họa (2/3):** trận đánh: lính từng loại, cận vệ tướng cưỡi ngựa, quân cướp / gia tộc, mũi tên, nền chiến trường, hiệu ứng mưu kế | Xong |
 | M12c | **Tab Tướng sĩ** kiểu Ninja Village + chân dung pixel ghép bộ phận + bản đồ thế giới vẽ lại | Xong |
 | M12d | **Bố cục tab + thi công mất lượt:** tab rộng và đều, bảng Xây dựng / Tuyển lính giữa màn hình có danh mục, xây và nâng cấp mất lượt, đội thợ (§8) | Xong |
-| M12e | **Trang bị** cho tướng và mưu sĩ: 5 bậc độ hiếm, Xưởng rèn, chiến lợi phẩm, kho 20 món, vũ khí hiện trong trận, khung chân dung theo sao, sửa hình ngựa và vũ khí lính (§8 Trang bị) | Đang làm |
-| M13 | **Hỗ trợ cảm ứng + xuất APK** (chạm để xem trước/xác nhận, vuốt để kéo, chụm để zoom, nút thay phím tắt); **sắp xếp lại tab Quân đội, Xây dựng, bảng thành** cho gọn trên điện thoại (ít chữ, chi tiết mở khi chạm) | |
+| M12e | **Trang bị** cho tướng và mưu sĩ: 5 bậc độ hiếm, Xưởng rèn, chiến lợi phẩm, kho 20 món, vũ khí hiện trong trận, khung chân dung theo sao, sửa hình ngựa và vũ khí lính (§8 Trang bị) | Xong |
+| M13 | **Hỗ trợ cảm ứng + xuất APK** (chạm xem trước + thanh Đặt/Hủy dùng chung cho chuột, kéo để cuộn, chụm để zoom, chạm tài nguyên xem chi tiết, nút Back; §10.2); **sắp xếp lại tab Quân đội, Xây dựng, bảng thành** cho gọn trên điện thoại (ít chữ, chi tiết mở khi chạm) | Đang làm |
 | M14 | Âm thanh, cân bằng, build Windows + Android, phát hành | |
 
 Đồ họa được đưa lên trước cảm ứng (chốt sau M11f) để lần sắp xếp lại bố cục ở M13 dùng luôn giao diện mới.

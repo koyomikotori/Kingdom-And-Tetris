@@ -4,6 +4,8 @@ extends Node2D
 const NO_SELECTION := -1
 const NO_BUILDING: StringName = &""
 const NO_MOVE := Vector2i(-1, -1)
+## No cell tapped for the current piece / building / move yet (GDD §10.2, M13).
+const NO_PENDING := Vector2i(-9999, -9999)
 ## Short titles: four tabs of equal width share the 340 px side panel (_build_tab_buttons).
 const TAB_TITLES: Array[String] = ["Đất", "Xây dựng", "Quân đội", "Tướng sĩ"]
 
@@ -26,6 +28,20 @@ var _selected := NO_SELECTION
 var _selected_building := NO_BUILDING
 ## Origin of the building being moved (picked in its BuildingWindow), or NO_MOVE.
 var _moving_from := NO_MOVE
+## The cell tapped for the selected piece / building / move: its ghost waits there for Đặt / Hủy.
+var _pending := NO_PENDING
+## The bar with Đặt / Hủy shown while a placement waits (built in _build_confirm_bar).
+var _confirm_bar: PanelContainer
+var _confirm_text: Label
+var _confirm_button: Button
+## A tapped cell whose information stays in the cell info panel (no hover on a touch screen).
+var _info_cell := BoardView.OFF_BOARD
+## The cell info panel shows only its first line.
+var _info_collapsed := false
+## The resource breakdown opened by tapping a resource (touch has no tooltips).
+var _resource_popup: PanelContainer
+var _resource_popup_text: Label
+var _resource_popup_id: StringName = &""
 ## Open post-battle report; blocks kingdom input while shown.
 var _battle_report: BattleReport
 ## Battle being played; the battle screen swallows input itself.
@@ -65,13 +81,23 @@ func _ready() -> void:
 	_build_resource_labels()
 	_build_officers_tab()
 	_build_tab_buttons()
+	_build_confirm_bar()
+	_build_resource_popup()
+	var info_panel: Control = cell_info_label.get_parent().get_parent()
+	info_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	info_panel.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			_info_collapsed = not _info_collapsed
+			_on_cell_hovered(board_view.get_hovered_cell()))
 
 	# A game picked in the main menu, or a new one.
 	var game := GameLaunch.take_pending_game()
 	var board := BoardData.from_save(game.board) if not game.is_empty() else BoardData.create_starting_board(board_size)
 	board_view.setup(board, _terrains, _buildings)
 	board_view.cell_hovered.connect(_on_cell_hovered)
-	board_view.cell_clicked.connect(_on_cell_clicked)
+	board_view.cell_tapped.connect(_on_cell_clicked)
+	board_view.ghost_dragged.connect(_on_ghost_dragged)
+	board_view.pan_dragged.connect(camera.pan)
 	_focus_camera()
 
 	var seed_value := piece_seed if piece_seed != 0 else randi()
@@ -123,31 +149,194 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		KEY_G:
 			board_view.show_coords = not board_view.show_coords
 		KEY_ESCAPE:
-			_clear_selection()
+			if _pending != NO_PENDING:
+				_cancel_pending()
+			elif _info_cell != BoardView.OFF_BOARD and not _has_selection():
+				_set_info_cell(BoardView.OFF_BOARD)
+			else:
+				_clear_selection()
 		KEY_1, KEY_2, KEY_3:
 			tabs.current_tab = 0
 			_toggle_selection(event.keycode - KEY_1)
 		KEY_ENTER, KEY_KP_ENTER:
-			_on_end_turn_pressed()
+			if _pending != NO_PENDING:
+				if not _confirm_button.disabled:
+					_confirm_pending()
+			else:
+				_on_end_turn_pressed()
 
 
+## The cell info panel: the hovered cell (mouse), else the tapped one; collapsed to its first line
+## when the player tapped the panel.
 func _on_cell_hovered(coord: Vector2i) -> void:
-	if coord == BoardView.OFF_BOARD:
-		cell_info_label.text = "Rê chuột lên một ô để xem thông tin.\nCuộn: zoom · Chuột phải/giữa: kéo · G: bật/tắt tọa độ"
-	else:
-		cell_info_label.text = _describe_cell(state.board.get_cell(coord))
+	var shown := coord if coord != BoardView.OFF_BOARD else _info_cell
+	var text := "Chạm một ô để xem thông tin.\nKéo: cuộn · Chụm / con lăn: zoom\nChạm khung này để thu gọn."
+	if shown != BoardView.OFF_BOARD and state.board.is_in_bounds(shown):
+		text = _describe_cell(state.board.get_cell(shown))
+	cell_info_label.text = text.get_slice("\n", 0) + " ▸" if _info_collapsed else text
 	_update_ghost()
 
 
+## A tap on the board (GDD §10.2, M13): with a piece, building or move selected the ghost waits on
+## that cell for Đặt / Hủy; otherwise a building opens its window and any other cell shows its
+## information.
 func _on_cell_clicked(coord: Vector2i) -> void:
+	_hide_resource_popup()
+	if _has_selection():
+		_pending = coord
+		board_view.ghost_locked = true
+		_update_ghost()
+	elif state.board.get_cell(coord).has_building():
+		_open_building(state.board.get_cell(coord).building_origin)
+	else:
+		_set_info_cell(coord)
+
+
+func _on_ghost_dragged(step: Vector2i) -> void:
+	_nudge(step)
+
+
+## Moves the waiting ghost by `step` cells (dragging it, or the arrow buttons on the confirm bar).
+func _nudge(step: Vector2i) -> void:
+	if _pending == NO_PENDING:
+		return
+	_pending += step
+	_update_ghost()
+
+
+func _has_selection() -> bool:
+	return _moving_from != NO_MOVE or _selected != NO_SELECTION or _selected_building != NO_BUILDING
+
+
+func _set_info_cell(coord: Vector2i) -> void:
+	_info_cell = coord
+	board_view.selected_cell = coord
+	_on_cell_hovered(board_view.get_hovered_cell())
+
+
+## Đặt / Xây / Chuyển tới on the confirm bar (or Enter).
+func _confirm_pending() -> void:
+	var coord := _pending
+	if coord == NO_PENDING:
+		return
 	if _moving_from != NO_MOVE:
 		_move_building_to(coord)
 	elif _selected != NO_SELECTION:
 		_place_selected_piece(coord)
 	elif _selected_building != NO_BUILDING:
 		_build_selected(coord)
-	elif state.board.get_cell(coord).has_building():
-		_open_building(state.board.get_cell(coord).building_origin)
+	if not _has_selection():
+		_cancel_pending()
+	else:
+		_update_ghost()
+
+
+## Hủy (or Esc): the ghost follows the pointer again; the piece / building stays selected.
+func _cancel_pending() -> void:
+	_pending = NO_PENDING
+	board_view.ghost_locked = false
+	_update_ghost()
+
+
+## The bar at the top of the map with what the placement does (or why it cannot) and Đặt / Hủy.
+func _build_confirm_bar() -> void:
+	# Centered over the map: under the top bar, left of the side panel.
+	var holder := CenterContainer.new()
+	holder.anchor_right = 1.0
+	holder.offset_right = side_panel.offset_left
+	holder.offset_top = top_bar.get_combined_minimum_size().y + 10
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$UI.add_child(holder)
+	$UI.move_child(holder, side_panel.get_index())
+	_confirm_bar = PanelContainer.new()
+	_confirm_bar.visible = false
+	holder.add_child(_confirm_bar)
+	var margin := MarginContainer.new()
+	for edge in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + edge, 10)
+	_confirm_bar.add_child(margin)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	margin.add_child(row)
+	# Arrows move the ghost one cell: precise on a small screen.
+	var arrows := GridContainer.new()
+	arrows.columns = 3
+	arrows.add_theme_constant_override("h_separation", 2)
+	arrows.add_theme_constant_override("v_separation", 2)
+	for entry: Array in [["", Vector2i.ZERO], ["▲", Vector2i.UP], ["", Vector2i.ZERO], ["◀", Vector2i.LEFT],
+			["▼", Vector2i.DOWN], ["▶", Vector2i.RIGHT]]:
+		if entry[0] == "":
+			arrows.add_child(Control.new())
+			continue
+		var arrow := Button.new()
+		arrow.text = entry[0]
+		arrow.focus_mode = Control.FOCUS_NONE
+		arrow.custom_minimum_size = Vector2(44, 32)
+		arrow.add_theme_font_size_override("font_size", 14)
+		arrow.pressed.connect(_nudge.bind(entry[1]))
+		arrows.add_child(arrow)
+	row.add_child(arrows)
+	_confirm_text = Label.new()
+	_confirm_text.custom_minimum_size = Vector2(300, 0)
+	_confirm_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_confirm_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_confirm_text.add_theme_font_size_override("font_size", 14)
+	row.add_child(_confirm_text)
+	_confirm_button = Button.new()
+	_confirm_button.text = "Đặt"
+	_confirm_button.focus_mode = Control.FOCUS_NONE
+	_confirm_button.custom_minimum_size = Vector2(110, 48)
+	_confirm_button.pressed.connect(_confirm_pending)
+	row.add_child(_confirm_button)
+	var cancel := Button.new()
+	cancel.text = "Hủy"
+	cancel.focus_mode = Control.FOCUS_NONE
+	cancel.custom_minimum_size = Vector2(90, 48)
+	cancel.pressed.connect(_cancel_pending)
+	row.add_child(cancel)
+
+
+## Shows the bar for the waiting placement: `text`, and whether Đặt may be pressed.
+func _show_confirm(action: String, text: String, ok: bool) -> void:
+	_confirm_bar.visible = true
+	_confirm_button.text = action
+	_confirm_button.disabled = not ok
+	_confirm_text.text = text
+	_confirm_text.add_theme_color_override("font_color", UiPalette.TEXT if ok else UiPalette.WARNING)
+
+
+## The small panel under the top bar with one resource's income breakdown.
+func _build_resource_popup() -> void:
+	_resource_popup = PanelContainer.new()
+	_resource_popup.visible = false
+	_resource_popup.position = Vector2(16, top_bar.get_combined_minimum_size().y + 6)
+	_resource_popup.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.pressed:
+			_hide_resource_popup())
+	$UI.add_child(_resource_popup)
+	var margin := MarginContainer.new()
+	for edge in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + edge, 12)
+	_resource_popup.add_child(margin)
+	_resource_popup_text = Label.new()
+	_resource_popup_text.add_theme_font_size_override("font_size", 14)
+	margin.add_child(_resource_popup_text)
+
+
+## Tapping a resource opens its breakdown; tapping it again (or the panel, or the map) closes it.
+func _toggle_resource_popup(resource_id: StringName) -> void:
+	if _resource_popup.visible and _resource_popup_id == resource_id:
+		_hide_resource_popup()
+		return
+	_resource_popup_id = resource_id
+	_resource_popup_text.text = _resource_labels[resource_id].tooltip_text
+	_resource_popup.reset_size()
+	_resource_popup.visible = true
+
+
+func _hide_resource_popup() -> void:
+	_resource_popup.visible = false
+	_resource_popup_id = &""
 
 
 ## Tapping a building opens its window: information, upgrade, move, demolish.
@@ -532,6 +721,12 @@ func _show_battle_report(raid: Dictionary, extra_lines: Array[String] = []) -> v
 	_battle_report.closed.connect(_on_battle_report_closed)
 
 
+## Android's Back button works like Esc (closes the top window, cancels, unselects).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		MobileSupport.send_escape()
+
+
 func _on_turn_started(turn: int) -> void:
 	turn_label.text = "Lượt %d" % turn
 	# Each turn starts on the new land pieces, so they are never forgotten.
@@ -540,6 +735,7 @@ func _on_turn_started(turn: int) -> void:
 
 
 func _clear_selection() -> void:
+	_cancel_pending()
 	if _moving_from != NO_MOVE:
 		_moving_from = NO_MOVE
 		placement_status.text = "Đã hủy di chuyển."
@@ -560,7 +756,7 @@ func _select(index: int) -> void:
 		_selected_building = NO_BUILDING
 	for i in piece_list.get_child_count():
 		(piece_list.get_child(i) as PieceCard).set_pressed_no_signal(i == _selected)
-	placement_status.text = "" if _selected == NO_SELECTION else "Nhấn chuột trái lên bản đồ để đặt. Esc: bỏ chọn."
+	placement_status.text = "" if _selected == NO_SELECTION else "Chạm một ô trên bản đồ rồi bấm Đặt. Chọn lại mảnh này để bỏ chọn."
 	_update_ghost()
 
 
@@ -570,7 +766,7 @@ func _toggle_building(building_id: StringName) -> void:
 	if _selected_building != NO_BUILDING and _selected != NO_SELECTION:
 		_select(NO_SELECTION)
 	placement_status.text = "" if _selected_building == NO_BUILDING \
-			else "Nhấn chuột trái lên bản đồ để xây. Esc: bỏ chọn."
+			else "Chạm một ô trên bản đồ rồi bấm Xây. Esc: bỏ chọn."
 	_update_ghost()
 
 
@@ -588,18 +784,29 @@ func _rebuild_piece_cards() -> void:
 	_select(_selected if _selected < state.hand.pieces.size() else NO_SELECTION)
 
 
+## The ghost at the waiting cell (a tap) or under the pointer, and the confirm bar for it.
 func _update_ghost() -> void:
-	var coord := board_view.get_hovered_cell()
-	if coord == BoardView.OFF_BOARD or (_selected == NO_SELECTION and _selected_building == NO_BUILDING and _moving_from == NO_MOVE):
+	var coord := _pending if _pending != NO_PENDING else board_view.get_hovered_cell()
+	_confirm_bar.visible = _pending != NO_PENDING
+	if not _has_selection():
+		_pending = NO_PENDING
+		board_view.ghost_locked = false
+		_confirm_bar.visible = false
+	if coord == BoardView.OFF_BOARD or not _has_selection():
 		board_view.hide_ghost()
 		return
+	if _has_selection() and _info_cell != BoardView.OFF_BOARD:
+		_set_info_cell(BoardView.OFF_BOARD)
 	if _moving_from != NO_MOVE:
 		var moving := _moving_building()
 		var target := coord - _building_anchor(moving)
 		var check := BuildRules.check_move(state.board, moving, _moving_from, target)
 		board_view.show_building_ghost(moving, target, check == BuildRules.Result.OK)
 		placement_status.text = "Di chuyển %s: %s Esc: hủy." % [moving.display_name,
-				"bấm để đặt ở đây." if check == BuildRules.Result.OK else BuildRules.describe(check)]
+				"chạm để chọn chỗ này." if check == BuildRules.Result.OK else BuildRules.describe(check)]
+		if _pending != NO_PENDING:
+			_show_confirm("Chuyển tới", "Chuyển %s tới đây (miễn phí)." % moving.display_name if check == BuildRules.Result.OK
+					else BuildRules.describe(check), check == BuildRules.Result.OK)
 		return
 	if _selected_building != NO_BUILDING:
 		var building := _buildings[_selected_building]
@@ -608,6 +815,10 @@ func _update_ghost() -> void:
 				state.building_cost(building), state.has_free_builder())
 		board_view.show_building_ghost(building, origin, result == BuildRules.Result.OK)
 		placement_status.text = BuildRules.describe(result)
+		if _pending != NO_PENDING:
+			_show_confirm("Xây", "Đặt nền móng %s, xong sau %d lượt. Giá: %s." % [building.display_name,
+					building.build_turns, UiFormat.amounts(state.building_cost(building), _resource_types)]
+					if result == BuildRules.Result.OK else BuildRules.describe(result), result == BuildRules.Result.OK)
 		return
 	var piece := state.hand.pieces[_selected]
 	var piece_origin := coord - piece.get_anchor()
@@ -615,7 +826,11 @@ func _update_ghost() -> void:
 	board_view.show_ghost(piece, piece_origin, placement == PlacementRules.Result.OK)
 	if placement != PlacementRules.Result.OK:
 		placement_status.text = PlacementRules.describe(placement)
+		if _pending != NO_PENDING:
+			_show_confirm("Đặt", PlacementRules.describe(placement), false)
 		return
+	if _pending != NO_PENDING:
+		_show_confirm("Đặt", "Đặt mảnh đất ở đây. Kéo mảnh hoặc bấm mũi tên để dời.", true)
 	var delta := UiFormat.amounts(Economy.placement_delta(state.board, piece, piece_origin, _terrains), _resource_types, true)
 	# Economy v2: land yields nothing by itself, so the delta is usually empty.
 	if delta.is_empty():
@@ -701,8 +916,14 @@ func _build_resource_labels() -> void:
 		row.add_child(icon)
 		var label := Label.new()
 		label.theme_type_variation = &"WoodLabel"
-		# Hovering shows where the per-turn change comes from (tooltip filled in _refresh_economy).
+		# Hovering shows where the per-turn change comes from (tooltip filled in _refresh_economy);
+		# tapping opens the same text in a panel (touch, GDD §10.2).
 		label.mouse_filter = Control.MOUSE_FILTER_PASS
+		row.mouse_filter = Control.MOUSE_FILTER_STOP
+		var resource_id := type.resource_id
+		row.gui_input.connect(func(event: InputEvent) -> void:
+			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+				_toggle_resource_popup(resource_id))
 		row.add_child(label)
 		_resource_labels[type.resource_id] = label
 
@@ -723,6 +944,8 @@ func _refresh_economy() -> void:
 		if lines.size() == 1:
 			lines.append("  Chưa có nguồn thu hay chi nào.")
 		label.tooltip_text = "\n".join(lines)
+		if _resource_popup_id == type.resource_id:
+			_resource_popup_text.text = label.tooltip_text
 	army_panel.refresh(state)
 	build_panel.refresh(state)
 	officers_panel.refresh(state)

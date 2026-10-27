@@ -109,3 +109,10 @@ func test_commander_and_strategist_have_their_own_sprites() -> void:
 	var soldier := GameArt.unit_sheet(&"swordsman")
 	check(GameArt.unit_frame(general, &"stand", 0).size.y > GameArt.unit_frame(soldier, &"stand", 0).size.y,
 			"The commander is bigger than a soldier")
+
+
+func test_phone_ui_scale() -> void:
+	check_eq(MobileSupport.ui_scale(96, 1080), 1.0, "A computer screen keeps the design size")
+	var phone := MobileSupport.ui_scale(400, 1080)
+	check(phone > 1.0 and phone <= MobileSupport.MAX_UI_SCALE, "A dense phone screen enlarges the UI (%.2f)" % phone)
+	check_eq(MobileSupport.ui_scale(0, 1080), 1.0, "Unknown density: no change")

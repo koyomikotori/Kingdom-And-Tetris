@@ -38,7 +38,9 @@ func _row(officer: Officer, role: String) -> Control:
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	panel.gui_input.connect(func(event: InputEvent) -> void:
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		# On release over the row, like a button: a drag that scrolls the list ends elsewhere (DragScroll).
+		if event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT \
+				and Rect2(Vector2.ZERO, panel.size).has_point(event.position):
 			officer_selected.emit(officer))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
