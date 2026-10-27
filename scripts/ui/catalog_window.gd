@@ -7,6 +7,8 @@ extends ModalWindow
 const ACCENT := UiPalette.ACCENT
 const LIST_WIDTH := 250
 const LIST_HEIGHT := 400
+## Screen height the rest of the window needs (ModalWindow.fit_height).
+const LIST_RESERVED := 300
 const LIST_ICON := 32
 
 var _category_buttons: Array[Button] = []
@@ -46,7 +48,7 @@ func build_catalog(title: String, categories: Array[String], action_text: String
 	list_frame.theme_type_variation = &"InsetPanel"
 	columns.add_child(list_frame)
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(LIST_WIDTH, LIST_HEIGHT)
+	scroll.custom_minimum_size = Vector2(LIST_WIDTH, fit_height(LIST_HEIGHT, LIST_RESERVED))
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	list_frame.add_child(scroll)
 	_list = VBoxContainer.new()

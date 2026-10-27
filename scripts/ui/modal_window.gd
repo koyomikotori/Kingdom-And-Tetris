@@ -38,6 +38,8 @@ func build_frame(title_text: String, accent: Color, width_share: float = WIDTH_S
 	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
 	# The paper panel comes from the project theme (GDD §13).
 	add_child(panel)
+	# A small game window: a window taller or wider than it shrinks to fit (GDD §10.2).
+	panel.resized.connect(func() -> void: ScreenFit.shrink_to_fit(panel, get_viewport_rect().size))
 	var margin := MarginContainer.new()
 	for edge in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + edge, 20)
@@ -64,6 +66,12 @@ func build_frame(title_text: String, accent: Color, width_share: float = WIDTH_S
 	_close_button.visible = closable
 	_actions.add_child(_close_button)
 	return body
+
+
+## `preferred` px, or less when the screen is short: what is left after `reserved` px of the rest
+## of the window (title, tabs, buttons). For lists and tab pages that scroll.
+func fit_height(preferred: float, reserved: float) -> float:
+	return clampf(get_viewport_rect().size.y - reserved, 160.0, preferred)
 
 
 func close() -> void:

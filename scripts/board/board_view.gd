@@ -1,13 +1,20 @@
 class_name BoardView
 extends Node2D
 ## Draws a BoardData with the generated pixel art (GameArt, GDD §13) and turns mouse input into
-## cell coordinates. Read-only: it never modifies the board, it only emits signals.
+## cell coordinates: a click (press and release without moving), or a left-button drag that moves
+## the map. Read-only: it never modifies the board, it only emits signals.
 
 signal cell_hovered(coord: Vector2i)
-signal cell_clicked(coord: Vector2i)
+## A press and release without moving (more than TAP_SLOP) on a cell.
+signal cell_tapped(coord: Vector2i)
+## A left-button drag: the map should follow (screen pixels).
+signal pan_dragged(relative: Vector2)
 
 const TILE_SIZE := 32
 const OFF_BOARD := Vector2i(-1, -1)
+## Screen pixels a press may move and still count as a click.
+const TAP_SLOP := 12.0
+const SELECTED_COLOR := Color(1.0, 0.9, 0.45)
 
 const EMPTY_COLOR := Color(0.10, 0.11, 0.14)
 const GRID_COLOR := Color(0, 0, 0, 0.12)
@@ -33,6 +40,15 @@ var castle_turns := 0:
 		if castle_turns != value:
 			castle_turns = value
 			queue_redraw()
+
+## The cell whose information is shown (clicked with nothing selected), or OFF_BOARD.
+var selected_cell := OFF_BOARD:
+	set(value):
+		selected_cell = value
+		queue_redraw()
+var _pressing := false
+var _press_position := Vector2.ZERO
+var _panning := false
 
 ## Shows "x,y" in every cell. Toggled with G in the kingdom scene (off now that cells have art).
 var show_coords := false:
@@ -117,15 +133,31 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _board == null:
 		return
 	if event is InputEventMouseMotion:
-		_update_hover()
-	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var coord := local_to_cell(get_local_mouse_position())
-		if _board.is_in_bounds(coord):
-			cell_clicked.emit(coord)
+		_update_hover(event.position)
+		if not _pressing:
+			return
+		if _panning or event.position.distance_to(_press_position) > TAP_SLOP:
+			_panning = true
+			pan_dragged.emit(event.relative)
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		var coord := _cell_at(event.position)
+		if event.pressed:
+			_pressing = true
+			_press_position = event.position
+			_panning = false
+		elif _pressing:
+			_pressing = false
+			if not _panning and _board.is_in_bounds(coord):
+				cell_tapped.emit(coord)
 
 
-func _update_hover() -> void:
-	var coord := local_to_cell(get_local_mouse_position())
+## The cell under a viewport position (an input event's), possibly off the board.
+func _cell_at(screen_position: Vector2) -> Vector2i:
+	return local_to_cell(get_global_transform_with_canvas().affine_inverse() * screen_position)
+
+
+func _update_hover(screen_position: Vector2) -> void:
+	var coord := _cell_at(screen_position)
 	if not _board.is_in_bounds(coord):
 		coord = OFF_BOARD
 	if coord == _hovered:
@@ -153,6 +185,8 @@ func _draw() -> void:
 		_draw_building_ghost()
 	elif _hovered != OFF_BOARD:
 		draw_rect(_cell_rect(_hovered), HOVER_COLOR, false, 2.0)
+	if selected_cell != OFF_BOARD and _ghost_piece == null and _ghost_building == null:
+		draw_rect(_cell_rect(selected_cell).grow(-1), SELECTED_COLOR, false, 3.0)
 
 
 func _draw_cell(cell: CellData) -> void:

@@ -26,6 +26,14 @@ var _selected := NO_SELECTION
 var _selected_building := NO_BUILDING
 ## Origin of the building being moved (picked in its BuildingWindow), or NO_MOVE.
 var _moving_from := NO_MOVE
+## A clicked empty cell whose information stays in the cell info panel.
+var _info_cell := BoardView.OFF_BOARD
+## The cell info panel shows only its first line.
+var _info_collapsed := false
+## The resource breakdown opened by clicking a resource (it stays open, unlike the tooltip).
+var _resource_popup: PanelContainer
+var _resource_popup_text: Label
+var _resource_popup_id: StringName = &""
 ## Open post-battle report; blocks kingdom input while shown.
 var _battle_report: BattleReport
 ## Battle being played; the battle screen swallows input itself.
@@ -65,13 +73,21 @@ func _ready() -> void:
 	_build_resource_labels()
 	_build_officers_tab()
 	_build_tab_buttons()
+	_build_resource_popup()
+	var info_panel: Control = cell_info_label.get_parent().get_parent()
+	info_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	info_panel.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			_info_collapsed = not _info_collapsed
+			_on_cell_hovered(board_view.get_hovered_cell()))
 
 	# A game picked in the main menu, or a new one.
 	var game := GameLaunch.take_pending_game()
 	var board := BoardData.from_save(game.board) if not game.is_empty() else BoardData.create_starting_board(board_size)
 	board_view.setup(board, _terrains, _buildings)
 	board_view.cell_hovered.connect(_on_cell_hovered)
-	board_view.cell_clicked.connect(_on_cell_clicked)
+	board_view.cell_tapped.connect(_on_cell_clicked)
+	board_view.pan_dragged.connect(camera.pan)
 	_focus_camera()
 
 	var seed_value := piece_seed if piece_seed != 0 else randi()
@@ -123,7 +139,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		KEY_G:
 			board_view.show_coords = not board_view.show_coords
 		KEY_ESCAPE:
-			_clear_selection()
+			if _info_cell != BoardView.OFF_BOARD and not _has_selection():
+				_set_info_cell(BoardView.OFF_BOARD)
+			else:
+				_clear_selection()
 		KEY_1, KEY_2, KEY_3:
 			tabs.current_tab = 0
 			_toggle_selection(event.keycode - KEY_1)
@@ -131,15 +150,22 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			_on_end_turn_pressed()
 
 
+## The cell info panel: the hovered cell, else the clicked one; collapsed to its first line when
+## the player clicked the panel.
 func _on_cell_hovered(coord: Vector2i) -> void:
-	if coord == BoardView.OFF_BOARD:
-		cell_info_label.text = "Rê chuột lên một ô để xem thông tin.\nCuộn: zoom · Chuột phải/giữa: kéo · G: bật/tắt tọa độ"
-	else:
-		cell_info_label.text = _describe_cell(state.board.get_cell(coord))
+	var shown := coord if coord != BoardView.OFF_BOARD else _info_cell
+	var text := "Rê chuột lên một ô để xem thông tin.\nKéo chuột trái / phải: cuộn · Con lăn: zoom · G: tọa độ\nBấm khung này để thu gọn."
+	if shown != BoardView.OFF_BOARD and state.board.is_in_bounds(shown):
+		text = _describe_cell(state.board.get_cell(shown))
+	cell_info_label.text = text.get_slice("\n", 0) + " ▸" if _info_collapsed else text
 	_update_ghost()
 
 
+## A click on the board (a press and release without dragging the map): places the selected
+## piece, building or moved building there; otherwise a building opens its window and any other
+## cell keeps its information in the cell info panel.
 func _on_cell_clicked(coord: Vector2i) -> void:
+	_hide_resource_popup()
 	if _moving_from != NO_MOVE:
 		_move_building_to(coord)
 	elif _selected != NO_SELECTION:
@@ -148,6 +174,52 @@ func _on_cell_clicked(coord: Vector2i) -> void:
 		_build_selected(coord)
 	elif state.board.get_cell(coord).has_building():
 		_open_building(state.board.get_cell(coord).building_origin)
+	else:
+		_set_info_cell(coord)
+
+
+func _has_selection() -> bool:
+	return _moving_from != NO_MOVE or _selected != NO_SELECTION or _selected_building != NO_BUILDING
+
+
+func _set_info_cell(coord: Vector2i) -> void:
+	_info_cell = coord
+	board_view.selected_cell = coord
+	_on_cell_hovered(board_view.get_hovered_cell())
+
+
+## The small panel under the top bar with one resource's income breakdown.
+func _build_resource_popup() -> void:
+	_resource_popup = PanelContainer.new()
+	_resource_popup.visible = false
+	_resource_popup.position = Vector2(16, top_bar.get_combined_minimum_size().y + 6)
+	_resource_popup.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.pressed:
+			_hide_resource_popup())
+	$UI.add_child(_resource_popup)
+	var margin := MarginContainer.new()
+	for edge in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + edge, 12)
+	_resource_popup.add_child(margin)
+	_resource_popup_text = Label.new()
+	_resource_popup_text.add_theme_font_size_override("font_size", 14)
+	margin.add_child(_resource_popup_text)
+
+
+## Tapping a resource opens its breakdown; tapping it again (or the panel, or the map) closes it.
+func _toggle_resource_popup(resource_id: StringName) -> void:
+	if _resource_popup.visible and _resource_popup_id == resource_id:
+		_hide_resource_popup()
+		return
+	_resource_popup_id = resource_id
+	_resource_popup_text.text = _resource_labels[resource_id].tooltip_text
+	_resource_popup.reset_size()
+	_resource_popup.visible = true
+
+
+func _hide_resource_popup() -> void:
+	_resource_popup.visible = false
+	_resource_popup_id = &""
 
 
 ## Tapping a building opens its window: information, upgrade, move, demolish.
@@ -560,7 +632,7 @@ func _select(index: int) -> void:
 		_selected_building = NO_BUILDING
 	for i in piece_list.get_child_count():
 		(piece_list.get_child(i) as PieceCard).set_pressed_no_signal(i == _selected)
-	placement_status.text = "" if _selected == NO_SELECTION else "Nhấn chuột trái lên bản đồ để đặt. Esc: bỏ chọn."
+	placement_status.text = "" if _selected == NO_SELECTION else "Bấm lên bản đồ để đặt. Esc: bỏ chọn."
 	_update_ghost()
 
 
@@ -570,7 +642,7 @@ func _toggle_building(building_id: StringName) -> void:
 	if _selected_building != NO_BUILDING and _selected != NO_SELECTION:
 		_select(NO_SELECTION)
 	placement_status.text = "" if _selected_building == NO_BUILDING \
-			else "Nhấn chuột trái lên bản đồ để xây. Esc: bỏ chọn."
+			else "Bấm lên bản đồ để xây. Esc: bỏ chọn."
 	_update_ghost()
 
 
@@ -588,11 +660,14 @@ func _rebuild_piece_cards() -> void:
 	_select(_selected if _selected < state.hand.pieces.size() else NO_SELECTION)
 
 
+## The ghost under the pointer, and what placing it there would do.
 func _update_ghost() -> void:
 	var coord := board_view.get_hovered_cell()
-	if coord == BoardView.OFF_BOARD or (_selected == NO_SELECTION and _selected_building == NO_BUILDING and _moving_from == NO_MOVE):
+	if coord == BoardView.OFF_BOARD or not _has_selection():
 		board_view.hide_ghost()
 		return
+	if _has_selection() and _info_cell != BoardView.OFF_BOARD:
+		_set_info_cell(BoardView.OFF_BOARD)
 	if _moving_from != NO_MOVE:
 		var moving := _moving_building()
 		var target := coord - _building_anchor(moving)
@@ -701,8 +776,14 @@ func _build_resource_labels() -> void:
 		row.add_child(icon)
 		var label := Label.new()
 		label.theme_type_variation = &"WoodLabel"
-		# Hovering shows where the per-turn change comes from (tooltip filled in _refresh_economy).
+		# Hovering shows where the per-turn change comes from (tooltip filled in _refresh_economy);
+		# clicking opens the same text in a panel that stays open.
 		label.mouse_filter = Control.MOUSE_FILTER_PASS
+		row.mouse_filter = Control.MOUSE_FILTER_STOP
+		var resource_id := type.resource_id
+		row.gui_input.connect(func(event: InputEvent) -> void:
+			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+				_toggle_resource_popup(resource_id))
 		row.add_child(label)
 		_resource_labels[type.resource_id] = label
 
@@ -723,6 +804,8 @@ func _refresh_economy() -> void:
 		if lines.size() == 1:
 			lines.append("  Chưa có nguồn thu hay chi nào.")
 		label.tooltip_text = "\n".join(lines)
+		if _resource_popup_id == type.resource_id:
+			_resource_popup_text.text = label.tooltip_text
 	army_panel.refresh(state)
 	build_panel.refresh(state)
 	officers_panel.refresh(state)

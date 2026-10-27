@@ -416,6 +416,59 @@ Màn hình trận hiện dòng chữ cho mỗi mưu kế thành công (ví dụ 
 
 **Để sau:** gia tộc có mưu sĩ dùng mưu kế; sự kiện mưu sĩ xin đầu quân; mưu sĩ đi Thảo phạt.
 
+### Lính và công trình quân sự mới (M13, đã chốt)
+
+**Doanh trại có cấp** (tối đa 6, không vượt cấp thành; vẫn được xây nhiều cái để có thêm chỗ đơn vị). Bậc lính theo **Doanh trại cấp cao nhất** đang có:
+- Cấp 1: Kiếm binh nông dân, Thương binh nông dân, Cung thủ nông dân (ba loại hiện có, đổi tên). **Bỏ điều kiện 3 ô rừng của Cung thủ.**
+- Cấp 3: Kiếm sĩ tinh nhuệ, Thương binh tinh nhuệ, Cung thủ tinh nhuệ.
+- Cấp 6: Kiếm vệ hoàng gia, Trường thương vệ binh, Cung thủ thiện xạ.
+
+**4 công trình Quân sự mới:** xây **trên ô cỏ**, cần **thành cấp 3**, mỗi loại **1 cái**, **3 cấp**, cấp tối đa = cấp thành − 2 (thành 3 → cấp 1, thành 4 → cấp 2, thành 5 → cấp 3), như Xưởng rèn.
+
+| Công trình | Cấp 1 | Cấp 2 | Cấp 3 |
+|---|---|---|---|
+| Chuồng ngựa chiến | Kỵ binh nhẹ (+ Doanh trại 1) | Kỵ binh thương (+ Doanh trại 3) | Kỵ binh nặng (+ Doanh trại 6) |
+| Trại bắn tên | Nỏ binh nông dân (+ Doanh trại 1) | Nỏ binh chuyên nghiệp (+ Doanh trại 3) | Nỏ binh tinh nhuệ (+ Doanh trại 6) |
+| Võ trường | Đao thuẫn binh nông dân (+ Doanh trại 1) | Đao thuẫn binh kỳ cựu (+ Doanh trại 3) | Đao thuẫn vệ binh tinh nhuệ (+ Doanh trại 6) |
+| Học viện quân sự | Pháo binh nhẹ (+ Doanh trại 3) | Pháo binh nặng (+ Doanh trại 6) | Lính hỏa mai tinh nhuệ (+ Doanh trại 6 + Võ trường 3) |
+
+**Hàng quân và vai trò:**
+- **Hàng trước:** Kiếm binh (mạnh giáp lá cà, yếu khi bị xung kích), Thương binh (cùng hàng với Kiếm binh; **chống xung kích**: giảm sát thương xung kích nhận vào và đánh mạnh hơn vào kỵ binh), Kỵ binh (xung kích rất mạnh, đứng cùng hàng với cận vệ tướng; tốn Ngựa).
+- **Hàng giữa:** Đao thuẫn binh (phòng thủ cận chiến và giáp cao, đỡ tên tốt, giữ đội hình).
+- **Hàng sau:** Cung thủ; Nỏ binh (bắn chậm hơn, **xuyên giáp**: bỏ qua một phần Giáp mục tiêu, Cung thủ không có); Pháo binh (chỉ khai hỏa **1 lần đầu trận**, sát thương cực lớn, trúng mọi hàng; pháo nặng mạnh hơn pháo nhẹ); Lính hỏa mai (nã 1 phát cực mạnh đầu trận rồi **tiến lên cận chiến** như bộ binh công thủ toàn diện, cảm hứng Samurai Flintlock của Shogun 2).
+- Bảng Tuyển lính vẫn chia theo hàng quân (Tất cả / Tiền tuyến / Hàng giữa / Hậu tuyến); loại chưa mở ghi rõ cần công trình nào cấp mấy.
+- **Không nâng bậc** đơn vị đã tuyển: muốn lính mạnh hơn thì tuyển đơn vị mới.
+
+**Số liệu ban đầu** (cận chiến / phòng thủ / giáp / xung kích / sĩ khí, bắn xa; chỉnh khi chơi thử):
+
+| Lính | Lính/đơn vị | Chỉ số | Giá | Nuôi/lượt |
+|---|---|---|---|---|
+| Kiếm binh nông dân | 20 | 9/7/5/5/8 | 3 Lương, 1 Đá | 1 Lương |
+| Thương binh nông dân | 20 | 6/9/4/3/7, chống xung kích 40% | 2 Lương, 2 Gỗ | 1 Lương |
+| Cung thủ nông dân | 15 | 3/2/2/1/5, bắn 6 | 2 Lương, 3 Gỗ | 1 Lương |
+| Kiếm sĩ tinh nhuệ | 20 | 12/9/7/6/10 | 5 Lương, 2 Đá, 1 Khoáng | 2 Lương |
+| Thương binh tinh nhuệ | 20 | 8/12/6/4/9, chống 50% | 4 Lương, 3 Gỗ, 1 Khoáng | 2 Lương |
+| Cung thủ tinh nhuệ | 15 | 4/3/3/1/7, bắn 8 | 4 Lương, 4 Gỗ, 1 Gỗ cứng | 2 Lương |
+| Kiếm vệ hoàng gia | 20 | 15/11/9/7/13 | 8 Lương, 3 Đá, 3 Khoáng | 3 Lương |
+| Trường thương vệ binh | 20 | 10/15/8/5/12, chống 60% | 7 Lương, 4 Gỗ, 3 Khoáng | 3 Lương |
+| Cung thủ thiện xạ | 15 | 5/4/4/1/9, bắn 11 | 6 Lương, 4 Gỗ, 3 Gỗ cứng | 3 Lương |
+| Kỵ binh nhẹ | 12 | 7/5/3/10/9 | 3 Lương, 3 Ngựa | 2 Lương |
+| Kỵ binh thương | 12 | 8/6/5/14/10 | 4 Lương, 4 Ngựa, 1 Khoáng | 2 Lương |
+| Kỵ binh nặng | 12 | 10/9/8/16/12 | 6 Lương, 5 Ngựa, 3 Khoáng | 3 Lương |
+| Nỏ binh nông dân | 15 | 3/3/3/1/5, bắn 7, xuyên giáp 30% | 3 Lương, 3 Gỗ | 1 Lương |
+| Nỏ binh chuyên nghiệp | 15 | 4/4/4/1/7, bắn 9, xuyên 40% | 4 Lương, 3 Gỗ, 2 Gỗ cứng | 2 Lương |
+| Nỏ binh tinh nhuệ | 15 | 5/5/5/1/9, bắn 11, xuyên 50% | 6 Lương, 4 Gỗ, 3 Gỗ cứng | 3 Lương |
+| Đao thuẫn binh nông dân | 20 | 7/11/9/3/9 | 3 Lương, 2 Gỗ, 1 Đá | 1 Lương |
+| Đao thuẫn binh kỳ cựu | 20 | 9/13/11/4/11 | 5 Lương, 2 Gỗ, 2 Khoáng | 2 Lương |
+| Đao thuẫn vệ binh tinh nhuệ | 20 | 11/15/13/5/13 | 7 Lương, 3 Gỗ, 3 Khoáng | 3 Lương |
+| Pháo binh nhẹ | 8 | 2/2/2/0/6, 1 phát 25 trúng mọi hàng | 4 Lương, 4 Gỗ cứng, 3 Khoáng | 2 Lương |
+| Pháo binh nặng | 8 | 2/3/3/0/7, 1 phát 40 trúng mọi hàng | 6 Lương, 6 Gỗ cứng, 5 Khoáng | 3 Lương |
+| Lính hỏa mai tinh nhuệ | 15 | 10/9/6/4/11, 1 phát 14 rồi cận chiến | 6 Lương, 2 Gỗ cứng, 4 Khoáng | 3 Lương |
+
+Save cũ: đơn vị Kiếm sĩ / Thương binh / Cung thủ trở thành bậc nông dân (giữ nguyên chỉ số); Doanh trại đã có là cấp 1.
+
+**Để sau:** công trình sản xuất trên ô cỏ (×2 sản lượng) khi có tài nguyên mới; công trình Hành chính (Sở cảnh sát, Quan phủ, Chính viện).
+
 ### Trang bị (M12e, đã chốt)
 
 **Ô trang bị:** mỗi người 3 ô, món của tướng và của mưu sĩ khác nhau.
@@ -686,6 +739,28 @@ Thống kê trận thắng/thua và trạng thái thắng/thua được lưu cù
   - Mỗi file có `save_version`. Bản cũ hơn được nâng cấp từng bước (`v1 → v2 → …`) khi tải. Bản mới hơn phiên bản game thì báo lỗi, không tải.
   - Chỉ lưu trạng thái ván. Dữ liệu tĩnh (địa hình, lính, gia tộc…) đọc lại từ `data/`. Gia tộc hay loại lính không còn trong dữ liệu thì bỏ qua; gia tộc mới thêm vào dữ liệu thì dùng giá trị ban đầu.
 
+### 10.2 Cảm ứng và Android (để cuối dự án, M15)
+
+**Chốt sau khi chơi thử trên điện thoại:** hoàn thiện bản máy tính trước, bản điện thoại làm sau cùng. Toàn bộ phần cảm ứng và Android dưới đây nằm sẵn trên nhánh `m13/touch-apk` (chưa merge); tới M15 cập nhật nhánh đó theo main rồi làm tiếp. Bản máy tính chỉ lấy các phần dùng tốt với chuột (M12f):
+- Bấm lên bản đồ là đặt / xây / chuyển ngay như cũ (rê chuột xem trước); kéo chuột trái (hoặc phải / giữa) để cuộn bản đồ, con lăn hoặc chụm trên touchpad để zoom.
+- Bấm một ô trống thì khung thông tin giữ ô đó (viền vàng); bấm khung để thu gọn.
+- Bấm một tài nguyên trên thanh gỗ mở bảng thu / chi (ngoài tooltip khi rê chuột).
+- Kéo trên bất kỳ danh sách nào để cuộn, kể cả khi bắt đầu trên nút hay thẻ; kéo xong không bị tính là bấm. Dòng tướng sĩ mở khi thả chuột trên dòng.
+- Cửa sổ và menu tự vừa khi cửa sổ game nhỏ; icon game là thành trì pixel.
+
+Thiết kế bản điện thoại (đã chốt, làm ở M15):
+
+**Một cách điều khiển chung** cho điện thoại và máy tính (chuột coi như một ngón tay):
+- **Đặt mảnh đất / xây / di chuyển công trình:** chọn mảnh hoặc công trình, rồi chạm (bấm) một ô: bóng mờ dừng ở đó và **thanh xác nhận** hiện ra với nút **Đặt** (hoặc Xây / Chuyển tới) và **Hủy**, kèm sản lượng hay lý do chưa đặt được (nút Đặt khóa khi không hợp lệ). Chạm ô khác để dời; kéo ngón tay trên bóng thì bóng chạy theo. Trên máy tính, rê chuột vẫn hiện bóng xem trước khi chưa chạm; Enter = Đặt khi thanh xác nhận đang mở, Esc = Hủy.
+- **Xem ô:** khi không cầm gì, chạm ô trống thì ô được viền sáng và khung thông tin góc dưới hiện ô đó (khung thu gọn được); chạm công trình mở bảng công trình như trước.
+- **Bản đồ:** kéo một ngón để cuộn (chuột phải / giữa vẫn kéo được), chụm hai ngón để zoom (con lăn vẫn zoom). Bảng, cửa sổ và danh sách cuộn bằng vuốt.
+- **Thanh tài nguyên:** chạm một tài nguyên mở khung nhỏ chi tiết thu / chi (thay cho tooltip khi rê chuột).
+- **Phím tắt:** đều đã có nút (mảnh đất 1–3 = thẻ mảnh, Enter = Kết thúc lượt, Space = Tạm dừng trận); nút Back của Android = Esc (đóng cửa sổ, bỏ chọn). G (tọa độ) chỉ còn trên máy tính.
+
+**Màn hình:** chỉ nằm ngang. Bố cục giữ như hiện tại; trên điện thoại chữ và nút được phóng to cho vừa ngón tay (nút tối thiểu ~48 px theo kích thước thật của màn hình).
+
+**Xuất APK:** file cấu hình xuất Android trong project (`export_presets.cfg`: tên "Kingdom Tiles: Rise of Realms", gói `com.koyomikotori.kingdomtiles`, màn ngang, icon thành trì pixel). Người chơi tự cài export templates của Godot 4.5.1, JDK 17 và Android SDK theo `docs/android_export_guide.md`; xuất bản debug để cài thử.
+
 ## 11. Lộ trình
 
 | Mốc | Nội dung | Trạng thái |
@@ -712,11 +787,13 @@ Thống kê trận thắng/thua và trạng thái thắng/thua được lưu cù
 | M12b | **Đồ họa (2/3):** trận đánh: lính từng loại, cận vệ tướng cưỡi ngựa, quân cướp / gia tộc, mũi tên, nền chiến trường, hiệu ứng mưu kế | Xong |
 | M12c | **Tab Tướng sĩ** kiểu Ninja Village + chân dung pixel ghép bộ phận + bản đồ thế giới vẽ lại | Xong |
 | M12d | **Bố cục tab + thi công mất lượt:** tab rộng và đều, bảng Xây dựng / Tuyển lính giữa màn hình có danh mục, xây và nâng cấp mất lượt, đội thợ (§8) | Xong |
-| M12e | **Trang bị** cho tướng và mưu sĩ: 5 bậc độ hiếm, Xưởng rèn, chiến lợi phẩm, kho 20 món, vũ khí hiện trong trận, khung chân dung theo sao, sửa hình ngựa và vũ khí lính (§8 Trang bị) | Đang làm |
-| M13 | **Hỗ trợ cảm ứng + xuất APK** (chạm để xem trước/xác nhận, vuốt để kéo, chụm để zoom, nút thay phím tắt); **sắp xếp lại tab Quân đội, Xây dựng, bảng thành** cho gọn trên điện thoại (ít chữ, chi tiết mở khi chạm) | |
-| M14 | Âm thanh, cân bằng, build Windows + Android, phát hành | |
+| M12e | **Trang bị** cho tướng và mưu sĩ: 5 bậc độ hiếm, Xưởng rèn, chiến lợi phẩm, kho 20 món, vũ khí hiện trong trận, khung chân dung theo sao, sửa hình ngựa và vũ khí lính (§8 Trang bị) | Xong |
+| M12f | Phần tiện cho chuột lấy từ M13: kéo chuột trái để cuộn bản đồ, kéo danh sách để cuộn, bấm ô / tài nguyên xem chi tiết, cửa sổ vừa màn hình, icon game (§10.2) | Đang làm |
+| M13 | **Công trình và lính mới:** Doanh trại 6 cấp với 3 bậc lính, Chuồng ngựa chiến, Trại bắn tên, Võ trường, Học viện quân sự, 21 loại lính (kỵ binh, nỏ xuyên giáp, đao thuẫn, pháo, hỏa mai) (§8) | |
+| M14 | Âm thanh, cân bằng, build Windows, phát hành bản máy tính | |
+| M15 | **Bản điện thoại:** cảm ứng (chạm xem trước + thanh Đặt/Hủy, chụm để zoom, nút Back), giao diện cho màn nhỏ, xuất APK, giả lập (nhánh `m13/touch-apk`, §10.2) | Để cuối |
 
-Đồ họa được đưa lên trước cảm ứng (chốt sau M11f) để lần sắp xếp lại bố cục ở M13 dùng luôn giao diện mới.
+Đồ họa được đưa lên trước cảm ứng (chốt sau M11f) để lần sắp xếp lại bố cục dùng luôn giao diện mới. Bản điện thoại dời xuống cuối (chốt sau khi chơi thử M13 trên điện thoại): hoàn thiện bản máy tính trước.
 
 Lưu/tải được đưa lên trước sự kiện và tướng, vì trạng thái game càng nhiều thì càng khó thêm lưu game về sau.
 

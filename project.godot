@@ -13,7 +13,11 @@ config_version=5
 config/name="Kingdom Tiles : Rise Of Realms"
 run/main_scene="res://scenes/menu/main_menu.tscn"
 config/features=PackedStringArray("4.5", "GL Compatibility")
-config/icon="res://icon.svg"
+config/icon="res://assets/ui/app_icon.png"
+
+[autoload]
+
+DragScroll="*res://scripts/ui/drag_scroll.gd"
 
 [display]
 

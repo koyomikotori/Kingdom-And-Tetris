@@ -1,6 +1,7 @@
 class_name CameraController
 extends Camera2D
-## Mouse wheel zooms toward the cursor; right or middle mouse drag pans.
+## Mouse wheel (or a trackpad pinch) zooms toward the cursor; right or middle mouse drag pans, and
+## the board view asks for left-button pans through pan().
 
 @export var min_zoom := 0.75
 @export var max_zoom := 4.0
@@ -22,7 +23,16 @@ func focus_on(rect: Rect2, reserved_right: float = 0.0, reserved_top: float = 0.
 	position = rect.get_center() + Vector2(reserved_right * 0.5, -reserved_top * 0.5) / z
 
 
+## Moves the view by a drag of `screen_relative` pixels (the map follows the mouse).
+func pan(screen_relative: Vector2) -> void:
+	position -= screen_relative / zoom.x
+	_clamp_to_bounds()
+
+
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMagnifyGesture:
+		_zoom_at(event.position, event.factor)
+		return
 	if event is InputEventMouseButton:
 		# Over a panel the wheel belongs to the panel (scrolling a tab), even when the panel let the
 		# event through (nothing left to scroll, or the cursor is on a label).

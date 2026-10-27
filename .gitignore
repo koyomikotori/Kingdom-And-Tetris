@@ -4,3 +4,6 @@
 
 # Style reference images (not ours to ship)
 /initial/
+
+# Exported builds (APK, exe)
+/build/
