@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="UnitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/army/unit_data.gd" id="1_unit"]
+
+[resource]
+script = ExtResource("1_unit")
+unit_id = &"royal_swordguard"
+display_name = "Kiếm vệ hoàng gia"
+sort_order = 2
+squad_size = 20
+row = 0
+attack_kind = 0
+melee_attack = 15
+melee_defense = 11
+armor = 9
+charge_attack = 7
+unit_type = 0
+morale = 13
+range_attack = 0
+reload_time = 5.0
+recruit_cost = Dictionary[StringName, int]({&"food": 8, &"stone": 3, &"ore": 3})
+upkeep = Dictionary[StringName, int]({&"food": 3})
+required_buildings = Dictionary[StringName, int]({&"barracks": 6})

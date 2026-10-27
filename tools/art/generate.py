@@ -321,6 +321,90 @@ def mine() -> Canvas:
     return c
 
 
+# --- Military buildings (GDD §8, M13) ------------------------------------------------------------
+
+def war_stable() -> Canvas:
+    """A long thatched stable with a horse looking out of its stall and a hay bale by the door."""
+    c = Canvas(16, 16)
+    c.rect(1, 8, 13, 6, P["wood"])
+    c.hline(1, 13, 13, P["wood_dark"])
+    for x in (1, 7, 13):
+        c.vline(x, 8, 13, P["wood_dark"])
+    for row in range(4):
+        inset = 3 - row
+        c.hline(inset, 14 - inset, 4 + row, P["thatch"] if row % 2 == 0 else P["thatch_dark"])
+    c.rect(3, 9, 3, 4, P["door"])  # stall with a horse head
+    c.rect(4, 9, 2, 2, P["horse"])
+    c.px(5, 11, P["horse_dark"])
+    c.px(3, 9, P["mane"])
+    c.rect(9, 10, 3, 4, P["door"])
+    c.hline(8, 12, 10, P["wood_light"])  # stall bar
+    c.ellipse(14, 13, 1.8, 1.6, P["thatch"])
+    c.px(14, 13, P["thatch_dark"])
+    c.outline()
+    return c
+
+
+def archery_range() -> Canvas:
+    """A small roofed shed and a straw target with red and white rings on a stand, an arrow in it."""
+    c = Canvas(16, 16)
+    c.rect(1, 9, 6, 5, P["wall"])
+    c.hline(1, 6, 13, P["wall_shade"])
+    for row in range(3):
+        c.hline(2 - row + 1, 5 + row, 6 + row, P["red"] if row < 2 else P["red_dark"])
+    c.rect(3, 10, 2, 4, P["door"])
+    c.vline(11, 9, 14, P["wood_dark"])  # target stand
+    c.vline(13, 10, 14, P["wood_dark"])
+    c.ellipse(12, 7, 3.4, 3.4, P["thatch"])
+    c.ellipse(12, 7, 2.4, 2.4, P["white"])
+    c.ellipse(12, 7, 1.4, 1.4, P["red"])
+    c.px(12, 7, P["gold"])
+    c.hline(8, 11, 6, P["wood_light"])  # arrow stuck in the target
+    c.px(8, 5, P["white"])
+    c.outline()
+    return c
+
+
+def martial_hall() -> Canvas:
+    """A red-roofed training hall with a weapon rack (spear, dao, halberd) and a war banner."""
+    c = hall("red", "red_dark", 10)
+    c.rect(4, 10, 3, 4, P["door"])
+    c.vline(10, 8, 13, P["wood_dark"])  # weapon rack
+    c.vline(13, 8, 13, P["wood_dark"])
+    c.hline(10, 13, 12, P["wood"])
+    c.vline(11, 6, 11, P["wood_light"])
+    c.px(11, 5, P["rock_light"])
+    c.vline(12, 7, 11, P["wood_light"])
+    c.px(12, 6, P["rock_light"])
+    c.px(13, 6, P["rock_light"])
+    c.vline(1, 2, 13, P["wood_dark"])  # banner
+    c.rect(2, 2, 2, 4, P["gold"])
+    c.px(2, 6, P["gold_dark"])
+    c.outline()
+    return c
+
+
+def military_academy() -> Canvas:
+    """A two-tier blue-roofed academy with gold ridge tips and a small cannon on the yard."""
+    c = Canvas(16, 16)
+    c.rect(2, 8, 12, 5, P["wall"])
+    c.hline(2, 13, 12, P["wall_shade"])
+    curved_roof(c, 1, 5, 14, 3)
+    c.rect(5, 3, 6, 2, P["wall"])
+    curved_roof(c, 4, 1, 8, 2)
+    c.px(8, 0, P["gold"])
+    c.px(3, 6, P["gold"])
+    c.px(12, 6, P["gold"])
+    c.rect(7, 9, 2, 4, P["door"])
+    c.px(4, 10, P["door"])
+    c.px(11, 10, P["door"])
+    c.rect(9, 13, 5, 1, P["rock_dark"])  # cannon on the yard
+    c.px(14, 13, P["rock_dark"])
+    c.ellipse(10, 14.5, 1.2, 1.2, P["wood_dark"])
+    c.outline()
+    return c
+
+
 DIGITS = {
     1: ["010", "110", "010", "010", "111"], 2: ["110", "001", "010", "100", "111"],
     3: ["110", "001", "010", "001", "110"], 4: ["101", "101", "111", "001", "001"],
@@ -584,6 +668,9 @@ def main() -> None:
     farm().save("buildings/farm.png")
     lumber_mill().save("buildings/lumber_mill.png")
     mine().save("buildings/mine.png")
+    for name, draw in (("war_stable", war_stable), ("archery_range", archery_range), ("martial_hall", martial_hall),
+                       ("military_academy", military_academy)):
+        draw().save(f"buildings/{name}.png")
     for name, draw in (("food", icon_food), ("wood", icon_wood), ("stone", icon_stone), ("ore", icon_ore),
                        ("hardwood", icon_hardwood), ("horses", icon_horses)):
         draw().save(f"icons/{name}.png", UI_SCALE)

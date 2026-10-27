@@ -54,7 +54,7 @@ func _row(officer: Officer, role: String) -> Control:
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(column)
-	column.add_child(_line("%s %s" % [officer.name, officer.star_text()], 14))
+	column.add_child(_line("%s %s" % [officer.name, officer.star_text()], 14, officer.name_color()))
 	column.add_child(_line("%s · Cấp %d" % [role, officer.level], 12, UiPalette.MUTED))
 	if not officer.is_ready():
 		column.add_child(_line("Bị thương, còn %d lượt" % officer.wounded_turns, 12, WARNING_COLOR))

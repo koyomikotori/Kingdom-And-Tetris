@@ -87,6 +87,7 @@ func _rebuild_type_list(state: KingdomState) -> void:
 		row.add_child(column)
 		var name_label := Label.new()
 		name_label.text = "%s  ×%d" % [unit.display_name, squads]
+		name_label.add_theme_color_override("font_color", unit.tier_color(false))
 		column.add_child(name_label)
 		var eats: Dictionary[StringName, int] = {}
 		for resource_id in unit.upkeep:
@@ -115,8 +116,8 @@ func _rebuild_squad_list(state: KingdomState) -> void:
 		if level > 0:
 			level_text = Experience.SQUAD_LEVEL_MARKS[level] + " " + level_text
 		var label := _small_label("%s · %s — %d/%d lính" % [unit.display_name, level_text, squad.soldiers, unit.squad_size])
-		if squad.soldiers < unit.squad_size:
-			label.add_theme_color_override("font_color", WARNING_COLOR)
+		# Understrength squads show in the warning color, the others in their tier color (M13b).
+		label.add_theme_color_override("font_color", WARNING_COLOR if squad.soldiers < unit.squad_size else unit.tier_color(false))
 		info.add_child(label)
 		info.add_child(_xp_bar(Experience.squad_progress(squad.xp)))
 		var button := Button.new()

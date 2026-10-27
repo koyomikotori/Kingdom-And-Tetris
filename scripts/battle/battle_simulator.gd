@@ -4,8 +4,11 @@ extends RefCounted
 ## Call step() repeatedly (the battle screen does this every frame, more often when sped up),
 ## or simulate() to run a whole battle at once. retreat() ends the battle immediately.
 ##
-## Timeline: military advisors try their stratagems on the first tick; guns fire one volley at GUN_TIME; archers fire at FIRST_ARROW_TIME and then every
+## Timeline: military advisors try their stratagems on the first tick; guns fire one volley at GUN_TIME (artillery
+## on every row; musketeers then march to the front row); archers fire at FIRST_ARROW_TIME and then every
 ## reload_time; melee lines clash at CONTACT_TIME with a one-off charge, then fight continuously.
+## Spearmen shrug off part of a charge and hit cavalry harder (charge_resist); crossbows ignore part of
+## the target's armor (armor_pierce) (GDD §8, M13).
 ## Casualties use attack / (attack + defense), so stats compare as ratios and never hit zero.
 ## Same seed + same armies (+ same retreat time) = same result.
 
@@ -106,7 +109,7 @@ func is_melee_started() -> bool:
 
 ## A ranged unit stops shooting once its row is the front line in melee.
 func _is_in_melee(side: int, unit: BattleSide.Unit) -> bool:
-	return is_melee_started() and unit.data.row == _sides[side].front_row()
+	return is_melee_started() and unit.row == _sides[side].front_row()
 
 
 ## Each stratagem of the side's advisor works with Advisors.stratagem_chance (GDD §8, M11f).
@@ -147,7 +150,7 @@ func _stratagem_targets(s: int, stratagem: StratagemData) -> Array[BattleSide.Un
 			return own
 		StratagemData.Target.OWN_FRONT:
 			var front := _sides[s].front_row()
-			return own.filter(func(u: BattleSide.Unit) -> bool: return u.data.row == front)
+			return own.filter(func(u: BattleSide.Unit) -> bool: return u.row == front)
 	return enemy
 
 
@@ -158,8 +161,11 @@ func _fire_guns(s: int) -> void:
 		var unit := _sides[s].units[i]
 		if unit.is_active() and unit.data.attack_kind == UnitData.AttackKind.GUN and not unit.has_fired:
 			unit.has_fired = true
-			_ranged_attack(s, unit, GUN_FACTOR, false)
-			record.events.append({"time": time, "type": &"gun_volley", "side": s, "unit": i})
+			_ranged_attack(s, unit, GUN_FACTOR, unit.data.volley_all_rows)
+			record.events.append({"time": time, "type": &"gun_volley", "side": s, "unit": i,
+					"all_rows": unit.data.volley_all_rows})
+			if unit.data.melee_after_volley:
+				unit.row = UnitData.Row.FRONT
 
 
 func _fire_arrows(s: int) -> void:
@@ -179,7 +185,8 @@ func _ranged_attack(s: int, source: BattleSide.Unit, factor: float, spread_over_
 	var targets := _pick_targets(1 - s, spread_over_rows)
 	for target_index in targets:
 		var target := _sides[1 - s].units[target_index]
-		var ratio := _ratio(source.range_attack(), target.data.armor * target.defense_mult)
+		var armor := target.data.armor * target.defense_mult * (1.0 - source.data.armor_pierce)
+		var ratio := _ratio(source.range_attack(), armor)
 		_hit(1 - s, target_index, source, source.alive() * source.data.damage_per_soldier * ratio * factor * targets[target_index])
 
 
@@ -194,7 +201,7 @@ func _fight_melee(s: int) -> void:
 		var unit := _sides[s].units[i]
 		if not unit.is_active():
 			continue
-		if unit.data.is_ranged() and not _is_in_melee(s, unit):
+		if unit.data.is_ranged() and not _is_in_melee(s, unit) and not (unit.data.melee_after_volley and unit.has_fired):
 			continue
 		var charging := not unit.has_charged
 		unit.has_charged = true
@@ -204,9 +211,12 @@ func _fight_melee(s: int) -> void:
 			var target := _sides[1 - s].units[target_index]
 			var share: float = targets[target_index]
 			var defense := target.melee_defense() * (1.0 - unit.defense_pierce)
-			var casualties := unit.alive() * _ratio(unit.melee_attack(), defense) * MELEE_RATE * TICK
+			var attack := unit.melee_attack()
+			if target.data.is_cavalry:
+				attack *= 1.0 + unit.data.charge_resist
+			var casualties := unit.alive() * _ratio(attack, defense) * MELEE_RATE * TICK
 			if charging:
-				casualties += unit.alive() * _ratio(unit.data.charge_attack * unit.charge_mult, defense) * CHARGE_FACTOR
+				casualties += unit.alive() * _ratio(unit.data.charge_attack * unit.charge_mult, defense) * CHARGE_FACTOR 						* (1.0 - target.data.charge_resist)
 			_hit(1 - s, target_index, unit, casualties * unit.data.damage_per_soldier * share)
 
 
@@ -216,10 +226,10 @@ func _pick_targets(side: int, all_rows: bool) -> Dictionary:
 	var rows := {}
 	for i in _sides[side].units.size():
 		var unit := _sides[side].units[i]
-		if unit.is_active() and (all_rows or unit.data.row == front):
-			if not rows.has(unit.data.row):
-				rows[unit.data.row] = []
-			rows[unit.data.row].append(i)
+		if unit.is_active() and (all_rows or unit.row == front):
+			if not rows.has(unit.row):
+				rows[unit.row] = []
+			rows[unit.row].append(i)
 	var result := {}
 	for row in rows:
 		var row_alive := 0

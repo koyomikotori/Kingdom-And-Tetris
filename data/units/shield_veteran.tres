@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="UnitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/army/unit_data.gd" id="1_unit"]
+
+[resource]
+script = ExtResource("1_unit")
+unit_id = &"shield_veteran"
+display_name = "Đao thuẫn binh kỳ cựu"
+sort_order = 10
+squad_size = 20
+row = 1
+attack_kind = 0
+melee_attack = 9
+melee_defense = 13
+armor = 11
+charge_attack = 4
+unit_type = 2
+morale = 11
+range_attack = 0
+reload_time = 5.0
+recruit_cost = Dictionary[StringName, int]({&"food": 5, &"wood": 2, &"ore": 2})
+upkeep = Dictionary[StringName, int]({&"food": 2})
+required_buildings = Dictionary[StringName, int]({&"martial_hall": 2, &"barracks": 3})

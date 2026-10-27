@@ -5,8 +5,8 @@
 [resource]
 script = ExtResource("1_unit")
 unit_id = &"archer"
-display_name = "Cung thủ"
-sort_order = 2
+display_name = "Cung thủ nông dân"
+sort_order = 12
 squad_size = 15
 row = 2
 attack_kind = 1
@@ -14,10 +14,10 @@ melee_attack = 3
 melee_defense = 2
 armor = 2
 charge_attack = 1
+unit_type = 4
 morale = 5
 range_attack = 6
 reload_time = 5.0
 recruit_cost = Dictionary[StringName, int]({&"food": 2, &"wood": 3})
 upkeep = Dictionary[StringName, int]({&"food": 1})
-required_building = &"barracks"
-required_terrain = Dictionary[StringName, int]({&"forest": 3})
+required_buildings = Dictionary[StringName, int]({&"barracks": 1})

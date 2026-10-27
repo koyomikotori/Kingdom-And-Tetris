@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="UnitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/army/unit_data.gd" id="1_unit"]
+
+[resource]
+script = ExtResource("1_unit")
+unit_id = &"marksman_archer"
+display_name = "Cung thủ thiện xạ"
+sort_order = 14
+squad_size = 15
+row = 2
+attack_kind = 1
+melee_attack = 5
+melee_defense = 4
+armor = 4
+charge_attack = 1
+unit_type = 4
+morale = 9
+range_attack = 11
+reload_time = 4.5
+recruit_cost = Dictionary[StringName, int]({&"food": 6, &"wood": 4, &"hardwood": 3})
+upkeep = Dictionary[StringName, int]({&"food": 3})
+required_buildings = Dictionary[StringName, int]({&"barracks": 6})

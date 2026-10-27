@@ -6,6 +6,9 @@ extends RefCounted
 class Unit:
 	extends RefCounted
 	var data: UnitData
+	## Formation row right now: data.row, until musketeers march to the front after their volley
+	## (UnitData.melee_after_volley, M13).
+	var row: UnitData.Row
 	## The kingdom squad this unit came from, or null (bandits, test armies).
 	var squad: Army.Squad
 	## The clan that lent this unit to the side (an ally of the kingdom, or a friend helping the
@@ -41,6 +44,7 @@ class Unit:
 
 	func _init(p_data: UnitData, count: int, p_squad: Army.Squad) -> void:
 		data = p_data
+		row = p_data.row
 		squad = p_squad
 		start_soldiers = count
 		soldiers = count
@@ -50,7 +54,7 @@ class Unit:
 			var bonus := level * Experience.SQUAD_LEVEL_BONUS
 			if p_data.is_ranged():
 				range_bonus = bonus
-			else:
+			if not p_data.is_ranged() or p_data.melee_after_volley:
 				attack_bonus = bonus
 			defense_bonus = bonus
 			morale += bonus
@@ -136,6 +140,6 @@ func fraction_alive() -> float:
 func front_row() -> int:
 	var best := -1
 	for unit in active_units():
-		if best == -1 or unit.data.row < best:
-			best = unit.data.row
+		if best == -1 or unit.row < best:
+			best = unit.row
 	return best

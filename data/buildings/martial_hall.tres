@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/buildings/building_data.gd" id="1_building"]
+
+[resource]
+script = ExtResource("1_building")
+building_id = &"martial_hall"
+display_name = "Võ trường"
+description = "Luyện đao thuẫn binh giữ hàng giữa: tuyển Đao thuẫn binh nông dân (cấp 1), kỳ cựu (cấp 2), vệ binh tinh nhuệ (cấp 3). Chỉ có 1 cái, cần thành cấp 3. Nâng cấp tới cấp thành − 2 (tối đa 3). Xây trên ô cỏ."
+cost = Dictionary[StringName, int]({&"wood": 10, &"stone": 8, &"ore": 4})
+allowed_terrains = Array[StringName]([&"grass"])
+max_count = 1
+fixed_count = true
+color = Color(0.5, 0.3, 0.3, 1)
+upkeep = Dictionary[StringName, int]({&"food": 1})
+required_castle_level = 3
+category = 1
+build_turns = 3
+upgrade_levels = 3
+castle_level_gap = 2

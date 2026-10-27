@@ -53,11 +53,26 @@ C = {
 # The commander's sprite per worn weapon type (Item.WEAPON_TYPES; "" = a plain sword).
 GENERAL_WEAPONS = ["", "dao", "thuong", "kiem", "kich", "chuy"]
 
-# Each soldier type: weapon, headgear and whether the clothes are rags (bandits).
+# Each soldier type: weapon, headgear, gear (one or a tuple) and whether the clothes are rags
+# (bandits). Tiers (GDD §8, M13): peasants wear straw hats, elites iron helmets and lamellar,
+# royal guards gold-rimmed helmets with a tall plume and gold-trimmed armor.
 SOLDIERS = {
     "swordsman": {"weapon": "sword", "hat": "conical", "gear": "pauldron"},
-    "spearman": {"weapon": "spear", "hat": "helmet", "gear": "scale"},
+    "elite_swordsman": {"weapon": "sword", "hat": "helmet", "gear": ("lamellar", "pauldron")},
+    "royal_swordguard": {"weapon": "sword", "hat": "royal", "gear": ("royal", "pauldron")},
+    "spearman": {"weapon": "spear", "hat": "conical", "gear": "scale"},
+    "elite_spearman": {"weapon": "spear", "hat": "helmet", "gear": "lamellar"},
+    "royal_pikeguard": {"weapon": "pike", "hat": "royal", "gear": "royal"},
+    "shield_peasant": {"weapon": "dao_shield", "hat": "headband", "gear": ""},
+    "shield_veteran": {"weapon": "dao_shield", "hat": "helmet", "gear": "scale"},
+    "shield_guard": {"weapon": "dao_shield", "hat": "royal", "gear": "royal"},
     "archer": {"weapon": "bow", "hat": "conical", "gear": "quiver"},
+    "elite_archer": {"weapon": "bow", "hat": "helmet", "gear": ("quiver", "scale")},
+    "marksman_archer": {"weapon": "bow", "hat": "feather_cap", "gear": ("quiver", "lamellar")},
+    "crossbow_peasant": {"weapon": "crossbow", "hat": "conical", "gear": "bolts"},
+    "crossbow_pro": {"weapon": "crossbow", "hat": "helmet", "gear": ("bolts", "scale")},
+    "crossbow_elite": {"weapon": "crossbow", "hat": "royal", "gear": ("bolts", "lamellar")},
+    "elite_musketeer": {"weapon": "musket", "hat": "jingasa", "gear": ("lamellar", "pauldron")},
     "bandit_thug": {"weapon": "club", "hat": "headband", "rags": True},
     "bandit_archer": {"weapon": "bow", "hat": "headband", "rags": True},
 }
@@ -93,24 +108,39 @@ def legs(c: Canvas, pose: Pose) -> None:
         c.px(x, 15 - (1 if pose.lift and x == xs[0] else 0), C["belt"])
 
 
-def torso(c: Canvas, pose: Pose, rags: bool, gear: str = "") -> None:
+def torso(c: Canvas, pose: Pose, rags: bool, gear="") -> None:
+    gears = (gear,) if isinstance(gear, str) else tuple(gear)
     top = 7 - pose.lift
     breathe = 1 if pose.state == "stand" and pose.frame == 1 else 0
-    if gear == "quiver":  # on the back, arrows sticking out
+    if "quiver" in gears:  # on the back, arrows sticking out
         c.rect(4, top - 1, 2, 5, C["quiver"])
         c.px(4, top - 2, C["feather"])
         c.px(5, top - 3, C["feather"])
+    if "bolts" in gears:  # a short bolt case on the hip
+        c.rect(3, top + 3, 2, 3, C["quiver"])
+        c.px(3, top + 2, C["iron_light"])
+        c.px(4, top + 2, C["iron_light"])
     c.rect(5, top + breathe, 5, 5 - breathe, TEAM)
     c.vline(5, top + breathe, top + 4, TEAM_DARK)
     c.vline(8, top + breathe, top + 2, TEAM_LIGHT)
     c.hline(5, 9, top + 3, C["belt"])
     c.px(7, top + 3, C["gold_dark"])
-    if gear == "scale":  # scale armor over the chest
+    if "scale" in gears:  # scale armor over the chest
         for x, y in ((6, top + 1), (8, top + 1), (7, top + 2), (9, top + 2)):
             c.px(x, y + breathe, C["iron"])
         c.px(7, top + 1 + breathe, C["iron_light"])
-    elif gear == "pauldron":
-        c.px(9, top + breathe, C["iron"])
+    if "lamellar" in gears or "royal" in gears:  # rows of iron plates over the whole chest
+        for y in (top + 1, top + 2):
+            c.hline(6, 9, y + breathe, C["iron"])
+        c.px(7, top + 1 + breathe, C["iron_light"])
+        c.px(9, top + 2 + breathe, C["iron_dark"])
+    if "royal" in gears:  # gold trim and buckle
+        c.hline(5, 9, top + 3, C["gold_dark"])
+        c.px(7, top + 3, C["gold"])
+        c.px(9, top + breathe, C["gold"])
+        c.px(5, top + breathe, C["gold"])
+    if "pauldron" in gears:
+        c.px(9, top + breathe, C["gold"] if "royal" in gears else C["iron"])
         c.px(9, top + 1 + breathe, C["iron"])
     if rags:
         for x in (5, 7, 9):
@@ -135,6 +165,24 @@ def head(c: Canvas, pose: Pose, hat: str) -> None:
         c.px(5, top + 1, C["iron"])
         c.px(7, top - 1, C["iron_light"])
         c.px(8, top - 2, C["plume"])
+    elif hat == "royal":  # iron helmet with a gold rim and a tall red plume
+        c.hline(6, 9, top - 1, C["iron"])
+        c.hline(6, 9, top, C["gold"])
+        c.px(5, top + 1, C["iron"])
+        c.px(7, top - 1, C["iron_light"])
+        c.vline(8, top - 4, top - 2, C["plume"])
+        c.px(7, top - 4, C["plume"])
+    elif hat == "feather_cap":  # a dark cap with a long pheasant feather (marksmen)
+        c.hline(6, 9, top - 1, C["hat_black"])
+        c.hline(6, 9, top, C["hat_black"])
+        c.px(9, top, C["gold"])
+        for i in range(4):
+            c.px(5 - i // 2, top - 2 - i, C["pheasant"] if i % 2 == 0 else C["pheasant_dark"])
+    elif hat == "jingasa":  # flat, wide black lacquered hat with a gold crest (musketeers)
+        c.hline(4, 11, top, C["hat_black"])
+        c.hline(6, 9, top - 1, C["hat_black"])
+        c.px(7, top - 2, C["gold"])
+        c.px(8, top - 1, C["lacquer"])
     elif hat == "headband":
         c.hline(6, 9, top, C["hair"])
         c.hline(6, 9, top + 1, C["band"])
@@ -171,18 +219,86 @@ def weapon(c: Canvas, pose: Pose, kind: str) -> None:
             c.vline(11, 4 - lift, 8 - lift, C["steel"])
             c.hline(10, 12, 9 - lift, C["hilt"])
             hand(c, 11, 10 - lift)
-    elif kind == "spear":
+    elif kind in ("spear", "pike"):
+        # The royal pike has a red tassel under its blade.
         if state == "attack":
             x0 = 1 if frame == 0 else 4
             c.hline(x0, x0 + 8, 9, C["shaft"])
             c.hline(x0 + 9, x0 + 10, 9, C["steel"])
             c.px(x0 + 9, 8, C["steel"])
+            if kind == "pike":
+                c.px(x0 + 8, 10, C["tassel"])
             hand(c, x0 + 6, 10)
         else:
             top = 1 if state == "cheer" else 2 - lift
             c.vline(11, top + 2, 14 - lift - (2 if state == "cheer" else 0), C["shaft"])
             c.vline(11, top, top + 1, C["steel"])
+            if kind == "pike":
+                c.px(12, top + 2, C["tassel"])
             hand(c, 11, 8 - lift - (2 if state == "cheer" else 0))
+    elif kind == "dao_shield":
+        # A round wooden shield with an iron rim and boss in front, a broad dao in the other hand.
+        sy = 7 - lift
+        c.rect(10, sy, 3, 6, C["shaft"])
+        c.vline(13, sy + 1, sy + 4, C["iron"])
+        c.hline(10, 12, sy, C["iron"])
+        c.hline(10, 12, sy + 5, C["iron"])
+        c.px(11, sy + 2, C["iron_light"])
+        c.px(11, sy + 3, C["gold_dark"])
+        if state == "attack" and frame == 0:
+            c.vline(7, 1, 4, C["steel"])
+            c.px(6, 1, C["steel"])
+            c.px(7, 5, C["hilt"])
+            hand(c, 7, 6)
+        elif state == "attack":
+            c.hline(12, 14, 4, C["steel"])
+            c.px(14, 3, C["steel"])
+            c.px(11, 5, C["hilt"])
+            hand(c, 10, 6)
+        elif state == "cheer":
+            c.vline(5, 1, 3, C["steel"])
+            c.px(4, 1, C["steel"])
+            hand(c, 5, 4)
+        else:
+            c.vline(4, 8 - lift, 11 - lift, C["steel"])
+            c.px(3, 11 - lift, C["steel"])
+            hand(c, 4, 7 - lift)
+    elif kind == "crossbow":
+        if state == "cheer":
+            c.hline(8, 12, 2, C["shaft"])
+            c.vline(12, 1, 3, C["bow"])
+            hand(c, 10, 3)
+            return
+        y = 9 - lift
+        if state == "attack" and frame == 1:  # recoil
+            c.hline(7, 11, y, C["shaft"])
+            c.vline(12, y - 2, y + 2, C["bow"])
+        else:
+            c.hline(8, 12, y, C["shaft"])
+            c.vline(13, y - 2, y + 2, C["bow"])
+            if state == "attack":  # string drawn back, bolt loaded
+                c.px(12, y - 1, C["string"])
+                c.px(12, y + 1, C["string"])
+                c.px(14, y, C["steel"])
+        hand(c, 9, y + 1)
+    elif kind == "musket":
+        if state == "attack":  # aimed: long barrel forward, a flash on the second frame
+            c.hline(6, 10, 8, C["shaft"])
+            c.hline(11, 13, 8, C["iron_dark"])
+            hand(c, 8, 9)
+            hand(c, 11, 9)
+            if frame == 1:
+                c.px(14, 8, C["gold_light"])
+                c.px(14, 7, C["gold"])
+        elif state == "cheer":
+            c.vline(11, 1, 6, C["shaft"])
+            c.vline(11, 1, 2, C["iron_dark"])
+            hand(c, 11, 4)
+        else:
+            c.vline(11, 3 - lift, 14 - lift, C["shaft"])
+            c.vline(11, 3 - lift, 6 - lift, C["iron_dark"])
+            c.px(11, 2 - lift, C["steel"])  # bayonet
+            hand(c, 11, 9 - lift)
     elif kind == "bow":
         if state == "cheer":
             c.hline(7, 12, 1, C["bow"])
@@ -262,10 +378,12 @@ def soldier_frame(spec: dict, state: str, frame: int) -> tuple:
     return split_team(c)
 
 
-def cavalry_frame(state: str, frame: int) -> tuple:
+def cavalry_frame(state: str, frame: int, variant: str = "guard") -> tuple:
     """A rider of the commander's bodyguard (24×22, headroom above): a horse with a saddle cloth
     and breast strap in the side's color, the rider in iron lamellar over a colored coat, an iron
-    helmet with a red tassel, and a lance with a pennant in the side's color."""
+    helmet with a red tassel, and a lance with a pennant in the side's color.
+    Variants (GDD §8, M13): "guard" (the bodyguard and lancers), "light" (a cloth cap, no armor, no
+    pennant), "heavy" (iron barding on the horse's chest and face, a plumed helmet)."""
     c = Canvas(24, 22)
     gallop = state in ("walk", "attack") and frame == 1
     lift = 1 if (state == "cheer" or state == "walk") and frame == 1 else 0
@@ -290,6 +408,12 @@ def cavalry_frame(state: str, frame: int) -> tuple:
     for y in range(8, 13):
         c.px(16 + (y - 8) // 2, y, C["mane"])
     c.vline(17, 10, 12, TEAM)  # breast strap
+    if variant == "heavy":  # iron barding over the chest and a face plate
+        c.rect(15, 10, 3, 5, C["iron"])
+        c.vline(15, 10, 14, C["iron_dark"])
+        c.px(16, 11, C["iron_light"])
+        c.hline(19, 21, 7, C["iron"])
+        c.px(20, 7, C["iron_light"])
     # Saddle cloth with a dark hem.
     c.rect(7, 11, 7, 4, TEAM)
     c.hline(7, 13, 11, TEAM_LIGHT)
@@ -300,24 +424,33 @@ def cavalry_frame(state: str, frame: int) -> tuple:
     top = 5 - lift
     c.rect(9, top, 4, 6, TEAM)
     c.vline(9, top, top + 5, TEAM_DARK)
-    for y in (top + 1, top + 3):
-        c.hline(10, 12, y, C["iron"])
-    c.px(11, top + 2, C["iron_light"])
+    if variant != "light":
+        for y in (top + 1, top + 3):
+            c.hline(10, 12, y, C["iron"])
+        c.px(11, top + 2, C["iron_light"])
     c.hline(9, 12, top + 4, C["belt"])
     c.rect(9, top - 4, 4, 4, C["skin"])
     c.vline(9, top - 4, top - 1, C["skin_dark"])
     c.px(12, top - 2, C["eye"])
-    c.hline(8, 13, top - 4, C["iron"])
-    c.hline(9, 12, top - 5, C["iron"])
-    c.px(10, top - 5, C["iron_light"])
-    c.px(8, top - 3, C["iron_dark"])
-    c.px(11, top - 6, C["tassel"])
-    c.px(10, top - 7, C["tassel"])
+    if variant == "light":  # a cloth cap in the side's color
+        c.hline(9, 12, top - 4, TEAM_DARK)
+        c.hline(10, 11, top - 5, TEAM)
+    else:
+        c.hline(8, 13, top - 4, C["iron"])
+        c.hline(9, 12, top - 5, C["iron"])
+        c.px(10, top - 5, C["iron_light"])
+        c.px(8, top - 3, C["iron_dark"])
+        c.px(11, top - 6, C["tassel"])
+        c.px(10, top - 7, C["tassel"])
+        if variant == "heavy":
+            c.px(12, top - 6, C["plume"])
+            c.px(12, top - 7, C["plume"])
     # Lance with a pennant.
     if state == "attack" and frame == 1:
         c.hline(12, 21, top + 2, C["shaft"])
         c.hline(22, 23, top + 2, C["steel"])
-        c.rect(18, top, 3, 2, TEAM)
+        if variant != "light":
+            c.rect(18, top, 3, 2, TEAM)
         c.px(13, top + 3, C["skin"])
     elif state == "attack":
         for i in range(8):
@@ -331,9 +464,48 @@ def cavalry_frame(state: str, frame: int) -> tuple:
         c.vline(14, lance_top + 2, 15, C["shaft"])
         c.vline(14, lance_top, lance_top + 1, C["steel"])
         flutter = frame
-        c.rect(15, lance_top + 2, 3 + flutter, 2, TEAM)
-        c.px(17 + flutter, lance_top + 2, TEAM_DARK)
+        if variant != "light":
+            c.rect(15, lance_top + 2, 3 + flutter, 2, TEAM)
+            c.px(17 + flutter, lance_top + 2, TEAM_DARK)
         c.px(13, top + 3, C["skin"])
+    return split_team(c)
+
+
+# Cavalry sprite per unit (GDD §8, M13), drawn by cavalry_frame.
+CAVALRY = {"light_cavalry": "light", "lancer_cavalry": "guard", "heavy_cavalry": "heavy"}
+# Artillery sprite per unit: barrel color, length and thickness.
+ARTILLERY = {"light_artillery": ("gold_dark", 7, 2), "heavy_artillery": ("iron_dark", 9, 3)}
+
+
+def artillery_frame(state: str, frame: int, barrel: str, length: int, thick: int) -> tuple:
+    """A gunner (24×16) beside a field gun on a wooden carriage: bronze for light guns, a longer,
+    thicker iron barrel for heavy ones. The attack frames fire (a flash, then the recoil)."""
+    pose = Pose(state, frame)
+    gunner = Canvas(16, 16)
+    legs(gunner, pose)
+    torso(gunner, pose, False, "")
+    head(gunner, pose, "helmet")
+    weapon(gunner, pose, "")
+    c = Canvas(24, 16)
+    c.paste(gunner, 0, 0)
+    recoil = 1 if state == "attack" and frame == 1 else 0
+    x0 = 13 - recoil
+    # Carriage and wheel.
+    c.hline(x0, x0 + 6, 11, C["shaft"])
+    c.hline(x0 - 2, x0 + 1, 12, C["shaft"])
+    c.ellipse(x0 + 4, 12.5, 2.6, 2.6, C["horse_dark"])
+    c.px(x0 + 4, 12, C["gold_dark"])
+    spoke = (0, 1) if (state == "walk" and frame == 1) else (1, 0)
+    c.px(x0 + 4 + spoke[0], 12 - spoke[1], C["shaft"])
+    # Barrel, tilted up a little.
+    y = 10 - thick
+    c.rect(x0, y, length, thick, C[barrel])
+    c.hline(x0, x0 + length - 1, y, C["iron_light"] if barrel == "iron_dark" else C["gold"])
+    c.vline(x0 + length, y - 1, y + thick - 1, C[barrel])
+    if state == "attack" and frame == 0:
+        mx = min(22, x0 + length + 1)
+        c.vline(mx, y - 1, y + thick, C["gold_light"])
+        c.px(mx, y + thick // 2, C["gold"])
     return split_team(c)
 
 
@@ -740,6 +912,10 @@ def draw_all() -> None:
     base, team = sheet(cavalry_frame, 24, 22)
     base.save("units/general_guard.png")
     team.save("units/general_guard_team.png")
+    for name, variant in CAVALRY.items():
+        save_sheet(name, sheet(lambda s, f, v=variant: cavalry_frame(s, f, v), 24, 22))
+    for name, spec in ARTILLERY.items():
+        save_sheet(name, sheet(lambda s, f, sp=spec: artillery_frame(s, f, *sp), 24, 16))
     for gender, female in (("m", False), ("f", True)):
         for weapon_type in GENERAL_WEAPONS:
             name = f"general_{gender}" + (f"_{weapon_type}" if weapon_type else "")

@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="UnitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/army/unit_data.gd" id="1_unit"]
+
+[resource]
+script = ExtResource("1_unit")
+unit_id = &"crossbow_elite"
+display_name = "Nỏ binh tinh nhuệ"
+sort_order = 17
+squad_size = 15
+row = 2
+attack_kind = 1
+melee_attack = 5
+melee_defense = 5
+armor = 5
+charge_attack = 1
+unit_type = 5
+morale = 9
+range_attack = 11
+reload_time = 7.0
+armor_pierce = 0.5
+recruit_cost = Dictionary[StringName, int]({&"food": 6, &"wood": 4, &"hardwood": 3})
+upkeep = Dictionary[StringName, int]({&"food": 3})
+required_buildings = Dictionary[StringName, int]({&"archery_range": 3, &"barracks": 6})

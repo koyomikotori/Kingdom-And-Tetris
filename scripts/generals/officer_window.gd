@@ -4,6 +4,8 @@ extends ModalWindow
 ## bars and level points — item bonuses in brackets —, level and XP, trait or stratagems, post and
 ## what it gives, upkeep) and a "Trang bị" tab (M12e: the three slots, the chosen slot's item, the
 ## storage items that fit it, wear / take off / dismantle), with Làm tổng tướng / Sa thải below.
+## The title is colored by stars; ← / → switch to the previous / next general or advisor in the
+## Tướng sĩ tab's order (M13b).
 
 const STAT_BAR_WIDTH := 160
 ## The tab pages keep this height whatever they show (their content scrolls).
@@ -14,6 +16,7 @@ const TABS_RESERVED := 260
 var _state: KingdomState
 var _officer: Officer
 var _resource_types: Array[ResourceTypeData] = ResourceTypeData.load_all()
+var _tabs: TabContainer
 var _stats: VBoxContainer
 var _role: Label
 var _commander_button: Button
@@ -28,7 +31,7 @@ var _dismantling: Item
 func open(state: KingdomState, officer: Officer) -> void:
 	_state = state
 	_officer = officer
-	var body := build_frame("%s %s" % [officer.name, officer.star_text()], UiPalette.ACCENT, 0.6)
+	var body := build_frame("%s %s" % [officer.name, officer.star_text()], Officer.star_color(officer.stars), 0.6)
 	var row := _row([])
 	row.add_theme_constant_override("separation", 16)
 	body.add_child(row)
@@ -41,7 +44,13 @@ func open(state: KingdomState, officer: Officer) -> void:
 	_role.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_role.custom_minimum_size = Vector2(PortraitView.SIZE * 2, 0)
 	left.add_child(_role)
+	if _all_officers().size() > 1:
+		var hint := _label("← → xem người khác", 12)
+		hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		hint.add_theme_color_override("font_color", MUTED_COLOR)
+		left.add_child(hint)
 	var tabs := TabContainer.new()
+	_tabs = tabs
 	tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tabs.custom_minimum_size = Vector2(0, fit_height(TABS_HEIGHT, TABS_RESERVED))
 	row.add_child(tabs)
@@ -54,6 +63,35 @@ func open(state: KingdomState, officer: Officer) -> void:
 	state.advisors.changed.connect(_refresh)
 	state.equipment.changed.connect(_refresh)
 	_refresh()
+
+
+## Generals, then advisors: the order of the Tướng sĩ tab.
+func _all_officers() -> Array[Officer]:
+	var result: Array[Officer] = []
+	result.append_array(_state.generals.generals)
+	result.append_array(_state.advisors.advisors)
+	return result
+
+
+## Replaces this window with the officer `step` places away (wrapping around), on the same tab.
+func _switch(step: int) -> void:
+	var officers := _all_officers()
+	var index := officers.find(_officer)
+	if officers.size() < 2 or index == -1:
+		return
+	var window := OfficerWindow.new()
+	get_parent().add_child(window)
+	window.open(_state, officers[posmod(index + step, officers.size())])
+	window._tabs.current_tab = _tabs.current_tab
+	queue_free()
+
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if event.pressed and event.keycode in [KEY_LEFT, KEY_RIGHT]:
+		_switch(-1 if event.keycode == KEY_LEFT else 1)
+		get_viewport().set_input_as_handled()
+		return
+	super(event)
 
 
 func _tab(tabs: TabContainer, title: String) -> VBoxContainer:
