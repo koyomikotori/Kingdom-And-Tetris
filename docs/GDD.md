@@ -471,7 +471,7 @@ Save cũ: đơn vị Kiếm sĩ / Thương binh / Cung thủ trở thành bậc 
 
 **Tiện lợi (M13b, đã chốt):** bảng Tuyển lính chia theo loại (Tất cả / Kiếm / Thương / Đao thuẫn / Kỵ binh / Cung / Nỏ / Hỏa khí, nút xuống 2 hàng); tên lính tô màu theo bậc (nông dân nâu, tinh nhuệ bạc, hoàng gia vàng) ở bảng tuyển và tab Quân đội; loại chưa đủ công trình hiện mờ. Tên tướng và mưu sĩ tô màu theo sao như độ hiếm trang bị (1–2★ xám, 3★ xanh lá, 4★ xanh lam, 5★ tím, 6★ vàng); trong bảng thông tin tướng sĩ, phím ← → chuyển sang người trước / sau. Tự bổ sung quân giảm từ 25% xuống 10% mỗi lượt; quân lang tộc vẫn hồi +2 lính mỗi lượt.
 
-**Bản đồ sinh động (M13c, đã chốt):** ô bản đồ 48 px (ô đất vẽ 24×24), công trình giữ cỡ 32 px đứng giữa ô nên quanh nó có lối đi. Trên các mép ô (khe giữa các công trình) có dân làng đi giữa thành chính và ruộng / xưởng gỗ / mỏ rồi vác lúa, gỗ, đá về; xe bò chở hàng từ mỏ và xưởng gỗ; lính tuần tra (1 tốp cho 2 đơn vị) từ doanh trại và công trình quân sự ra biên giới, mặc màu của bạn; ngựa quanh chuồng ngựa chiến và trang trại cấp 3; hươu ở rừng ngoài lãnh thổ; chim bay ngang. Mỗi công trình có một vòng animation nhỏ 4 khung (khói, cờ bay, lưỡi cưa, quặng lấp lánh, đầu ngựa, mũi tên bay vào bia, lửa lò rèn…), công trình đang xây có thợ gõ búa. Menu có nút "Hiệu ứng bản đồ: Bật/Tắt", lưu theo máy.
+**Bản đồ sinh động (M13c, đã chốt):** ô bản đồ 48 px (ô đất vẽ 24×24), công trình giữ cỡ 32 px đứng giữa ô nên quanh nó có lối đi. Trên các mép ô (khe giữa các công trình) có dân làng đi giữa thành chính và ruộng / xưởng gỗ / mỏ rồi vác lúa, gỗ, đá về; xe bò chở hàng từ mỏ và xưởng gỗ; lính tuần tra (1 tốp cho 3 đơn vị) từ doanh trại và công trình quân sự ra biên giới, mặc màu của bạn; ngựa quanh chuồng ngựa chiến và trang trại cấp 3; hươu ở rừng ngoài lãnh thổ; chim bay ngang. Mỗi công trình có một vòng animation nhỏ 4 khung (khói, cờ bay, lưỡi cưa, quặng lấp lánh, đầu ngựa, mũi tên bay vào bia, lửa lò rèn…), công trình đang xây có thợ gõ búa. Menu có nút "Hiệu ứng bản đồ: Bật/Tắt", lưu theo máy.
 
 **Để sau:** công trình sản xuất trên ô cỏ (×2 sản lượng) khi có tài nguyên mới; công trình Hành chính (Sở cảnh sát, Quan phủ, Chính viện).
 
@@ -849,3 +849,17 @@ Lưu/tải được đưa lên trước sự kiện và tướng, vì trạng th
 - Số mảnh mỗi lượt và tỉ lệ xuất hiện ô quan trọng.
 - Bản đồ cố định 12×12, hay mở rộng biên khi nâng cấp thành?
 - Bộ asset pixel art sẽ dùng (Kenney, itch.io…).
+
+## 14. Âm thanh (M14a, đã chốt)
+
+M14 chia 3 đợt: **M14a âm thanh**, M14b cân bằng, M14c bản phát hành Windows.
+
+**Nguồn:** tất cả âm thanh **tự tạo bằng script** (`tools/audio/sound_gen.py`, Python + numpy, kiểu 8-bit Kairosoft), xuất WAV vào `assets/audio/sfx/` và `assets/audio/music/`. Người chơi bỏ file .ogg / .wav / .mp3 **trùng tên** vào `assets/audio/custom/` để thay bất kỳ âm thanh hay bản nhạc nào.
+
+**Nhạc nền** (chiptune, âm giai ngũ cung Á Đông, lặp lại): menu chính, bản đồ vương quốc (thanh bình), trận đánh; đoạn ngắn thắng / thua khi trận kết thúc và ở màn hình kết thúc ván. Chuyển bản có fade.
+
+**Hiệu ứng:** bấm nút (mọi nút), lỗi (thao tác không được), đặt đất, đặt nền móng / bắt đầu nâng cấp, xây xong, tuyển lính, phá hủy, kết thúc lượt (cồng), sự kiện, rèn, chiêu mộ tướng sĩ, buôn bán / tặng quà (tiếng xu). Trận đánh theo sự kiện: trống trận lúc bắt đầu, dây cung, nỏ, súng, pháo, kỵ binh xung phong, tiếng kim loại khi giáp lá cà (giới hạn số tiếng cùng lúc), tù và khi một đơn vị tan vỡ / rút lui, tướng ngã, mưu kế.
+
+**Âm nền bản đồ (nhẹ):** thỉnh thoảng chim hót, tiếng búa khi đang có công trình thi công; tắt cùng "Hiệu ứng bản đồ" và im khi đang đánh trận.
+
+**Cửa sổ Cài đặt** (nút "Cài đặt" ở Menu trong game và ở menu chính): thanh âm lượng Nhạc nền và Âm thanh hiệu ứng (0–100%), Hiệu ứng bản đồ Bật/Tắt, Toàn màn hình Bật/Tắt. Lưu theo máy (`user://settings.cfg`), không nằm trong file save.

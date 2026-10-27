@@ -109,6 +109,8 @@ func _ready() -> void:
 	board_view.add_child(_map_life)
 	_map_life.setup(state)
 	_apply_settings()
+	GameSettings.notifier.changed.connect(_apply_settings)
+	Sfx.music(&"kingdom")
 
 	build_panel.setup(_buildings, _resource_types)
 	build_panel.build_window_requested.connect(_open_build_window)
@@ -257,7 +259,9 @@ func _move_building_to(coord: Vector2i) -> void:
 	var result := state.move_building(_moving_from, coord - _building_anchor(building))
 	if result != BuildRules.Result.OK:
 		placement_status.text = BuildRules.describe(result)
+		Sfx.play(&"error")
 		return
+	Sfx.play(&"place_land")
 	_moving_from = NO_MOVE
 	board_view.hide_ghost()
 	placement_status.text = "Đã di chuyển %s." % building.display_name
@@ -269,7 +273,9 @@ func _place_selected_piece(coord: Vector2i) -> void:
 	var result := state.place_piece(_selected, coord - piece.get_anchor())
 	if result != PlacementRules.Result.OK:
 		placement_status.text = PlacementRules.describe(result)
+		Sfx.play(&"error")
 		return
+	Sfx.play(&"place_land")
 	_select(NO_SELECTION)
 	_refresh_economy()
 	placement_status.text = "Đã đặt mảnh đất."
@@ -281,7 +287,9 @@ func _build_selected(coord: Vector2i) -> void:
 	var result := state.build(_selected_building, coord - _building_anchor(building))
 	if result != BuildRules.Result.OK:
 		placement_status.text = BuildRules.describe(result)
+		Sfx.play(&"error")
 		return
+	Sfx.play(&"build")
 	_toggle_building(NO_BUILDING)
 	_refresh_economy()
 	placement_status.text = "Đã đặt nền móng %s, xây xong sau %d lượt." % [building.display_name, building.build_turns]
@@ -316,6 +324,9 @@ func _on_disband_requested(squad: Army.Squad) -> void:
 func _on_end_turn_pressed() -> void:
 	_clear_selection()
 	var report := state.end_turn()
+	Sfx.play(&"end_turn")
+	if not report.completed.is_empty():
+		Sfx.play(&"complete")
 	var lines: Array[String] = []
 	var collected := UiFormat.amounts(report.collected, _resource_types)
 	lines.append("Đã thu: %s." % collected if not collected.is_empty() else "Lượt trước không thu được tài nguyên nào.")
@@ -382,8 +393,12 @@ func _play_battle(simulator: BattleSimulator, player_side: int, title: String, o
 	_battle_screen = BattleScreen.new()
 	$UI.add_child(_battle_screen)
 	_battle_screen.start(simulator, player_side, title)
+	Sfx.music(&"battle")
+	_map_life.ambient = false
 	_battle_screen.finished.connect(func(record: BattleRecord) -> void:
 		_battle_screen = null
+		_map_life.ambient = true
+		Sfx.music(&"kingdom")
 		on_finished.call(record))
 
 
@@ -560,6 +575,7 @@ func _continue_turn_start() -> void:
 		_show_end_game_if_any()
 		return
 	_clear_selection()
+	Sfx.play(&"event")
 	var window := EventWindow.new()
 	$UI.add_child(window)
 	window.open(state, state.rng)
@@ -601,7 +617,6 @@ func _open_game_menu() -> void:
 	var menu := GameMenuWindow.new()
 	$UI.add_child(menu)
 	menu.open(state, _save_system, $UI)
-	menu.settings_changed.connect(_apply_settings)
 
 
 ## Map effects on or off (GameSettings, M13c): building animations and the walkers.

@@ -287,10 +287,12 @@ func _on_confirm_pressed() -> void:
 	match action:
 		Action.UPGRADE:
 			if _is_castle and _state.upgrade_castle() == KingdomState.CastleResult.OK:
+				Sfx.play(&"build")
 				construction_started.emit("Bắt đầu nâng thành chính lên cấp %d, xong sau %d lượt." % [
 						_state.castle_level + 1, _state.castle_turns])
 				close()
 			elif not _is_castle and _state.upgrade_building(_origin) == KingdomState.UpgradeResult.OK:
+				Sfx.play(&"build")
 				construction_started.emit("Bắt đầu nâng %s lên cấp %d, xong sau %d lượt." % [_building.display_name,
 						_state.board.get_building_level(_origin) + 1, _turns_left()])
 				close()
@@ -304,6 +306,7 @@ func _on_confirm_pressed() -> void:
 			move_requested.emit(_origin)
 			close()
 		Action.DEMOLISH:
+			Sfx.play(&"demolish")
 			demolished.emit("Đã phá hủy %s" % _building.display_name, _state.demolish(_origin))
 			close()
 		Action.CUSTOM:
@@ -357,6 +360,7 @@ func _refresh_forge() -> void:
 		var started := _state.start_forge(_forge_kind, _forge_slot)
 		if started == Equipment.Result.OK:
 			set_status("Bắt đầu rèn, xong sau %d lượt." % Equipment.FORGE_TURNS)
+			Sfx.play(&"forge")
 		else:
 			set_status(Equipment.describe(started), false))
 	start.custom_minimum_size = Vector2(140, 40)
@@ -486,6 +490,7 @@ func _recruit(index: int) -> void:
 	var name := _state.generals.candidates[index].name
 	if _state.generals.recruit(_state.stockpile, index) == Generals.RecruitResult.OK:
 		set_status("%s đã gia nhập!" % name)
+		Sfx.play(&"level_up")
 
 
 func _buy_refresh() -> void:

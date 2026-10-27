@@ -19,6 +19,7 @@ func open(state: KingdomState, path: int, system: SaveSystem, host: Node) -> voi
 	_system = system
 	_host = host
 	var won := path != Victory.NO_PATH
+	Sfx.sting(&"victory" if won else &"defeat")
 	var title := "Chiến thắng: %s!" % Victory.PATH_NAMES[path] if won else "Thành chính thất thủ!"
 	var body := build_frame(title, VICTORY_COLOR if won else DEFEAT_COLOR, 0.42, false)
 	var story := _label(_story(path), 16)

@@ -20,6 +20,7 @@ var _status: Label
 
 
 func _ready() -> void:
+	Sfx.music(&"menu")
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var background := ColorRect.new()
 	background.color = BACKGROUND_COLOR
@@ -64,6 +65,10 @@ func _ready() -> void:
 	_new_game_button = _button(NEW_GAME_TEXT, _on_new_game_pressed)
 	column.add_child(_new_game_button)
 	column.add_child(_button("Tải game", _on_load_pressed))
+	column.add_child(_button("Cài đặt", func() -> void:
+		var window := SettingsWindow.new()
+		add_child(window)
+		window.open()))
 	column.add_child(_button("Thoát", func() -> void: get_tree().quit()))
 	_status = _label("", 14)
 	_status.add_theme_color_override("font_color", WARNING_COLOR)
