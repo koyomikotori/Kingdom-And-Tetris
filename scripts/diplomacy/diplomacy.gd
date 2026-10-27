@@ -180,6 +180,8 @@ var agreements: Array[Agreement]:
 		return result
 ## Ngoại giao of the kingdom's working diplomacy advisor, 0 without one (set by KingdomState).
 var envoy := 0
+## Extra share of relation from gifts (the diplomacy advisor's items, M12e; set by KingdomState).
+var gift_bonus := 0.0
 ## How threatening the kingdom looks (KingdomState.get_threat()); every clan's wariness grows toward
 ## it (wariness_target).
 var threat := 0
@@ -293,7 +295,7 @@ func value_of(amounts: Dictionary[StringName, int]) -> int:
 func gift_gain(clan_id: StringName, amounts: Dictionary[StringName, int]) -> int:
 	var clan := clans[clan_id]
 	var raw := floori(float(value_of(amounts)) / GIFT_VALUE_PER_POINT * GIFT_MULTIPLIER[clan.data.personality]
-			* (1.0 + envoy * ENVOY_GIFT))
+			* (1.0 + envoy * ENVOY_GIFT + gift_bonus))
 	return clampi(raw, 0, MAX_GIFT_GAIN_PER_TURN - clan.gift_gain_this_turn)
 
 

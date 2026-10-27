@@ -6,16 +6,18 @@ extends Control
 ## tools/art/portrait_art.py stacked and tinted from the officer's OfficerLook. Read-only.
 
 const SIZE := 96
-## Stars from which the frame gets its gold border.
-const GOLD_FRAME_STARS := 4
+## Frame tier by stars (index = stars): 1–2★ bronze, 3★ green, 4★ blue, 5★ purple, 6★ gold
+## (tools/art/portrait_art.py FRAME_TIERS, M12e).
+const FRAME_TIER_BY_STARS: Array[int] = [0, 0, 0, 1, 2, 3, 4]
 
-var art_scale := 2
+## Display scale (0.5 shows the 96×96 portrait at 48×48, e.g. next to an item, M12e).
+var art_scale := 2.0
 var _officer: Officer
 var _team := KingdomState.PLAYER_COLOR
 
 
 ## `team`: the armor cloth / robe color (the player's color for the kingdom's officers).
-func setup(officer: Officer, scale: int = 2, team: Color = KingdomState.PLAYER_COLOR) -> void:
+func setup(officer: Officer, scale: float = 2.0, team: Color = KingdomState.PLAYER_COLOR) -> void:
 	_officer = officer
 	art_scale = scale
 	_team = team
@@ -70,6 +72,6 @@ static func layers(officer: Officer, team: Color) -> Array:
 	return result
 
 
-## The wooden frame, or the gold one from GOLD_FRAME_STARS.
+## The frame of the officer's star tier.
 static func frame_part(officer: Officer) -> String:
-	return "frame_%d" % (1 if officer.stars >= GOLD_FRAME_STARS else 0)
+	return "frame_%d" % FRAME_TIER_BY_STARS[clampi(officer.stars, 0, FRAME_TIER_BY_STARS.size() - 1)]

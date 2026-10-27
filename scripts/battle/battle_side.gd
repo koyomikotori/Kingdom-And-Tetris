@@ -18,6 +18,8 @@ class Unit:
 	var charge_mult := 1.0
 	var defense_mult := 1.0
 	var range_mult := 1.0
+	## Share of the target's melee defense this unit's blows ignore (a mace, M12e).
+	var defense_pierce := 0.0
 	## The squad's experience level (Experience.squad_level) and its flat stat bonuses: melee
 	## attack (range attack for ranged units), melee defense; morale is added directly.
 	var level := 0
@@ -83,11 +85,15 @@ var general_name := ""
 var general_look: OfficerLook
 ## Set by the simulator when the commander's bodyguard broke or died.
 var general_fallen := false
+## The commander's weapon type (Item.WEAPON_TYPES; &"" = a plain sword), for their sprite.
+var general_weapon: StringName = &""
 ## The military advisor behind this side, or "" (Advisors.assist): their Mưu lược and the
 ## stratagems the simulator rolls at the start of the battle.
 var advisor_name := ""
 var advisor_look: OfficerLook
 var strategy := 0
+## Extra stratagem chance from the advisor's items (M12e).
+var stratagem_bonus := 0.0
 var stratagems: Array[StratagemData] = []
 
 

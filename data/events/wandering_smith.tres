@@ -1,0 +1,52 @@
+[gd_resource type="Resource" script_class="EventData" format=3]
+
+[ext_resource type="Script" path="res://scripts/events/event_data.gd" id="1_event"]
+[ext_resource type="Script" path="res://scripts/events/event_choice_data.gd" id="2_choice"]
+[ext_resource type="Script" path="res://scripts/events/event_outcome_data.gd" id="3_outcome"]
+
+[sub_resource type="Resource" id="o00"]
+script = ExtResource("3_outcome")
+weight = 0.5
+text = "Ông thợ rèn trao lại một món đồ chắc chắn."
+item_rarity = 1
+
+[sub_resource type="Resource" id="o01"]
+script = ExtResource("3_outcome")
+weight = 0.35
+text = "Một món đồ tinh xảo, đường rèn rất đẹp."
+item_rarity = 2
+
+[sub_resource type="Resource" id="o02"]
+script = ExtResource("3_outcome")
+weight = 0.15
+text = "Ông lão dốc hết tâm huyết: một món đồ hiếm có!"
+item_rarity = 3
+
+[sub_resource type="Resource" id="c0"]
+script = ExtResource("2_choice")
+text = "Nhờ rèn một món"
+hint = "Ra một món trang bị, độ hiếm tùy tay nghề."
+cost = Dictionary[StringName, int]({&"ore": 8, &"hardwood": 6})
+outcomes = Array[ExtResource("3_outcome")]([SubResource("o00"), SubResource("o01"), SubResource("o02")])
+
+[sub_resource type="Resource" id="o10"]
+script = ExtResource("3_outcome")
+weight = 1.0
+text = "Ông thợ rèn gật đầu rồi lên đường."
+
+[sub_resource type="Resource" id="c1"]
+script = ExtResource("2_choice")
+text = "Mời đi"
+hint = "Không tốn gì."
+outcomes = Array[ExtResource("3_outcome")]([SubResource("o10")])
+
+[resource]
+script = ExtResource("1_event")
+event_id = &"wandering_smith"
+title = "Thợ rèn giang hồ"
+text = "Một ông lão vác lò rèn nhỏ trên vai xin dừng chân, nói có thể rèn binh khí cho tướng sĩ nếu có đủ quặng và gỗ."
+category = 3
+weight = 1.0
+cooldown = 10
+min_turn = 6
+choices = Array[ExtResource("2_choice")]([SubResource("c0"), SubResource("c1")])

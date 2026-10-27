@@ -114,7 +114,7 @@ func _is_in_melee(side: int, unit: BattleSide.Unit) -> bool:
 func _use_stratagems(s: int) -> void:
 	var side := _sides[s]
 	for stratagem in side.stratagems:
-		if _rng.randf() >= Advisors.stratagem_chance(side.strategy):
+		if _rng.randf() >= Advisors.stratagem_chance(side.strategy) + side.stratagem_bonus:
 			continue
 		var targets := _stratagem_targets(s, stratagem)
 		if targets.is_empty():
@@ -203,7 +203,7 @@ func _fight_melee(s: int) -> void:
 		for target_index in targets:
 			var target := _sides[1 - s].units[target_index]
 			var share: float = targets[target_index]
-			var defense := target.melee_defense()
+			var defense := target.melee_defense() * (1.0 - unit.defense_pierce)
 			var casualties := unit.alive() * _ratio(unit.melee_attack(), defense) * MELEE_RATE * TICK
 			if charging:
 				casualties += unit.alive() * _ratio(unit.data.charge_attack * unit.charge_mult, defense) * CHARGE_FACTOR

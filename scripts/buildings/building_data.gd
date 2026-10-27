@@ -36,6 +36,12 @@ const CATEGORY_NAMES: Array[String] = ["Sản xuất", "Quân sự", "Hành chí
 @export var category: Category = Category.PRODUCTION
 ## Turns a new one takes to build (GDD §8, M12d). Upgrades take upgrade_turns().
 @export var build_turns: int = 2
+## The limit stays max_count whatever the castle level (the forge, M12e).
+@export var fixed_count: bool = false
+## Levels for a building without level_yields (the forge); 0 = from level_yields.
+@export var upgrade_levels: int = 0
+## Its level stays this far below the castle's (the forge: castle level − 2).
+@export var castle_level_gap: int = 0
 
 
 ## Upgrade cost: to level N, N × the build cost; from level 3 also (N − 2) × each UPGRADE_EXTRA.
@@ -52,7 +58,7 @@ static func load_all() -> Dictionary[StringName, BuildingData]:
 
 ## Levels this building has (1 when it cannot be upgraded).
 func max_level() -> int:
-	return maxi(1, level_yields.size())
+	return maxi(1, maxi(level_yields.size(), upgrade_levels))
 
 
 func is_upgradable() -> bool:

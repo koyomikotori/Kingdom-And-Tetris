@@ -15,7 +15,7 @@ var _frame := 0
 func setup(officer: Officer, scale: int = 2, team: Color = KingdomState.PLAYER_COLOR) -> void:
 	art_scale = scale
 	var kind := BattleView.ADVISOR_KIND if officer is Advisor else BattleView.GENERAL_KIND
-	_sprite_id = GameArt.officer_sprite(kind, officer.look)
+	_sprite_id = GameArt.officer_sprite(kind, officer.look, (officer as General).weapon_type() if officer is General else &"")
 	_tints = GameArt.unit_tints(team, officer.look)
 	_fit()
 

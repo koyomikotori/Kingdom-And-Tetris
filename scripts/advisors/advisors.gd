@@ -125,10 +125,20 @@ func active(post_id: StringName) -> Advisor:
 	return advisor if advisor != null and advisor.is_ready() else null
 
 
-## The working holder's stat for that post, or 0 without one.
+## The working holder's stat for that post (items included), or 0 without one.
 func post_stat(post_id: StringName) -> int:
 	var advisor := active(post_id)
 	return advisor.stat_for(post_id) if advisor != null else 0
+
+
+## An item effect (ItemEffectData) of the working holder of `post_id`, when the effect works in
+## that post (M12e); 0.0 otherwise.
+func post_effect(post_id: StringName, effect_id: StringName) -> float:
+	var advisor := active(post_id)
+	var data: ItemEffectData = Equipment.effect_data().get(effect_id)
+	if advisor == null or data == null or (data.post != &"" and data.post != post_id):
+		return 0.0
+	return advisor.item_effect(effect_id)
 
 
 ## Adds one of the advisor's level points to a stat (STAT_IDS). False (nothing changes) without
@@ -209,7 +219,7 @@ static func share_of(amounts: Dictionary[StringName, int], share: float) -> Dict
 ## Cost after the Nội chính discount (each amount loses its share, rounded).
 func discounted(cost: Dictionary[StringName, int]) -> Dictionary[StringName, int]:
 	var result := cost.duplicate()
-	var off := share_of(cost, post_stat(&"admin") * ADMIN_COST)
+	var off := share_of(cost, post_stat(&"admin") * ADMIN_COST + post_effect(&"admin", &"build_discount"))
 	for resource_id in off:
 		result[resource_id] -= off[resource_id]
 	return result
@@ -225,15 +235,17 @@ func assist(side: BattleSide) -> void:
 		return
 	side.advisor_name = advisor.name
 	side.advisor_look = advisor.look
-	side.strategy = advisor.strategy
+	var strategy := advisor.stat_for(&"military")
+	side.strategy = strategy
+	side.stratagem_bonus = post_effect(&"military", &"stratagem")
 	for id in advisor.stratagems:
 		if stratagems.has(id):
 			side.stratagems.append(stratagems[id])
 	for unit in side.units:
 		if unit.ally != null:
 			continue
-		unit.morale += advisor.strategy * MILITARY_MORALE
-		unit.range_mult += advisor.strategy * MILITARY_RANGE
+		unit.morale += strategy * MILITARY_MORALE
+		unit.range_mult += strategy * MILITARY_RANGE
 
 
 static func stratagem_chance(strategy: int) -> float:
@@ -251,7 +263,7 @@ func after_battle(record: BattleRecord, side: int) -> Dictionary:
 	if not won and rng.randf() < WOUND_CHANCE:
 		advisor.wounded_turns = WOUND_TURNS
 		fate = &"wounded"
-	var xp := BATTLE_XP + (WIN_XP if won else 0)
+	var xp := roundi((BATTLE_XP + (WIN_XP if won else 0)) * (1.0 + advisor.item_effect(&"advisor_xp")))
 	var levels := advisor.gain_xp(xp)
 	changed.emit()
 	return {"name": advisor.name, "fate": fate, "xp": xp, "levels": levels}

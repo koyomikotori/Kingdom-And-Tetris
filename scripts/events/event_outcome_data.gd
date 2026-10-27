@@ -29,3 +29,6 @@ extends Resource
 ## A general joins the kingdom, with a random star rank in this range (0 = none; GDD §8, M11d).
 @export var general_min_stars: int = 0
 @export var general_max_stars: int = 0
+## A random item of this rarity (Item.Rarity: 0 Thường … 4 Huyền thoại, a legendary not found yet,
+## else an epic one); -1 = none (GDD §8 "Trang bị", M12e).
+@export var item_rarity: int = -1

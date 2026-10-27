@@ -27,6 +27,16 @@ const GUARD_COMMAND_DEFENSE := 0.05
 ## Every unit of the side loses this much morale when the general falls.
 const FALL_MORALE_LOSS := 3.0
 const DEATH_CHANCE := 0.3
+## Death chance never drops below this, whatever the armor (M12e).
+const MIN_DEATH_CHANCE := 0.05
+## Per point of the worn armor (Item main bonus): bodyguard defense / armor, less death chance.
+const ARMOR_DEFENSE := 0.05
+const ARMOR_SURVIVAL := 0.03
+## The bodyguard's extra per point of the worn weapon's main bonus, by weapon type (M12e).
+const WEAPON_ATTACK: Dictionary[StringName, float] = {&"dao": 0.04, &"kich": 0.02}
+const WEAPON_CHARGE: Dictionary[StringName, float] = {&"thuong": 0.06, &"kich": 0.03}
+const WEAPON_DEFENSE: Dictionary[StringName, float] = {&"kiem": 0.04}
+const WEAPON_PIERCE: Dictionary[StringName, float] = {&"chuy": 0.03}
 const WOUND_TURNS := 3
 const GUARD_UNIT_PATH := "res://data/general_units/general_guard.tres"
 ## Male given names for generals (family, middle and female names are in Officer).
@@ -225,18 +235,28 @@ func lead(side: BattleSide, board: BoardData, defending: bool) -> void:
 	side.add_unit(guard_unit, ranks[general.stars].guards)
 	var guard: BattleSide.Unit = side.units.back()
 	guard.is_general_guard = true
-	guard.attack_mult += general.might * GUARD_MIGHT_ATTACK
-	guard.charge_mult += general.might * GUARD_MIGHT_ATTACK
-	guard.defense_mult += general.command * GUARD_COMMAND_DEFENSE
+	var might := general.total_might()
+	var command := general.total_command()
+	guard.attack_mult += might * GUARD_MIGHT_ATTACK + general.item_effect(&"guard_attack")
+	guard.charge_mult += might * GUARD_MIGHT_ATTACK + general.item_effect(&"guard_attack")
+	guard.defense_mult += command * GUARD_COMMAND_DEFENSE + general.item_bonus(&"guard_armor") * ARMOR_DEFENSE
+	var weapon: Item = general.items.get(&"weapon")
+	if weapon != null:
+		var points := weapon.main_bonus()
+		guard.attack_mult += WEAPON_ATTACK.get(weapon.weapon_type, 0.0) * points
+		guard.charge_mult += WEAPON_CHARGE.get(weapon.weapon_type, 0.0) * points
+		guard.defense_mult += WEAPON_DEFENSE.get(weapon.weapon_type, 0.0) * points
+		guard.defense_pierce = WEAPON_PIERCE.get(weapon.weapon_type, 0.0) * points
 	side.general_name = general.name
 	side.general_look = general.look
+	side.general_weapon = general.weapon_type()
 	for unit in side.units:
 		if unit.ally != null:
 			continue
-		unit.attack_mult += general.might * MIGHT_ATTACK
-		unit.charge_mult += general.might * MIGHT_ATTACK
-		unit.defense_mult += general.command * COMMAND_DEFENSE
-		unit.morale += general.command * COMMAND_MORALE
+		unit.attack_mult += might * MIGHT_ATTACK + general.item_effect(&"army_attack")
+		unit.charge_mult += might * MIGHT_ATTACK
+		unit.defense_mult += command * COMMAND_DEFENSE + general.item_effect(&"army_defense")
+		unit.morale += command * COMMAND_MORALE + general.item_effect(&"morale")
 		if trait_data == null or not _trait_applies(trait_data, unit):
 			continue
 		unit.attack_mult += trait_data.melee_attack_bonus
@@ -255,9 +275,9 @@ func _trait_applies(trait_data: GeneralTraitData, unit: BattleSide.Unit) -> bool
 	return true
 
 
-## After a battle the commander led on `side`: if they fell, DEATH_CHANCE they died, otherwise
-## they are wounded for WOUND_TURNS turns. A commander who lives gains battle XP
-## (Experience.general_battle_xp, wounded or not).
+## After a battle the commander led on `side`: if they fell, death_chance() they died (with the
+## items they wore), otherwise they are wounded for WOUND_TURNS turns. A commander who lives gains
+## battle XP (Experience.general_battle_xp, wounded or not; items may add more).
 ## Returns {"name", "fate": &"none" | &"dead" | &"wounded", "xp": int, "levels": int}.
 func after_battle(record: BattleRecord, side: int) -> Dictionary:
 	var battle_side := record.sides[side]
@@ -266,7 +286,7 @@ func after_battle(record: BattleRecord, side: int) -> Dictionary:
 		return {"name": "", "fate": &"none", "xp": 0, "levels": 0}
 	var fate := &"none"
 	if battle_side.general_fallen:
-		if rng.randf() < DEATH_CHANCE:
+		if rng.randf() < death_chance(general):
 			dismiss(general)
 			return {"name": general.name, "fate": &"dead", "xp": 0, "levels": 0}
 		general.wounded_turns = WOUND_TURNS
@@ -275,10 +295,16 @@ func after_battle(record: BattleRecord, side: int) -> Dictionary:
 	for unit in battle_side.units:
 		if unit.is_general_guard:
 			guard_kills += unit.kills
-	var xp := Experience.general_battle_xp(guard_kills, record.winner == side)
+	var xp := roundi(Experience.general_battle_xp(guard_kills, record.winner == side) * (1.0 + general.item_effect(&"general_xp")))
 	var levels := general.gain_xp(xp)
 	changed.emit()
 	return {"name": general.name, "fate": fate, "xp": xp, "levels": levels}
+
+
+## The chance a fallen commander dies: less with armor and survival items.
+static func death_chance(general: General) -> float:
+	return maxf(MIN_DEATH_CHANCE, DEATH_CHANCE - general.item_bonus(&"guard_armor") * ARMOR_SURVIVAL
+			- general.item_effect(&"survival"))
 
 
 # --- Save (GDD §10.1) ---------------------------------------------------------------------

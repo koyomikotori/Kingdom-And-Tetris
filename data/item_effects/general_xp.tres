@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemEffectData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/equipment/item_effect_data.gd" id="1_effect"]
+
+[resource]
+script = ExtResource("1_effect")
+effect_id = &"general_xp"
+kind = &"general"
+text = "+%s kinh nghiệm sau trận"
+amount = 0.25
+is_share = true
+post = &""

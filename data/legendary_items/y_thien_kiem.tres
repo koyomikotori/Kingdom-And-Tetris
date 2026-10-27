@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LegendaryItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/equipment/legendary_item_data.gd" id="1_legendary"]
+
+[resource]
+script = ExtResource("1_legendary")
+item_id = &"y_thien_kiem"
+display_name = "Ỷ thiên kiếm"
+description = "Thanh bảo kiếm sắc đến mức chém sắt như chém bùn."
+kind = &"general"
+slot = &"weapon"
+weapon_type = &"kiem"
+effects = Array[StringName]([&"army_defense", &"survival"])

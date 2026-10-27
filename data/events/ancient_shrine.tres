@@ -1,0 +1,57 @@
+[gd_resource type="Resource" script_class="EventData" format=3]
+
+[ext_resource type="Script" path="res://scripts/events/event_data.gd" id="1_event"]
+[ext_resource type="Script" path="res://scripts/events/event_choice_data.gd" id="2_choice"]
+[ext_resource type="Script" path="res://scripts/events/event_outcome_data.gd" id="3_outcome"]
+
+[sub_resource type="Resource" id="o00"]
+script = ExtResource("3_outcome")
+weight = 0.55
+text = "Trong miếu chỉ còn bụi và mạng nhện."
+
+[sub_resource type="Resource" id="o01"]
+script = ExtResource("3_outcome")
+weight = 0.3
+text = "Dưới bệ thờ có một món đồ cổ còn dùng tốt."
+item_rarity = 2
+
+[sub_resource type="Resource" id="o02"]
+script = ExtResource("3_outcome")
+weight = 0.12
+text = "Một rương gỗ cũ cất giữ báu vật!"
+item_rarity = 3
+
+[sub_resource type="Resource" id="o03"]
+script = ExtResource("3_outcome")
+weight = 0.03
+text = "Ánh sáng lóe lên từ hốc tường: một bảo vật truyền thuyết!"
+item_rarity = 4
+
+[sub_resource type="Resource" id="c0"]
+script = ExtResource("2_choice")
+text = "Cho người lục soát"
+hint = "Có thể chẳng tìm được gì."
+cost = Dictionary[StringName, int]({&"food": 15})
+outcomes = Array[ExtResource("3_outcome")]([SubResource("o00"), SubResource("o01"), SubResource("o02"), SubResource("o03")])
+
+[sub_resource type="Resource" id="o10"]
+script = ExtResource("3_outcome")
+weight = 1.0
+text = "Ngôi miếu cũ lại chìm vào sương núi."
+
+[sub_resource type="Resource" id="c1"]
+script = ExtResource("2_choice")
+text = "Để yên"
+hint = "Không tốn gì."
+outcomes = Array[ExtResource("3_outcome")]([SubResource("o10")])
+
+[resource]
+script = ExtResource("1_event")
+event_id = &"ancient_shrine"
+title = "Miếu cổ trên núi"
+text = "Thợ săn báo có một ngôi miếu bỏ hoang trên núi, dân gian đồn nơi đó cất giấu báu vật của một vị tướng xưa."
+category = 3
+weight = 0.8
+cooldown = 14
+min_turn = 8
+choices = Array[ExtResource("2_choice")]([SubResource("c0"), SubResource("c1")])

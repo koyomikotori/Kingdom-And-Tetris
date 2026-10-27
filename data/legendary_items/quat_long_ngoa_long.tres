@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LegendaryItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/equipment/legendary_item_data.gd" id="1_legendary"]
+
+[resource]
+script = ExtResource("1_legendary")
+item_id = &"quat_long_ngoa_long"
+display_name = "Quạt lông Ngọa Long"
+description = "Chiếc quạt lông trắng của bậc kỳ tài nằm ẩn ở gò Ngọa Long."
+kind = &"advisor"
+slot = &"weapon"
+weapon_type = &""
+effects = Array[StringName]([&"stratagem", &"advisor_xp"])

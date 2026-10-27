@@ -244,6 +244,9 @@ func _on_end_turn_pressed() -> void:
 	var upkeep := UiFormat.amounts(report.upkeep, _resource_types)
 	if not upkeep.is_empty():
 		lines.append("Nuôi quân: %s." % upkeep)
+	if report.forged != null:
+		var forged: Item = report.forged
+		lines.append("Xưởng rèn xong %s (%s)." % [forged.display_name, Item.RARITY_NAMES[forged.rarity]])
 	for entry: Dictionary in report.completed:
 		lines.append("%s đã %s." % [entry.name, "lên cấp %d" % entry.level if entry.upgrade else "xây xong"])
 	for unit_id: StringName in report.deserted:
@@ -387,9 +390,16 @@ func _attack_clan(clan_id: StringName) -> void:
 func _ally_lines(result: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	var general: Dictionary = result.get("general", {})
+	var loot: Dictionary = result.get("item", {})
+	if not loot.is_empty():
+		var item: Item = loot.item
+		var refund: Dictionary[StringName, int] = loot.refund
+		lines.append("Chiến lợi phẩm: %s (%s)%s." % [item.display_name, Item.RARITY_NAMES[item.rarity],
+				", kho đầy nên đã phân rã lấy %s" % UiFormat.amounts(refund, _resource_types) if not refund.is_empty()
+				else " — xem ở tab Trang bị của tướng sĩ"])
 	match general.get("fate", &"none"):
 		&"dead":
-			lines.append("Tổng tướng %s đã tử trận!" % general.name)
+			lines.append("Tổng tướng %s đã tử trận, mất luôn trang bị đang đeo!" % general.name)
 		&"wounded":
 			lines.append("Tổng tướng %s ngã ngựa, bị thương, nghỉ %d lượt." % [general.name, Generals.WOUND_TURNS])
 	var advisor: Dictionary = result.get("advisor", {})
@@ -524,6 +534,8 @@ func _show_battle_report(raid: Dictionary, extra_lines: Array[String] = []) -> v
 
 func _on_turn_started(turn: int) -> void:
 	turn_label.text = "Lượt %d" % turn
+	# Each turn starts on the new land pieces, so they are never forgotten.
+	tabs.current_tab = 0
 	_refresh_economy()
 
 

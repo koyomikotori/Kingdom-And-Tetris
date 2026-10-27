@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LegendaryItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/equipment/legendary_item_data.gd" id="1_legendary"]
+
+[resource]
+script = ExtResource("1_legendary")
+item_id = &"truong_bat_xa_mau"
+display_name = "Trượng bát xà mâu"
+description = "Ngọn mâu dài một trượng tám, mũi uốn lượn như rắn."
+kind = &"general"
+slot = &"weapon"
+weapon_type = &"thuong"
+effects = Array[StringName]([&"army_attack", &"morale"])

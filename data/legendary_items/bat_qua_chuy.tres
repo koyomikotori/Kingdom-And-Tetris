@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LegendaryItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/equipment/legendary_item_data.gd" id="1_legendary"]
+
+[resource]
+script = ExtResource("1_legendary")
+item_id = &"bat_qua_chuy"
+display_name = "Bát qua chùy"
+description = "Đôi chùy tám cạnh, mỗi đòn đánh vỡ cả khiên lẫn giáp."
+kind = &"general"
+slot = &"weapon"
+weapon_type = &"chuy"
+effects = Array[StringName]([&"guard_attack", &"army_defense"])

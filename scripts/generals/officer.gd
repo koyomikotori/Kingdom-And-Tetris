@@ -1,7 +1,8 @@
 class_name Officer
 extends RefCounted
 ## What generals and advisors share (GDD §8): name, stars, wounds, the level they grow through
-## (M11e: XP toward the next level and points not yet added to a stat) and their look (M12c).
+## (M11e: XP toward the next level and points not yet added to a stat), their look (M12c) and the
+## items they wear (M12e).
 
 ## Names (GDD §13: half the officers are women). Male given names differ for generals and
 ## advisors (Generals.GIVEN_NAMES, Advisors.ADVISOR_NAMES).
@@ -22,6 +23,8 @@ var xp := 0
 var points := 0
 ## Portrait and battle sprite (OfficerLook).
 var look := OfficerLook.new()
+## Worn items by slot (Item.SLOTS), managed through Equipment.
+var items: Dictionary[StringName, Item] = {}
 
 
 ## A full name for `look.gender`: family name, then a middle and a given name for that gender.
@@ -70,9 +73,34 @@ func gain_xp(amount: int) -> int:
 	return gained
 
 
+## What the worn items add to a stat (Item.main_stat(): &"might", &"command", &"guard_armor",
+## &"strategy", &"admin", &"diplomacy").
+func item_bonus(stat: StringName) -> int:
+	var total := 0
+	for slot in items:
+		if items[slot].main_stat() == stat:
+			total += items[slot].main_bonus()
+	return total
+
+
+## The summed amount of an item effect (ItemEffectData) over the worn items; legendary ones ×2.
+func item_effect(effect_id: StringName) -> float:
+	var data: ItemEffectData = Equipment.effect_data().get(effect_id)
+	if data == null:
+		return 0.0
+	var total := 0.0
+	for slot in items:
+		var item := items[slot]
+		total += data.amount * item.effect_multiplier() * item.effects.count(effect_id)
+	return total
+
+
 func _officer_save() -> Dictionary:
+	var worn := {}
+	for slot in items:
+		worn[String(slot)] = items[slot].to_save()
 	return {"name": name, "stars": stars, "wounded_turns": wounded_turns, "level": level, "xp": xp, "points": points,
-			"look": look.to_save()}
+			"look": look.to_save(), "items": worn}
 
 
 func _officer_load(data: Dictionary) -> void:
@@ -84,3 +112,8 @@ func _officer_load(data: Dictionary) -> void:
 	points = int(data.points)
 	# Saves from before M12c have no look: make one from the name.
 	look = OfficerLook.from_save(data.look) if data.has("look") else OfficerLook.from_seed(name)
+	# Saves from before M12e have no items.
+	items.clear()
+	var worn: Dictionary = data.get("items", {})
+	for slot: String in worn:
+		items[StringName(slot)] = Item.from_save(worn[slot])

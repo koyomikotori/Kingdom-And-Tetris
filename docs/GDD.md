@@ -416,6 +416,42 @@ Màn hình trận hiện dòng chữ cho mỗi mưu kế thành công (ví dụ 
 
 **Để sau:** gia tộc có mưu sĩ dùng mưu kế; sự kiện mưu sĩ xin đầu quân; mưu sĩ đi Thảo phạt.
 
+### Trang bị (M12e, đã chốt)
+
+**Ô trang bị:** mỗi người 3 ô, món của tướng và của mưu sĩ khác nhau.
+
+| | Tướng | Mưu sĩ |
+|---|---|---|
+| Vũ khí | +Võ lực; 5 loại: **Đao** (+cận chiến cận vệ), **Thương** (+xung kích), **Kiếm** (+phòng thủ), **Kích** (+cận chiến và xung kích, ít hơn), **Chùy** (đòn cận chiến bỏ qua một phần **Phòng thủ** địch) | Quạt / Bút: +Mưu lược |
+| Giáp | Cận vệ thêm Phòng thủ và Giáp (đỡ cả cận chiến lẫn tên đạn), giảm khả năng tử trận | Áo bào: +Nội chính |
+| Phụ kiện | +Thống suất | Ấn / Ngọc bội: +Ngoại giao |
+
+Trong trận chỉ cận vệ nhận phần thêm theo loại vũ khí; Võ lực / Thống suất vẫn có tác dụng như cũ (§8 Tướng).
+
+**Độ hiếm** (màu viền ô và icon):
+
+| Bậc | Màu | Chỉ số chính | Hiệu ứng |
+|---|---|---|---|
+| Thường | xám | +1 | — |
+| Tốt | xanh lá | +2 | — |
+| Hiếm | xanh dương, họa tiết nhỏ | +3 | 1 |
+| Sử thi | tím, họa tiết vừa | +4 | 2 |
+| Huyền thoại | vàng, họa tiết nhiều | +6 | 2 hiệu ứng mạnh |
+
+- Hiệu ứng lấy ngẫu nhiên trong bộ của tướng (+2 sĩ khí toàn quân, +10% sát thương cận vệ, +3% cận chiến / phòng thủ toàn quân, −8% khả năng tử trận, +25% kinh nghiệm) hoặc của mưu sĩ (+5% tỉ lệ mưu kế khi giữ Quân sự; +3% sản lượng, −3% giá xây, −3% phí nuôi khi giữ Nội chính; +15% quan hệ khi tặng quà khi giữ Ngoại giao; +25% kinh nghiệm). Hiệu ứng của món Huyền thoại ×2. Giáp tướng: mỗi điểm +5% phòng thủ cận vệ và −3% khả năng tử trận (tối thiểu 5%). Vũ khí tướng, mỗi điểm: Đao +4% cận chiến cận vệ, Thương +6% xung kích, Kiếm +4% phòng thủ, Kích +2% cận chiến và +3% xung kích, Chùy bỏ qua 3% phòng thủ địch.
+- **Huyền thoại** là món có tên, hiệu ứng cố định, **mỗi món chỉ có 1 trong một ván**: Thanh long đao, Đồ long đao, Trượng bát xà mâu, Phương thiên họa kích, Ỷ thiên kiếm, Bát qua chùy…, và vài món cho mưu sĩ (quạt lông, sách binh pháp, ấn ngọc).
+
+**Nguồn trang bị:**
+- **Xưởng rèn khí giới** (công trình Quân sự, cần thành **cấp 3**, tối đa **1 xưởng**, không tăng theo cấp thành). Nâng cấp xưởng tối đa bằng cấp thành − 2 (thành 3 → xưởng 1 … thành 6 → xưởng 4). Bấm vào xưởng: chọn loại món (vũ khí / giáp / phụ kiện, cho tướng hay mưu sĩ), trả Khoáng sản + Gỗ cứng, **2 lượt** sau ra 1 món. Mỗi lúc rèn 1 món; đang rèn thì không nâng cấp xưởng, mất xưởng thì mất món đang rèn. Giá 6 Khoáng sản + 6 Gỗ cứng, +2 mỗi cấp xưởng. Xưởng chỉ ra tới **Sử thi**; tỉ lệ Thường / Tốt / Hiếm / Sử thi: cấp 1 55/30/13/2, cấp 2 40/35/20/5, cấp 3 25/37/28/10, cấp 4 15/33/35/17.
+- **Chiến lợi phẩm:** đi đánh thắng 35% rơi đồ (Thường 30, Tốt 30, Hiếm 22, Sử thi 13, Huyền thoại 5), phòng thủ thắng 12% (50/30/15/5/0); Huyền thoại chỉ có ở đây, ở sự kiện và sau này ở mini game Thảo phạt đạo tặc, tỉ lệ thấp.
+- **Sự kiện:** vài sự kiện mới tặng đồ.
+
+**Kho đồ:** chung, tối đa **20 món** (xem ở tab Trang bị). Món đang ở trên người khác cùng loại (tướng / mưu sĩ) cũng hiện trong danh sách, kèm mặt và tóm tắt người đó, nút **Đổi** (món người hiện tại đang đeo ở ô đó chuyển sang người kia). Bảng tướng sĩ giữ một kích thước cố định; nội dung dài thì cuộn. Mỗi lượt mới bảng bên phải quay về tab Đất. Sa thải thì đồ đang đeo về kho; **tử trận thì mất luôn đồ đang đeo**. Phân rã món không cần để lấy lại một ít Khoáng sản / Gỗ cứng.
+
+**Khung chân dung theo sao** (vẽ lại, hào nhoáng hơn; ô trang bị dùng cùng kiểu theo độ hiếm): 1–2★ đồng · 3★ xanh lá · 4★ xanh dương, họa tiết nhỏ · 5★ tím, họa tiết vừa · 6★ vàng, họa tiết nhiều.
+
+**Hình ảnh:** mỗi món một icon pixel. Tổng tướng ra trận cầm đúng loại vũ khí đang đeo (chưa đeo: kiếm thường). Sửa luôn: cổ và đầu ngựa của tổng tướng quá to / dài; vũ khí của lính bị cắt mất đầu (mũi giáo…) ở frame đâm thứ 2.
+
 ## 9. Bản đồ thế giới & ngoại giao
 
 - Thêm tab/nút **Ngoại giao**. Bấm vào thì mở một màn hình bản đồ lớn: vương quốc của mình ở một vị trí, các gia tộc / vương quốc xung quanh hiển thị quanh đó.
@@ -675,8 +711,8 @@ Thống kê trận thắng/thua và trạng thái thắng/thua được lưu cù
 | M12a | **Đồ họa (1/3):** hệ thống ảnh pixel vẽ bằng script, bản đồ (địa hình, ô ◆, thành, công trình có cấp, mảnh đất trong tay), giao diện gỗ + giấy cuộn, icon tài nguyên (§13) | Xong |
 | M12b | **Đồ họa (2/3):** trận đánh: lính từng loại, cận vệ tướng cưỡi ngựa, quân cướp / gia tộc, mũi tên, nền chiến trường, hiệu ứng mưu kế | Xong |
 | M12c | **Tab Tướng sĩ** kiểu Ninja Village + chân dung pixel ghép bộ phận + bản đồ thế giới vẽ lại | Xong |
-| M12d | **Bố cục tab + thi công mất lượt:** tab rộng và đều, bảng Xây dựng / Tuyển lính giữa màn hình có danh mục, xây và nâng cấp mất lượt, đội thợ (§8) | Đang làm |
-| M12e | **Trang bị** cho tướng và mưu sĩ (tab Trang bị trong bảng chi tiết; thiết kế bàn riêng) | |
+| M12d | **Bố cục tab + thi công mất lượt:** tab rộng và đều, bảng Xây dựng / Tuyển lính giữa màn hình có danh mục, xây và nâng cấp mất lượt, đội thợ (§8) | Xong |
+| M12e | **Trang bị** cho tướng và mưu sĩ: 5 bậc độ hiếm, Xưởng rèn, chiến lợi phẩm, kho 20 món, vũ khí hiện trong trận, khung chân dung theo sao, sửa hình ngựa và vũ khí lính (§8 Trang bị) | Đang làm |
 | M13 | **Hỗ trợ cảm ứng + xuất APK** (chạm để xem trước/xác nhận, vuốt để kéo, chụm để zoom, nút thay phím tắt); **sắp xếp lại tab Quân đội, Xây dựng, bảng thành** cho gọn trên điện thoại (ít chữ, chi tiết mở khi chạm) | |
 | M14 | Âm thanh, cân bằng, build Windows + Android, phát hành | |
 

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LegendaryItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/equipment/legendary_item_data.gd" id="1_legendary"]
+
+[resource]
+script = ExtResource("1_legendary")
+item_id = &"thiet_lan_giap"
+display_name = "Thiết lân giáp"
+description = "Giáp vảy sắt đen như vảy kỳ lân, tên đạn khó xuyên."
+kind = &"general"
+slot = &"armor"
+weapon_type = &""
+effects = Array[StringName]([&"survival", &"army_defense"])
