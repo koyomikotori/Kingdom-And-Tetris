@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="UnitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/army/unit_data.gd" id="1_unit"]
+
+[resource]
+script = ExtResource("1_unit")
+unit_id = &"elite_musketeer"
+display_name = "Lính hỏa mai tinh nhuệ"
+sort_order = 20
+squad_size = 15
+row = 2
+attack_kind = 2
+melee_attack = 10
+melee_defense = 9
+armor = 6
+charge_attack = 4
+unit_type = 6
+morale = 11
+range_attack = 14
+reload_time = 5.0
+melee_after_volley = true
+recruit_cost = Dictionary[StringName, int]({&"food": 6, &"hardwood": 2, &"ore": 4})
+upkeep = Dictionary[StringName, int]({&"food": 3})
+required_buildings = Dictionary[StringName, int]({&"military_academy": 3, &"barracks": 6, &"martial_hall": 3})

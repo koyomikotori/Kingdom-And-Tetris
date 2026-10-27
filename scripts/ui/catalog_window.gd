@@ -5,11 +5,13 @@ extends ModalWindow
 ## and one action button below. BuildWindow and RecruitWindow fill it through the hooks below.
 
 const ACCENT := UiPalette.ACCENT
-const LIST_WIDTH := 250
+const LIST_WIDTH := 310
 const LIST_HEIGHT := 400
 ## Screen height the rest of the window needs (ModalWindow.fit_height).
 const LIST_RESERVED := 300
 const LIST_ICON := 32
+## Opacity of entries that are not available yet.
+const DIMMED_ALPHA := 0.55
 
 var _category_buttons: Array[Button] = []
 var _category := 0
@@ -26,8 +28,10 @@ var _action: Button
 ## `categories`: tab titles, the first one being "Tất cả".
 func build_catalog(title: String, categories: Array[String], action_text: String) -> void:
 	var body := build_frame(title, ACCENT, 0.62)
-	var tabs := HBoxContainer.new()
-	tabs.add_theme_constant_override("separation", 6)
+	# Many categories wrap onto a second row (the recruit window, M13b).
+	var tabs := HFlowContainer.new()
+	tabs.add_theme_constant_override("h_separation", 8)
+	tabs.add_theme_constant_override("v_separation", 8)
 	body.add_child(tabs)
 	var group := ButtonGroup.new()
 	for i in categories.size():
@@ -110,7 +114,15 @@ func _select(id: StringName) -> void:
 ## Entry labels, the details and the action button follow the current state.
 func refresh() -> void:
 	for id in _entry_buttons:
-		_entry_buttons[id].text = _entry_text(id)
+		var button: Button = _entry_buttons[id]
+		button.text = _entry_text(id)
+		var color := _entry_color(id)
+		for key in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color"]:
+			if color.a > 0.0:
+				button.add_theme_color_override(key, color)
+			else:
+				button.remove_theme_color_override(key)
+		button.modulate.a = DIMMED_ALPHA if _entry_dimmed(id) else 1.0
 	for child in _picture_box.get_children():
 		_picture_box.remove_child(child)
 		child.queue_free()
@@ -122,6 +134,7 @@ func refresh() -> void:
 		return
 	_picture_box.add_child(_picture(_selected))
 	_name_label.text = _entry_name(_selected)
+	_name_label.add_theme_color_override("font_color", _title_color(_selected))
 	_details.text = _entry_details(_selected)
 	var reason := _block_reason(_selected)
 	_reason.text = reason
@@ -130,6 +143,21 @@ func refresh() -> void:
 
 
 # --- Hooks --------------------------------------------------------------------------------
+
+## Name color on the wooden entry button; transparent = the theme's.
+func _entry_color(_id: StringName) -> Color:
+	return Color.TRANSPARENT
+
+
+## Color of the chosen entry's name over the details (on paper).
+func _title_color(_id: StringName) -> Color:
+	return UiPalette.ink(ACCENT)
+
+
+## Shown faded: not available yet (M13b).
+func _entry_dimmed(_id: StringName) -> bool:
+	return false
+
 
 ## Ids shown in category `index` (0 = all).
 func _entries(_index: int) -> Array[StringName]:

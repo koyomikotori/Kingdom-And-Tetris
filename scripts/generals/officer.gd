@@ -39,6 +39,17 @@ func is_ready() -> bool:
 	return wounded_turns <= 0
 
 
+## Name color by stars, the equipment rarity colors (Item.RARITY_COLORS): 1–2★ gray, 3★ green,
+## 4★ blue, 5★ purple, 6★ gold (M13b).
+static func star_color(p_stars: int) -> Color:
+	return Item.RARITY_COLORS[clampi(p_stars - 2, 0, Item.RARITY_COLORS.size() - 1)]
+
+
+## star_color made readable on paper.
+func name_color() -> Color:
+	return UiPalette.ink(star_color(stars))
+
+
 func star_text() -> String:
 	return "★".repeat(stars)
 

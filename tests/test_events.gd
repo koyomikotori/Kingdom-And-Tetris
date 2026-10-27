@@ -166,7 +166,7 @@ func test_army_effects() -> void:
 	state.stockpile.add({&"food": 50})
 	var volunteers := _resolve(state, &"volunteers", 0)
 	check_eq(state.army.count_squads(), 1, "A new squad")
-	check(volunteers.changes.any(func(line: String) -> bool: return line.contains("Kiếm sĩ")), "Reported")
+	check(volunteers.changes.any(func(line: String) -> bool: return line.contains("Kiếm binh")), "Reported")
 	state.army.add_squad(&"swordsman", 20)
 	var expected := 0
 	for squad in state.army.squads:

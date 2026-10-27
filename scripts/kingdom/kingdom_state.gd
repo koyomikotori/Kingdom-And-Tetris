@@ -17,7 +17,7 @@ const STARTING_RESOURCES: Dictionary[StringName, int] = {&"food": 80, &"wood": 8
 		&"hardwood": 10, &"horses": 10}
 ## Each turn, squads below full strength regain this fraction of their full size (rounded up);
 ## the new soldiers dilute the squad's XP (Army.add_soldiers).
-const REPLENISH_FRACTION := 0.25
+const REPLENISH_FRACTION := 0.1
 
 var board: BoardData
 var hand: PieceHand

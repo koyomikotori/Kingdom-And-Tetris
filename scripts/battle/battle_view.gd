@@ -47,6 +47,10 @@ const GROUND_COLOR := Color(0.47, 0.76, 0.35)
 const ZONE_LINE_COLOR := Color(1, 1, 1, 0.12)
 const BULLET_COLOR := Color(1.0, 0.9, 0.5)
 const ARROW_COLOR := Color(0.85, 0.75, 0.55)
+const CANNONBALL_COLOR := Color(0.18, 0.17, 0.17)
+## Artillery balls fly this long (battle-seconds), this high above the straight line.
+const CANNONBALL_FLIGHT := 0.7
+const CANNONBALL_ARC := 90.0
 ## Backdrop pieces are pixel art drawn ×3 (mountains, clouds, town, camp) and ×2 (field).
 const BACKDROP_SCALE := 3.0
 const GROUND_SCALE := 2.0
@@ -108,7 +112,7 @@ class Effect:
 
 class Projectile:
 	extends RefCounted
-	var kind: StringName  # &"bullet", &"arrow"
+	var kind: StringName  # &"bullet", &"arrow", &"cannonball" (lobbed, M13)
 	var from: Vector2
 	var to: Vector2
 	## Battle-seconds before it appears, then how long it flies.
@@ -215,7 +219,7 @@ func _ground_top() -> float:
 
 
 func _is_in_side_zone(unit: BattleSide.Unit) -> bool:
-	return unit.data.row == UnitData.Row.BACK
+	return unit.row == UnitData.Row.BACK
 
 
 ## Places every unit at its lane and current target. Runs again when the control is resized.
@@ -244,7 +248,7 @@ func _assign_lanes() -> void:
 			if view.unit.is_general_guard:
 				view.lane_target = view.guard_target.lane_y if view.guard_target != null else (top + bottom) * 0.5
 				continue
-			var key := -1 if _is_in_side_zone(view.unit) else int(view.unit.data.row)
+			var key := -1 if _is_in_side_zone(view.unit) else int(view.unit.row)
 			if not groups.has(key):
 				groups[key] = []
 			groups[key].append(view)
@@ -260,7 +264,7 @@ func _home_x(view: UnitView) -> float:
 	if _is_in_side_zone(view.unit):
 		x = zone * 0.5 + FIGURE_SPACING.x * (FIGURES_PER_ROW - 1) * 0.5
 	else:
-		x = zone + (FIGURES_PER_ROW * FIGURE_SPACING.x + (FRONT_ROW_LEAD if view.unit.data.row == UnitData.Row.FRONT else 0.0))
+		x = zone + (FIGURES_PER_ROW * FIGURE_SPACING.x + (FRONT_ROW_LEAD if view.unit.row == UnitData.Row.FRONT else 0.0))
 		if view.unit.is_general_guard:
 			x += GENERAL_LEAD
 	return x if view.screen_side == 0 else size.x - x
@@ -274,8 +278,8 @@ func _target_x(view: UnitView) -> float:
 	if view.unit.is_general_guard and view.guard_target != null:
 		return view.guard_target.pos.x - _facing(view.screen_side) * CLASH_GAP * 2.0
 	var side := _simulator.record.sides[view.battle_side]
-	var rank := maxi(0, int(view.unit.data.row) - maxi(0, side.front_row()))
-	if view.unit.data.is_ranged() and rank > 0:
+	var rank := maxi(0, int(view.unit.row) - maxi(0, side.front_row()))
+	if view.unit.data.is_ranged() and rank > 0 and not view.unit.data.melee_after_volley:
 		return _home_x(view)
 	var offset := CLASH_GAP + rank * RANK_GAP
 	if view.unit.is_general_guard:
@@ -380,7 +384,7 @@ func _spawn_effects(event: Dictionary) -> void:
 	var targets: Array = []
 	var front := _simulator.record.sides[enemy_side].front_row()
 	for view: UnitView in _views[enemy_side]:
-		if view.unit.is_active() and (event.type == &"arrow_volley" or int(view.unit.data.row) == front):
+		if view.unit.is_active() and (event.type == &"arrow_volley" or event.get("all_rows", false) or int(view.unit.row) == front):
 			targets.append(view)
 	if targets.is_empty():
 		return
@@ -389,7 +393,17 @@ func _spawn_effects(event: Dictionary) -> void:
 		var target: UnitView = targets[_rng.randi() % targets.size()]
 		var land := target.pos + Vector2(_rng.randf_range(-30, 30), _rng.randf_range(-20, 20))
 		var start := shooter.pos + Vector2(_rng.randf_range(-20, 20), _rng.randf_range(-15, 5))
-		if event.type == &"gun_volley":
+		if event.get("all_rows", false):
+			# Artillery: a few heavy balls lobbed over the lines, smoke where they land.
+			if i % 3 == 0:
+				var delay := _rng.randf_range(0.0, 0.3)
+				_add_projectile(&"cannonball", start, land, delay, CANNONBALL_FLIGHT)
+				var smoke := Effect.new()
+				smoke.kind = &"smoke"
+				smoke.pos = land
+				smoke.delay = delay + CANNONBALL_FLIGHT
+				_effects.append(smoke)
+		elif event.type == &"gun_volley":
 			_add_projectile(&"bullet", start, land, _rng.randf_range(0.0, 0.15), 0.22)
 		else:
 			# Up and out of the frame, then down onto the target from above.
@@ -622,6 +636,11 @@ func _draw_projectile(projectile: Projectile) -> void:
 	var pos := projectile.from.lerp(projectile.to, t)
 	if projectile.kind == &"bullet":
 		draw_line(pos, pos - direction * 14.0, BULLET_COLOR, 1.5)
+		return
+	if projectile.kind == &"cannonball":
+		pos.y -= sin(t * PI) * CANNONBALL_ARC
+		draw_circle(pos, 4.0, CANNONBALL_COLOR)
+		draw_circle(pos - Vector2(1.2, 1.2), 1.5, CANNONBALL_COLOR.lightened(0.4))
 		return
 	var arrow := GameArt.effect(&"arrow")
 	if arrow == null:

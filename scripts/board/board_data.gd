@@ -192,6 +192,16 @@ func count_buildings(building_id: StringName, include_unfinished: bool = false) 
 	return count
 
 
+## The level of the highest-level finished building of this type (one being upgraded keeps
+## working at its level only once the upgrade is done), 0 without one.
+func highest_building_level(building_id: StringName) -> int:
+	var best := 0
+	for cell in _cells:
+		if cell.building_id == building_id and cell.coord == cell.building_origin and not cell.is_constructing():
+			best = maxi(best, cell.building_level)
+	return best
+
+
 func _rect_coords(rect: Rect2i) -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
 	for y in range(rect.position.y, rect.end.y):

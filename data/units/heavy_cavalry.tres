@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="UnitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/army/unit_data.gd" id="1_unit"]
+
+[resource]
+script = ExtResource("1_unit")
+unit_id = &"heavy_cavalry"
+display_name = "Kỵ binh nặng"
+sort_order = 8
+squad_size = 12
+row = 0
+attack_kind = 0
+melee_attack = 10
+melee_defense = 9
+armor = 8
+charge_attack = 16
+unit_type = 3
+morale = 12
+range_attack = 0
+reload_time = 5.0
+is_cavalry = true
+recruit_cost = Dictionary[StringName, int]({&"food": 6, &"horses": 5, &"ore": 3})
+upkeep = Dictionary[StringName, int]({&"food": 3})
+required_buildings = Dictionary[StringName, int]({&"war_stable": 3, &"barracks": 6})

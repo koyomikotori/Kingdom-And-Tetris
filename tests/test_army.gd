@@ -25,8 +25,9 @@ func _paint(board: BoardData, terrain: StringName, coords: Array[Vector2i]) -> v
 
 func test_data_loads() -> void:
 	check(buildings.has(&"barracks"), "Barracks is loaded")
-	check_eq(units.map(func(u: UnitData) -> StringName: return u.unit_id),
-			[&"swordsman", &"spearman", &"archer"], "Units in sort order")
+	check_eq(units.size(), 21, "21 unit types (M13)")
+	check_eq(units.slice(0, 3).map(func(u: UnitData) -> StringName: return u.unit_id),
+			[&"swordsman", &"elite_swordsman", &"royal_swordguard"], "Units in sort order")
 	for unit in units:
 		check(not unit.recruit_cost.is_empty(), "%s has a recruit cost" % unit.unit_id)
 		check(unit.squad_size > 0 and unit.melee_attack > 0 and unit.morale > 0, "%s has combat stats" % unit.unit_id)
@@ -77,15 +78,10 @@ func test_recruit_requires_barracks_and_resources() -> void:
 	check_eq(state.army.count_squads(), 1, "Failed recruit adds nobody")
 
 
-func test_archers_need_forest() -> void:
+func test_archers_need_no_forest() -> void:
 	var state := _rich_state()
 	state.build(&"barracks", Vector2i(4, 4))
-	_paint(state.board, &"forest", [Vector2i(7, 4), Vector2i(7, 5)])
-	check_eq(state.recruit(&"archer"), RecruitmentRules.Result.NEEDS_TERRAIN, "2 forest is not enough")
-	_paint(state.board, &"forest", [Vector2i(7, 6)])
-	check_eq(state.recruit(&"archer"), RecruitmentRules.Result.OK, "3 forest unlocks archers")
-	var text := RecruitmentRules.describe(RecruitmentRules.Result.NEEDS_TERRAIN, units[2], buildings, terrains)
-	check(text.contains("3 ô Rừng"), "Reason names the terrain (got '%s')" % text)
+	check_eq(state.recruit(&"archer"), RecruitmentRules.Result.OK, "Archers need only a barracks (M13)")
 
 
 func test_upkeep_is_paid_each_turn() -> void:
@@ -162,10 +158,10 @@ func test_replenish_is_free_and_needs_barracks() -> void:
 	state.build(&"barracks", Vector2i(4, 4))
 	var food_before := state.stockpile.get_amount(&"food")
 	report = state.end_turn()
-	check_eq(report.replenished, {&"swordsman": 5, &"archer": 1}, "25% of 20 = +5; archer only needs 1")
-	check_eq([state.army.squads[0].soldiers, state.army.squads[1].soldiers], [10, 15], "Squads grew, never past full size")
+	check_eq(report.replenished, {&"swordsman": 2, &"archer": 1}, "10% of 20 = +2; archer only needs 1")
+	check_eq([state.army.squads[0].soldiers, state.army.squads[1].soldiers], [7, 15], "Squads grew, never past full size")
 	check_eq(state.stockpile.get_amount(&"food"), food_before - 2, "Only the usual upkeep was paid")
-	for i in 3:
+	for i in 7:
 		state.stockpile.add({&"food": 2})
 		state.end_turn()
 	check_eq(state.army.squads[0].soldiers, 20, "Back to full strength after a few turns")

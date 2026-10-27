@@ -160,6 +160,9 @@ func _refresh() -> void:
 				" ◆" if cell.is_key else ""])
 		if _building.is_upgradable():
 			lines.append("Cấp %d/%d." % [cell.building_level, _building.max_level()])
+		var unlocked := _units_unlocked(1, cell.building_level)
+		if not unlocked.is_empty():
+			lines.append("Mở tuyển: %s." % ", ".join(unlocked))
 		var produced := Economy.building_yield(_building, cell.is_key, cell.building_level)
 		if not produced.is_empty():
 			lines.append("Mỗi lượt: %s%s." % [UiFormat.amounts(produced, _resource_types, true),
@@ -169,7 +172,8 @@ func _refresh() -> void:
 			lines.append("Phí duy trì: %s mỗi lượt." % UiFormat.amounts(upkeep, _resource_types))
 		var most := BuildRules.limit(_building, _state.castle_level)
 		if most > 0:
-			lines.append("Đang có %d/%d (thêm 1 chỗ mỗi cấp thành)." % [_state.board.count_buildings(_building.building_id), most])
+			lines.append("Đang có %d/%d%s." % [_state.board.count_buildings(_building.building_id), most,
+					"" if _building.fixed_count else " (thêm 1 chỗ mỗi cấp thành)"])
 	_info.text = "\n".join(lines)
 	if not _is_castle:
 		_refresh_building_upgrade(cell)
@@ -205,15 +209,20 @@ func _refresh_building_upgrade(cell: CellData) -> void:
 		_upgrade.text = "Đã đạt cấp cao nhất (%d)." % level
 		_upgrade_button.disabled = true
 		return
-	var text := "Lên cấp %d: %s. Mất %d lượt, công trình ngừng hoạt động trong lúc nâng cấp.\nMỗi lượt: %s. Phí duy trì: %s mỗi lượt." % [level + 1,
-			UiFormat.amounts(_state.building_upgrade_cost(_origin), _resource_types), _state.building_upgrade_turns(_origin),
-			UiFormat.amounts(Economy.building_yield(_building, cell.is_key, level + 1), _resource_types, true),
-			UiFormat.amounts(_building.upkeep_at(level + 1), _resource_types)]
+	var text := "Lên cấp %d: %s. Mất %d lượt, công trình ngừng hoạt động trong lúc nâng cấp.\n" % [level + 1,
+			UiFormat.amounts(_state.building_upgrade_cost(_origin), _resource_types), _state.building_upgrade_turns(_origin)]
+	if not _building.level_yields.is_empty():
+		text += "Mỗi lượt: %s. " % UiFormat.amounts(Economy.building_yield(_building, cell.is_key, level + 1), _resource_types, true)
+	text += "Phí duy trì: %s mỗi lượt." % UiFormat.amounts(_building.upkeep_at(level + 1), _resource_types)
+	var unlocked := _units_unlocked(level + 1, level + 1)
+	if not unlocked.is_empty():
+		text += "\nMở tuyển: %s." % ", ".join(unlocked)
 	match result:
 		KingdomState.UpgradeResult.CASTLE_TOO_LOW:
 			text += "\nCần thành chính cấp %d (cấp công trình không vượt cấp thành%s)." % [
 					level + 1 + _building.castle_level_gap,
-					", xưởng rèn thấp hơn thành %d cấp" % _building.castle_level_gap if _building.castle_level_gap > 0 else ""]
+					", %s thấp hơn thành %d cấp" % [_building.display_name, _building.castle_level_gap] \
+							if _building.castle_level_gap > 0 else ""]
 		KingdomState.UpgradeResult.CANNOT_AFFORD:
 			text += "\nChưa đủ tài nguyên."
 		KingdomState.UpgradeResult.NO_BUILDERS:
@@ -222,6 +231,21 @@ func _refresh_building_upgrade(cell: CellData) -> void:
 			text += "\nXưởng đang rèn: chờ rèn xong rồi mới nâng cấp."
 	_upgrade.text = text
 	_upgrade_button.disabled = result != KingdomState.UpgradeResult.OK
+
+
+## Names of the unit types that need this building at a level from `from_level` to `to_level`
+## (GDD §8, M13); other buildings they need are named in brackets.
+func _units_unlocked(from_level: int, to_level: int) -> Array[String]:
+	var names: Array[String] = []
+	for unit: UnitData in _state.units.values():
+		var needed: int = unit.required_buildings.get(_building.building_id, 0)
+		if needed < from_level or needed > to_level:
+			continue
+		var others: Dictionary[StringName, int] = unit.required_buildings.duplicate()
+		others.erase(_building.building_id)
+		names.append(unit.display_name if others.is_empty() else "%s (cần thêm %s)" % [unit.display_name,
+				RecruitmentRules.describe_buildings(others, _state.buildings)])
+	return names
 
 
 ## First step of an action: say what it will do and wait for confirmation.
@@ -442,7 +466,9 @@ func _candidate_row(officer: Officer, text: String, extra: String, buttons: Arra
 	portrait.setup(officer, CANDIDATE_PORTRAIT_SCALE)
 	var column := VBoxContainer.new()
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	column.add_child(_label(text, 14))
+	var name_label := _label(text, 14)
+	name_label.add_theme_color_override("font_color", officer.name_color())
+	column.add_child(name_label)
 	column.add_child(_muted(extra))
 	var row := _row([portrait, column])
 	for button: Button in buttons:

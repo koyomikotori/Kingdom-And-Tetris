@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="UnitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/army/unit_data.gd" id="1_unit"]
+
+[resource]
+script = ExtResource("1_unit")
+unit_id = &"light_artillery"
+display_name = "Pháo binh nhẹ"
+sort_order = 18
+squad_size = 8
+row = 2
+attack_kind = 2
+melee_attack = 2
+melee_defense = 2
+armor = 2
+charge_attack = 0
+unit_type = 6
+morale = 6
+range_attack = 25
+reload_time = 5.0
+volley_all_rows = true
+damage_per_soldier = 5.0
+recruit_cost = Dictionary[StringName, int]({&"food": 4, &"hardwood": 4, &"ore": 3})
+upkeep = Dictionary[StringName, int]({&"food": 2})
+required_buildings = Dictionary[StringName, int]({&"military_academy": 1, &"barracks": 3})

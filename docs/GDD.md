@@ -86,7 +86,7 @@ Các quy tắc kề nhau (cụm ruộng, trại gỗ cạnh rừng, mỏ cạnh 
 
 Bản đồ ảnh hưởng chiến đấu trực tiếp chứ không chỉ qua tài nguyên:
 
-- Có rừng (đủ số lượng) → mở khóa cung thủ.
+- ~~Có rừng (đủ số lượng) → mở khóa cung thủ.~~ (bỏ ở M13)
 - Có đồng cỏ lớn liền mạch → mở khóa kỵ binh.
 - Có đồi đá + mỏ → mở khóa lính khiên, sau này là quân trang bị nặng.
 - Tướng có thể nhận buff theo địa hình lãnh thổ.
@@ -176,7 +176,7 @@ Màn hình ngang, chia theo bề ngang:
 **Đơn vị (squad):** mỗi lần tuyển được **một đơn vị gồm nhiều lính** (ví dụ kiếm sĩ: 20 lính). Trên màn hình trận đánh, mỗi đơn vị chỉ vẽ vài hình đại diện (ví dụ 5 hình cho 20 lính) để tránh lag, giống Ninja Village. Mỗi đơn vị là một quân riêng, có số lính và sĩ khí riêng (sau này: kinh nghiệm riêng). Giá tuyển và phí nuôi tính theo đơn vị.
 
 **Quản lý đơn vị:**
-- **Bổ sung quân:** cuối mỗi lượt, đơn vị thiếu quân tự hồi 25% quân số chuẩn (làm tròn lên, không vượt chuẩn), **miễn phí** (đã tốn lương thực nuôi quân). Cần có ít nhất 1 doanh trại.
+- **Bổ sung quân:** cuối mỗi lượt, đơn vị thiếu quân tự hồi 10% quân số chuẩn (25% trước M13b) (làm tròn lên, không vượt chuẩn), **miễn phí** (đã tốn lương thực nuôi quân). Cần có ít nhất 1 doanh trại.
 - **Giới hạn số đơn vị:** thành chính cho 2, mỗi doanh trại thêm 4; tối đa 3 doanh trại (tổng 14). Sau này: nâng cấp / mở rộng thành để tăng giới hạn và mở rộng ra đất hoang mới.
 - **Giải tán:** người chơi có thể giải tán một đơn vị (ví dụ còn quá ít quân, hoặc muốn thay bằng loại tốt hơn). Không hoàn tài nguyên.
 - Không có gộp đơn vị.
@@ -221,7 +221,7 @@ Mỗi lần tuyển được 1 đơn vị; giá và phí nuôi tính theo đơn 
 |---|---|---|---|---|---|---|---|---|---|---|
 | Kiếm sĩ | 20 | Trước / cận chiến | 9 | 7 | 5 | 5 | 8 | — | 3 lương thực, 1 đá | Doanh trại |
 | Thương binh | 20 | Giữa / cận chiến | 6 | 9 | 4 | 3 | 7 | — | 2 lương thực, 2 gỗ | Doanh trại |
-| Cung thủ | 15 | Sau / cung | 3 | 2 | 2 | 1 | 5 | 6 / 5 giây | 2 lương thực, 3 gỗ | Doanh trại + ≥3 ô rừng |
+| Cung thủ | 15 | Sau / cung | 3 | 2 | 2 | 1 | 5 | 6 / 5 giây | 2 lương thực, 3 gỗ | Doanh trại (M13: bỏ điều kiện rừng) |
 | Cướp cầm dao | 16 | Trước / cận chiến | 6 | 3 | 1 | 4 | 4 | — | (địch) | |
 | Cướp cung | 10 | Sau / cung | 2 | 1 | 0 | 0 | 3 | 4 / 6 giây | (địch) | |
 
@@ -466,6 +466,12 @@ Màn hình trận hiện dòng chữ cho mỗi mưu kế thành công (ví dụ 
 | Lính hỏa mai tinh nhuệ | 15 | 10/9/6/4/11, 1 phát 14 rồi cận chiến | 6 Lương, 2 Gỗ cứng, 4 Khoáng | 3 Lương |
 
 Save cũ: đơn vị Kiếm sĩ / Thương binh / Cung thủ trở thành bậc nông dân (giữ nguyên chỉ số); Doanh trại đã có là cấp 1.
+
+**Đã làm (M13):** Doanh trại đang nâng cấp không tính khi tuyển (như mọi công trình đang thi công). Bốn công trình mới xây mất 3 lượt, phí duy trì 1 Lương (+1 mỗi cấp). Nỏ nạp 7 giây (cung 5, thiện xạ 4,5). Pháo: mỗi khẩu đánh như 5 (nhẹ) / 7 (nặng) người. Thương binh đánh kỵ binh mạnh hơn đúng bằng tỉ lệ chống xung kích. Quân các lang tộc vẫn chỉ dùng bậc nông dân (để cân bằng ở M14).
+
+**Tiện lợi (M13b, đã chốt):** bảng Tuyển lính chia theo loại (Tất cả / Kiếm / Thương / Đao thuẫn / Kỵ binh / Cung / Nỏ / Hỏa khí, nút xuống 2 hàng); tên lính tô màu theo bậc (nông dân nâu, tinh nhuệ bạc, hoàng gia vàng) ở bảng tuyển và tab Quân đội; loại chưa đủ công trình hiện mờ. Tên tướng và mưu sĩ tô màu theo sao như độ hiếm trang bị (1–2★ xám, 3★ xanh lá, 4★ xanh lam, 5★ tím, 6★ vàng); trong bảng thông tin tướng sĩ, phím ← → chuyển sang người trước / sau. Tự bổ sung quân giảm từ 25% xuống 10% mỗi lượt; quân lang tộc vẫn hồi +2 lính mỗi lượt.
+
+**Sắp làm (M13c):** bản đồ sinh động: ô to hơn để công trình có khoảng trống, chấm người dân / ngựa / lính đi lại giữa các công trình, animation cho từng công trình.
 
 **Để sau:** công trình sản xuất trên ô cỏ (×2 sản lượng) khi có tài nguyên mới; công trình Hành chính (Sở cảnh sát, Quan phủ, Chính viện).
 
@@ -788,8 +794,8 @@ Thiết kế bản điện thoại (đã chốt, làm ở M15):
 | M12c | **Tab Tướng sĩ** kiểu Ninja Village + chân dung pixel ghép bộ phận + bản đồ thế giới vẽ lại | Xong |
 | M12d | **Bố cục tab + thi công mất lượt:** tab rộng và đều, bảng Xây dựng / Tuyển lính giữa màn hình có danh mục, xây và nâng cấp mất lượt, đội thợ (§8) | Xong |
 | M12e | **Trang bị** cho tướng và mưu sĩ: 5 bậc độ hiếm, Xưởng rèn, chiến lợi phẩm, kho 20 món, vũ khí hiện trong trận, khung chân dung theo sao, sửa hình ngựa và vũ khí lính (§8 Trang bị) | Xong |
-| M12f | Phần tiện cho chuột lấy từ M13: kéo chuột trái để cuộn bản đồ, kéo danh sách để cuộn, bấm ô / tài nguyên xem chi tiết, cửa sổ vừa màn hình, icon game (§10.2) | Đang làm |
-| M13 | **Công trình và lính mới:** Doanh trại 6 cấp với 3 bậc lính, Chuồng ngựa chiến, Trại bắn tên, Võ trường, Học viện quân sự, 21 loại lính (kỵ binh, nỏ xuyên giáp, đao thuẫn, pháo, hỏa mai) (§8) | |
+| M12f | Phần tiện cho chuột lấy từ M13: kéo chuột trái để cuộn bản đồ, kéo danh sách để cuộn, bấm ô / tài nguyên xem chi tiết, cửa sổ vừa màn hình, icon game (§10.2) | Xong |
+| M13 | **Công trình và lính mới:** Doanh trại 6 cấp với 3 bậc lính, Chuồng ngựa chiến, Trại bắn tên, Võ trường, Học viện quân sự, 21 loại lính (kỵ binh, nỏ xuyên giáp, đao thuẫn, pháo, hỏa mai) (§8) | Đang làm |
 | M14 | Âm thanh, cân bằng, build Windows, phát hành bản máy tính | |
 | M15 | **Bản điện thoại:** cảm ứng (chạm xem trước + thanh Đặt/Hủy, chụm để zoom, nút Back), giao diện cho màn nhỏ, xuất APK, giả lập (nhánh `m13/touch-apk`, §10.2) | Để cuối |
 

@@ -29,7 +29,7 @@ func test_new_resources_and_buildings_load() -> void:
 	check_eq(buildings[&"farm"].yields_at(3), {&"food": 11, &"horses": 1} as Dictionary[StringName, int], "Farm level 3: horses")
 	check_eq(buildings[&"lumber_mill"].yields_at(2), {&"wood": 8, &"hardwood": 1} as Dictionary[StringName, int], "Mill level 2")
 	check_eq(buildings[&"mine"].yields_at(6), {&"stone": 17, &"ore": 5} as Dictionary[StringName, int], "Mine level 6")
-	check(not buildings[&"barracks"].is_upgradable(), "Barracks have no levels yet")
+	check_eq(buildings[&"barracks"].max_level(), 6, "Barracks have 6 levels (M13)")
 	check_eq(CastleLevelData.load_all().size(), 6, "Six castle levels")
 
 

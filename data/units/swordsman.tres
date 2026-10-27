@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_unit")
 unit_id = &"swordsman"
-display_name = "Kiếm sĩ"
+display_name = "Kiếm binh nông dân"
 sort_order = 0
 squad_size = 20
 row = 0
@@ -14,10 +14,10 @@ melee_attack = 9
 melee_defense = 7
 armor = 5
 charge_attack = 5
+unit_type = 0
 morale = 8
 range_attack = 0
 reload_time = 5.0
 recruit_cost = Dictionary[StringName, int]({&"food": 3, &"stone": 1})
 upkeep = Dictionary[StringName, int]({&"food": 1})
-required_building = &"barracks"
-required_terrain = Dictionary[StringName, int]({})
+required_buildings = Dictionary[StringName, int]({&"barracks": 1})

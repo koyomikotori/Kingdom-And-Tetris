@@ -65,13 +65,13 @@ func test_replenishment_dilutes_xp() -> void:
 	var state := _state()
 	_rich(state)
 	state.build(&"barracks", Vector2i(4, 4))
-	state.army.add_squad(&"swordsman", 15)
+	state.army.add_squad(&"swordsman", 18)
 	state.army.squads[0].xp = 300.0
 	state.end_turn()
 	var squad := state.army.squads[0]
 	check_eq(squad.soldiers, 20, "Replenished")
-	# 300 × 15 / 20 = 225, then the squad is above the training cap: no training XP.
-	check_eq(squad.xp, 225.0, "Diluted by the 5 new soldiers")
+	# 300 × 18 / 20 = 270, then the squad is above the training cap: no training XP.
+	check_eq(squad.xp, 270.0, "Diluted by the 2 new soldiers")
 
 
 func test_levels_raise_battle_stats() -> void:
