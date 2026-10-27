@@ -1,0 +1,164 @@
+class_name CatalogWindow
+extends ModalWindow
+## A Kairosoft style shop in the middle of the screen (GDD §8, M12d): category tabs on top, the
+## entries of the chosen category on the left, the chosen entry's picture and details on the right,
+## and one action button below. BuildWindow and RecruitWindow fill it through the hooks below.
+
+const ACCENT := UiPalette.ACCENT
+const LIST_WIDTH := 250
+const LIST_HEIGHT := 400
+const LIST_ICON := 32
+
+var _category_buttons: Array[Button] = []
+var _category := 0
+var _list: VBoxContainer
+var _entry_buttons: Dictionary = {}  # entry id -> Button
+var _selected: StringName = &""
+var _picture_box: CenterContainer
+var _name_label: Label
+var _details: Label
+var _reason: Label
+var _action: Button
+
+
+## `categories`: tab titles, the first one being "Tất cả".
+func build_catalog(title: String, categories: Array[String], action_text: String) -> void:
+	var body := build_frame(title, ACCENT, 0.62)
+	var tabs := HBoxContainer.new()
+	tabs.add_theme_constant_override("separation", 6)
+	body.add_child(tabs)
+	var group := ButtonGroup.new()
+	for i in categories.size():
+		var button := Button.new()
+		button.text = categories[i]
+		button.toggle_mode = true
+		button.button_group = group
+		button.focus_mode = Control.FOCUS_NONE
+		button.custom_minimum_size = Vector2(120, 38)
+		button.button_pressed = i == 0
+		button.pressed.connect(_show_category.bind(i))
+		tabs.add_child(button)
+		_category_buttons.append(button)
+	var columns := HBoxContainer.new()
+	columns.add_theme_constant_override("separation", 16)
+	body.add_child(columns)
+	var list_frame := PanelContainer.new()
+	list_frame.theme_type_variation = &"InsetPanel"
+	columns.add_child(list_frame)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(LIST_WIDTH, LIST_HEIGHT)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	list_frame.add_child(scroll)
+	_list = VBoxContainer.new()
+	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_list.add_theme_constant_override("separation", 4)
+	scroll.add_child(_list)
+	var detail := VBoxContainer.new()
+	detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	detail.add_theme_constant_override("separation", 8)
+	columns.add_child(detail)
+	_picture_box = CenterContainer.new()
+	_picture_box.custom_minimum_size = Vector2(0, 120)
+	detail.add_child(_picture_box)
+	_name_label = _label("", 20)
+	_name_label.add_theme_color_override("font_color", UiPalette.ink(ACCENT))
+	detail.add_child(_name_label)
+	_details = _label("", 14)
+	detail.add_child(_details)
+	_reason = _label("", 14)
+	_reason.add_theme_color_override("font_color", WARNING_COLOR)
+	detail.add_child(_reason)
+	_action = add_action(action_text, func() -> void: _on_action(_selected))
+	_show_category(0)
+
+
+func _show_category(index: int) -> void:
+	_category = index
+	for child in _list.get_children():
+		_list.remove_child(child)
+		child.queue_free()
+	_entry_buttons.clear()
+	var group := ButtonGroup.new()
+	var ids := _entries(index)
+	for id: StringName in ids:
+		var button := Button.new()
+		button.toggle_mode = true
+		button.button_group = group
+		button.focus_mode = Control.FOCUS_NONE
+		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		button.icon = _entry_icon(id)
+		button.expand_icon = true
+		button.add_theme_constant_override("icon_max_width", LIST_ICON)
+		button.custom_minimum_size = Vector2(0, LIST_ICON + 12)
+		button.pressed.connect(_select.bind(id))
+		_list.add_child(button)
+		_entry_buttons[id] = button
+	if ids.is_empty():
+		_list.add_child(_label("Chưa có gì trong mục này.", 13))
+	_select(_selected if ids.has(_selected) else (ids[0] if not ids.is_empty() else &""))
+
+
+func _select(id: StringName) -> void:
+	_selected = id
+	for entry_id in _entry_buttons:
+		_entry_buttons[entry_id].set_pressed_no_signal(entry_id == id)
+	refresh()
+
+
+## Entry labels, the details and the action button follow the current state.
+func refresh() -> void:
+	for id in _entry_buttons:
+		_entry_buttons[id].text = _entry_text(id)
+	for child in _picture_box.get_children():
+		_picture_box.remove_child(child)
+		child.queue_free()
+	if _selected == &"":
+		_name_label.text = ""
+		_details.text = ""
+		_reason.text = ""
+		_action.disabled = true
+		return
+	_picture_box.add_child(_picture(_selected))
+	_name_label.text = _entry_name(_selected)
+	_details.text = _entry_details(_selected)
+	var reason := _block_reason(_selected)
+	_reason.text = reason
+	_reason.visible = not reason.is_empty()
+	_action.disabled = not reason.is_empty()
+
+
+# --- Hooks --------------------------------------------------------------------------------
+
+## Ids shown in category `index` (0 = all).
+func _entries(_index: int) -> Array[StringName]:
+	return []
+
+
+func _entry_icon(_id: StringName) -> Texture2D:
+	return null
+
+
+func _entry_name(id: StringName) -> String:
+	return String(id)
+
+
+## The list button's text (name plus counts).
+func _entry_text(id: StringName) -> String:
+	return _entry_name(id)
+
+
+func _picture(_id: StringName) -> Control:
+	return Control.new()
+
+
+func _entry_details(_id: StringName) -> String:
+	return ""
+
+
+## Why the action cannot be done right now; "" when it can.
+func _block_reason(_id: StringName) -> String:
+	return ""
+
+
+func _on_action(_id: StringName) -> void:
+	pass

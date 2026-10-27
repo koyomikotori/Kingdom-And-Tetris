@@ -36,10 +36,12 @@ static func building_yield(building: BuildingData, on_key_cell: bool, level: int
 
 
 ## Total produced by every production building in one turn (each counted once, at its origin).
+## Buildings under construction produce nothing (GDD §8, M12d).
 static func buildings_yield(board: BoardData, buildings: Dictionary[StringName, BuildingData]) -> Dictionary[StringName, int]:
 	var total: Dictionary[StringName, int] = {}
 	for cell in board.get_all_cells():
-		if cell.has_building() and cell.coord == cell.building_origin and buildings.has(cell.building_id):
+		if cell.has_building() and cell.coord == cell.building_origin and buildings.has(cell.building_id) \
+				and not cell.is_constructing():
 			add_into(total, building_yield(buildings[cell.building_id], cell.is_key, cell.building_level))
 	return total
 

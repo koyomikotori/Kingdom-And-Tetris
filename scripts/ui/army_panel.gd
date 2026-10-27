@@ -1,9 +1,11 @@
 class_name ArmyPanel
 extends VBoxContainer
-## Army tab: the kingdom's squads (with a disband button each), then every unit type with stats,
-## cost and a recruit button.
+## Army tab (GDD §8, M12d): a long "Tuyển lính" button that opens the RecruitWindow in the middle
+## of the screen, the squad room, commander and strategist, one row per unit type the kingdom has
+## (sprite, squads and soldiers, total upkeep), then every squad with its level and a disband
+## button.
 
-signal recruit_requested(unit_id: StringName)
+signal recruit_window_requested
 signal disband_requested(squad: Army.Squad)
 
 const HEADER_COLOR := UiPalette.HEADER
@@ -12,58 +14,34 @@ const XP_COLOR := UiPalette.XP
 
 var _units: Array[UnitData] = []
 var _resource_types: Array[ResourceTypeData] = []
-var _count_labels: Dictionary[StringName, Label] = {}
-var _reason_labels: Dictionary[StringName, Label] = {}
-var _buttons: Dictionary[StringName, Button] = {}
 var _summary_label: Label
+var _type_list: VBoxContainer
 var _squad_list: VBoxContainer
 
 
 func setup(units: Array[UnitData], resource_types: Array[ResourceTypeData]) -> void:
 	_units = units
 	_resource_types = resource_types
+	add_theme_constant_override("separation", 6)
+	var open := Button.new()
+	open.text = "Tuyển lính"
+	open.focus_mode = Control.FOCUS_NONE
+	open.custom_minimum_size = Vector2(0, 44)
+	open.pressed.connect(func() -> void: recruit_window_requested.emit())
+	add_child(open)
 	_summary_label = Label.new()
 	_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_summary_label.add_theme_font_size_override("font_size", 13)
 	add_child(_summary_label)
+	add_child(HSeparator.new())
+	_type_list = VBoxContainer.new()
+	_type_list.add_theme_constant_override("separation", 4)
+	add_child(_type_list)
 	add_child(_section_label("Đơn vị của bạn"))
 	_squad_list = VBoxContainer.new()
 	add_child(_squad_list)
-	add_child(_section_label("Tuyển quân"))
-	for unit in units:
-		add_child(HSeparator.new())
-		var header := HBoxContainer.new()
-		add_child(header)
-		var name_label := Label.new()
-		name_label.text = unit.display_name
-		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		header.add_child(name_label)
-		var button := Button.new()
-		button.text = "Tuyển (+%d)" % unit.squad_size
-		button.focus_mode = Control.FOCUS_NONE
-		button.pressed.connect(func() -> void: recruit_requested.emit(unit.unit_id))
-		header.add_child(button)
-		_buttons[unit.unit_id] = button
-		var count_label := _small_label("")
-		count_label.add_theme_color_override("font_color", HEADER_COLOR)
-		add_child(count_label)
-		_count_labels[unit.unit_id] = count_label
-		add_child(_small_label("%s · %s · %d lính/đơn vị · Sĩ khí %d" % [UnitData.ROW_NAMES[unit.row],
-				UnitData.ATTACK_KIND_NAMES[unit.attack_kind], unit.squad_size, unit.morale]))
-		add_child(_small_label("Cận chiến %d · Phòng thủ %d · Giáp %d · Xung kích %d" % [
-				unit.melee_attack, unit.melee_defense, unit.armor, unit.charge_attack]))
-		if unit.attack_kind == UnitData.AttackKind.BOW:
-			add_child(_small_label("Bắn xa %d · Nạp tên %s giây" % [unit.range_attack, str(unit.reload_time)]))
-		elif unit.attack_kind == UnitData.AttackKind.GUN:
-			add_child(_small_label("Bắn xa %d · Chỉ nã 1 loạt đầu trận" % unit.range_attack))
-		add_child(_small_label("Giá: %s · Nuôi: %s/lượt mỗi đơn vị" % [
-				UiFormat.amounts(unit.recruit_cost, resource_types), UiFormat.amounts(unit.upkeep, resource_types)]))
-		var reason := _small_label("")
-		reason.add_theme_color_override("font_color", WARNING_COLOR)
-		add_child(reason)
-		_reason_labels[unit.unit_id] = reason
 
 
-## Rebuilds the squad list and enables only the units that can be recruited right now.
 func refresh(state: KingdomState) -> void:
 	var upkeep := UiFormat.amounts(state.get_army_upkeep(), _resource_types)
 	var replenish := "Tự bổ sung %d%% quân mỗi lượt." % roundi(KingdomState.REPLENISH_FRACTION * 100) \
@@ -83,15 +61,38 @@ func refresh(state: KingdomState) -> void:
 	_summary_label.text = "Đơn vị: %d/%d · %d lính · Nuôi quân, tướng, mưu sĩ: %s/lượt\n%s\n%s\n%s" % [
 			state.army.count_squads(), state.get_squad_capacity(), state.army.count_soldiers(),
 			upkeep if not upkeep.is_empty() else "0", replenish, leader, strategist]
+	_rebuild_type_list(state)
 	_rebuild_squad_list(state)
+
+
+## One row per unit type the kingdom has: sprite, squads / soldiers and what they eat together.
+func _rebuild_type_list(state: KingdomState) -> void:
+	for child in _type_list.get_children():
+		_type_list.remove_child(child)
+		child.queue_free()
 	for unit in _units:
-		_count_labels[unit.unit_id].text = "Đang có: %d đơn vị · %d lính" % [
-				state.army.count_squads(unit.unit_id), state.army.count_soldiers(unit.unit_id)]
-		var result := RecruitmentRules.check(state.board, state.stockpile, state.army, state.get_squad_capacity(), unit)
-		_buttons[unit.unit_id].disabled = result != RecruitmentRules.Result.OK
-		_reason_labels[unit.unit_id].text = "" if result == RecruitmentRules.Result.OK \
-				else RecruitmentRules.describe(result, unit, state.buildings, state.terrains)
-		_reason_labels[unit.unit_id].visible = result != RecruitmentRules.Result.OK
+		var squads := state.army.count_squads(unit.unit_id)
+		if squads == 0:
+			continue
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		_type_list.add_child(row)
+		var figure := OfficerFigure.new()
+		figure.setup_unit(unit, 2)
+		row.add_child(figure)
+		var column := VBoxContainer.new()
+		column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		column.add_theme_constant_override("separation", 0)
+		column.alignment = BoxContainer.ALIGNMENT_CENTER
+		row.add_child(column)
+		var name_label := Label.new()
+		name_label.text = "%s  ×%d" % [unit.display_name, squads]
+		column.add_child(name_label)
+		var eats: Dictionary[StringName, int] = {}
+		for resource_id in unit.upkeep:
+			eats[resource_id] = unit.upkeep[resource_id] * squads
+		column.add_child(_small_label("%d lính · Nuôi: %s/lượt" % [state.army.count_soldiers(unit.unit_id),
+				UiFormat.amounts(eats, _resource_types)]))
 
 
 func _rebuild_squad_list(state: KingdomState) -> void:

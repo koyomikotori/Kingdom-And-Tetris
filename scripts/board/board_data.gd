@@ -113,6 +113,8 @@ func place_building(building_id: StringName, origin: Vector2i, size: Vector2i) -
 		cell.building_id = building_id
 		cell.building_origin = origin
 		cell.building_level = 1
+		cell.building_turns = 0
+		cell.building_upgrading = false
 		cell_changed.emit(coord)
 	return true
 
@@ -126,6 +128,23 @@ func set_building_level(origin: Vector2i, level: int) -> void:
 	for cell in get_building_cells(origin):
 		cell.building_level = level
 		cell_changed.emit(cell.coord)
+
+
+## Starts (turns > 0) or ends (0) the construction of the building at `origin` (GDD §8, M12d).
+func set_construction(origin: Vector2i, turns: int, upgrading: bool = false) -> void:
+	for cell in get_building_cells(origin):
+		cell.building_turns = turns
+		cell.building_upgrading = upgrading and turns > 0
+		cell_changed.emit(cell.coord)
+
+
+## Top-left cells of every building under construction.
+func get_construction_origins() -> Array[Vector2i]:
+	var result: Array[Vector2i] = []
+	for cell in _cells:
+		if cell.is_constructing() and cell.coord == cell.building_origin:
+			result.append(cell.coord)
+	return result
 
 
 ## All cells covered by the building whose top-left cell is `origin`.
@@ -162,12 +181,14 @@ func count_owned_terrain(terrain_id: StringName) -> int:
 	return count
 
 
-## Number of separate buildings of this type (counted by their top-left cell).
-func count_buildings(building_id: StringName) -> int:
+## Number of separate buildings of this type (counted by their top-left cell). Buildings still
+## being built do nothing, so they count only with `include_unfinished` (limits do).
+func count_buildings(building_id: StringName, include_unfinished: bool = false) -> int:
 	var count := 0
 	for cell in _cells:
 		if cell.building_id == building_id and cell.coord == cell.building_origin:
-			count += 1
+			if include_unfinished or not cell.is_constructing():
+				count += 1
 	return count
 
 
@@ -247,6 +268,8 @@ func expand(direction: Vector2i, amount: int) -> void:
 		cell.building_id = old.building_id
 		cell.building_origin = old.building_origin + shift
 		cell.building_level = old.building_level
+		cell.building_turns = old.building_turns
+		cell.building_upgrading = old.building_upgrading
 	resized.emit(shift)
 
 
@@ -259,7 +282,8 @@ func to_save() -> Dictionary:
 		if cell.has_terrain() or cell.owned or cell.is_key or cell.has_building():
 			cells.append({"x": cell.coord.x, "y": cell.coord.y, "terrain": String(cell.terrain_id), "owned": cell.owned,
 					"key": cell.is_key, "building": String(cell.building_id),
-					"origin": [cell.building_origin.x, cell.building_origin.y], "level": cell.building_level})
+					"origin": [cell.building_origin.x, cell.building_origin.y], "level": cell.building_level,
+					"turns": cell.building_turns, "upgrading": cell.building_upgrading})
 	return {"width": width, "height": height, "cells": cells}
 
 
@@ -275,4 +299,7 @@ static func from_save(data: Dictionary) -> BoardData:
 		cell.building_id = StringName(entry.building)
 		cell.building_origin = Vector2i(int(entry.origin[0]), int(entry.origin[1]))
 		cell.building_level = int(entry.level)
+		# Saves from before M12d have no construction: everything there is finished.
+		cell.building_turns = int(entry.get("turns", 0))
+		cell.building_upgrading = bool(entry.get("upgrading", false))
 	return board

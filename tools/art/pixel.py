@@ -25,6 +25,8 @@ P = {
     "leaf": hex_color("2f7d3e"), "leaf_dark": hex_color("1e5a2c"), "leaf_light": hex_color("53a454"),
     "trunk": hex_color("6b4423"),
     "rock": hex_color("a8a092"), "rock_dark": hex_color("7a7266"), "rock_light": hex_color("d1c9b8"),
+    "dirt": hex_color("b08a5a"), "dirt_dark": hex_color("8e6c44"), "dirt_light": hex_color("c9a676"),
+    "rope": hex_color("e6d29a"),
     "wild": hex_color("5d5b45"), "wild_dot": hex_color("6c6a51"), "wild_dark": hex_color("4e4c3a"),
     "gold": hex_color("f2c23c"), "gold_dark": hex_color("b9862a"), "gold_light": hex_color("fff0a0"),
     "wall": hex_color("f1ead8"), "wall_shade": hex_color("cfc4aa"),

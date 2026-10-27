@@ -290,6 +290,30 @@ Sản lượng đã tăng nhẹ sau lần chơi thử đầu (trước là 4 / 6
 - **Phá hủy:** hoàn lại 50% giá xây, không hoàn tác được.
 - Thành chính không phá hủy hay di chuyển được.
 
+### Bố cục tab và thi công mất lượt (M12d, đã chốt)
+
+**Thanh tab bên phải:** rộng 340 px (trước 300); 4 nút tab Đất / Xây dựng / Quân đội / Tướng sĩ rộng bằng nhau.
+
+**Tab Xây dựng và Quân đội** chỉ còn thông tin những gì đang có:
+- Trên cùng một nút dài **Xây dựng công trình** / **Tuyển lính** mở bảng ở giữa màn hình.
+- Tab Xây dựng: cấp thành, **Đội thợ** đang dùng / tối đa, rồi mỗi loại công trình đang có một dòng: hình, số đang có / tối đa (kể cả đang thi công), tổng phí duy trì của loại đó.
+- Tab Quân đội: số đơn vị / chỗ, tổng tướng, mưu sĩ Quân sự, mỗi loại lính đang có một dòng (hình, số đơn vị và lính, tổng phí nuôi), rồi danh sách đơn vị (cấp, kinh nghiệm, giải tán).
+
+**Bảng Xây dựng (giữa màn hình, kiểu Kairosoft):**
+- Danh mục trên đầu: **Tất cả / Sản xuất / Quân sự / Hành chính** (`BuildingData.category`). Hiện có: Sản xuất = Nông trại, Xưởng gỗ, Mỏ khai thác; Quân sự = Doanh trại; Hành chính = Trạm lính canh. Sau này: Trại tập bắn, Võ trường, Chuồng ngựa chiến, Học viện quân sự, Xưởng rèn khí giới (mở lính cao cấp); Sở cảnh sát, Chính viện, Quan phủ (chưa chốt tác dụng).
+- Bên trái danh sách công trình (khóa khi chưa đủ cấp thành / đã đủ số), bên phải hình, công dụng tóm tắt, chi phí, số lượt xây và nút **Xây dựng**: bảng đóng lại, chọn chỗ đặt nền móng trên bản đồ.
+- **Bảng Tuyển lính** làm cùng kiểu, danh mục theo hàng quân (Tất cả / Tiền tuyến / Hậu tuyến). Lính vẫn **tuyển ngay**, không mất lượt.
+
+**Thi công mất lượt:**
+- Xây mới mất `BuildingData.build_turns` lượt: Trạm lính canh 1, Nông trại / Xưởng gỗ / Mỏ / Doanh trại 2.
+- Nâng cấp công trình mất số lượt bằng **cấp mới** (lên cấp 3: 3 lượt); thành chính mất **cấp mới + 1**.
+- Trả tiền khi đặt nền móng / bắt đầu nâng cấp. Số lượt giảm 1 ở mỗi lần kết thúc lượt; về 0 thì xong.
+- **Đang thi công thì ngừng hoạt động:** không sản xuất, không phí duy trì, không tính vào chỗ đơn vị, bổ sung quân, giảm cướp, điều kiện tuyển lính / đặc tính / sự kiện. Thành chính đang nâng cấp vẫn giữ mọi giới hạn của cấp cũ nhưng đóng Chiêu hiền tới khi xong.
+- Trên bản đồ: giàn giáo + số lượt còn lại. Bấm vào chỉ hiện lượt hoàn thành và nút **Phá hủy** (hoàn 50% giá đã trả); với công trình / thành đang nâng cấp là **Hủy nâng cấp** (hoàn 50%, về cấp cũ). Không di chuyển được khi đang thi công.
+- **Đội thợ:** số công trình thi công cùng lúc (kể cả thành) tối đa **1 + cấp thành**.
+- Save cũ: công trình đã có coi như xong.
+- Để sau: trả thêm để xây nhanh (cân bằng ở M14).
+
 ### Tướng (M11d, đã chốt)
 
 **Một tổng tướng cho cả đạo quân.** Vương quốc giữ tối đa **3 tướng** (đều tốn phí nuôi): một người làm **tổng tướng**, những người khác dự bị (thay khi tổng tướng bị thương hoặc tử trận). Có thể sa thải tướng (có xác nhận).
@@ -647,11 +671,12 @@ Thống kê trận thắng/thua và trạng thái thắng/thua được lưu cù
 | M11c | Kinh tế mới: cấp thành chính, công trình khai thác, Khoáng sản / Gỗ cứng / Ngựa | Xong |
 | M11d | Tướng: sao 1–6, Võ lực / Thống suất / đặc tính theo lãnh thổ, một tổng tướng + cận vệ kỵ binh trong trận, tử trận / bị thương, sự kiện chiêu mộ | Xong |
 | M11e | Kinh nghiệm và cấp: đơn vị 3 cấp (huấn luyện tới Cựu binh, pha loãng khi bổ sung), tướng lên cấp và tự cộng điểm | Xong |
-| M11f | Mưu sĩ: 3 chức Nội chính / Ngoại giao / Quân sự, 3 chỉ số, bộ mưu kế đầu trận, chiêu hiền chung với tướng; **Kinh tế v2**: chỉ công trình cho tài nguyên, công trình 6 cấp, giới hạn theo cấp thành | Đang làm |
+| M11f | Mưu sĩ: 3 chức Nội chính / Ngoại giao / Quân sự, 3 chỉ số, bộ mưu kế đầu trận, chiêu hiền chung với tướng; **Kinh tế v2**: chỉ công trình cho tài nguyên, công trình 6 cấp, giới hạn theo cấp thành | Xong |
 | M12a | **Đồ họa (1/3):** hệ thống ảnh pixel vẽ bằng script, bản đồ (địa hình, ô ◆, thành, công trình có cấp, mảnh đất trong tay), giao diện gỗ + giấy cuộn, icon tài nguyên (§13) | Xong |
 | M12b | **Đồ họa (2/3):** trận đánh: lính từng loại, cận vệ tướng cưỡi ngựa, quân cướp / gia tộc, mũi tên, nền chiến trường, hiệu ứng mưu kế | Xong |
-| M12c | **Tab Tướng sĩ** kiểu Ninja Village + chân dung pixel ghép bộ phận + bản đồ thế giới vẽ lại | Đang làm |
-| M12d | **Trang bị** cho tướng và mưu sĩ (tab Trang bị trong bảng chi tiết; thiết kế bàn riêng) | |
+| M12c | **Tab Tướng sĩ** kiểu Ninja Village + chân dung pixel ghép bộ phận + bản đồ thế giới vẽ lại | Xong |
+| M12d | **Bố cục tab + thi công mất lượt:** tab rộng và đều, bảng Xây dựng / Tuyển lính giữa màn hình có danh mục, xây và nâng cấp mất lượt, đội thợ (§8) | Đang làm |
+| M12e | **Trang bị** cho tướng và mưu sĩ (tab Trang bị trong bảng chi tiết; thiết kế bàn riêng) | |
 | M13 | **Hỗ trợ cảm ứng + xuất APK** (chạm để xem trước/xác nhận, vuốt để kéo, chụm để zoom, nút thay phím tắt); **sắp xếp lại tab Quân đội, Xây dựng, bảng thành** cho gọn trên điện thoại (ít chữ, chi tiết mở khi chạm) | |
 | M14 | Âm thanh, cân bằng, build Windows + Android, phát hành | |
 

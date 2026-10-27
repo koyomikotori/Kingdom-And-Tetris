@@ -2,20 +2,23 @@ class_name BuildingWindow
 extends ModalWindow
 ## Opens when a building on the board is tapped (Kairosoft style): its information and upgrade
 ## tabs (the castle also has "Chiêu hiền" to recruit generals and advisors, GDD §8 M11d/M11f;
-## they are managed in the "Tướng sĩ" side tab, M12c), and the actions below (upgrade the castle, move, demolish). Every action first explains
-## what it will do and waits for "Xác nhận".
+## they are managed in the "Tướng sĩ" side tab, M12c), and the actions below (upgrade, move,
+## demolish). While it is being built or upgraded (M12d) it only shows the turns left and
+## "Phá hủy" / "Hủy nâng cấp". Every action first explains what it will do and waits for "Xác nhận".
 
 ## The player confirmed moving the building at `origin`; the kingdom scene lets them pick the spot.
 signal move_requested(origin: Vector2i)
-## The building was demolished; `refund` is what came back.
+## The building was demolished, or its upgrade called off; `refund` is what came back.
 signal demolished(building_name: String, refund: Dictionary)
+## An upgrade was paid and started (the window closes); `text` says when it will be finished.
+signal construction_started(text: String)
 
 const ACCENT := UiPalette.ACCENT
 ## Height of the scrolling list in the castle's Chiêu hiền tab.
 const TAB_LIST_HEIGHT := 440
 const CANDIDATE_PORTRAIT_SCALE := 1
 
-enum Action { NONE, UPGRADE, MOVE, DEMOLISH, CUSTOM }
+enum Action { NONE, UPGRADE, MOVE, DEMOLISH, CUSTOM, CANCEL_UPGRADE }
 
 var _state: KingdomState
 var _origin: Vector2i
@@ -41,6 +44,19 @@ func open(state: KingdomState, origin: Vector2i) -> void:
 	_is_castle = cell.building_id == BoardData.CASTLE_ID
 	_building = state.buildings.get(cell.building_id)
 	var body := build_frame(_title(), ACCENT, 0.42)
+	_confirm_box = VBoxContainer.new()
+	_confirm_box.visible = false
+	_confirm_text = _label("", 15)
+	_confirm_text.add_theme_color_override("font_color", ACCENT)
+	_confirm_box.add_child(_confirm_text)
+	var confirm := _button("Xác nhận", _on_confirm_pressed)
+	confirm.custom_minimum_size = Vector2(140, 44)
+	var cancel := _button("Hủy", _cancel_action)
+	cancel.custom_minimum_size = Vector2(140, 44)
+	_confirm_box.add_child(_row([confirm, cancel]))
+	if _turns_left() > 0:
+		_open_construction(body, cell)
+		return
 	_tabs = TabContainer.new()
 	_tabs.custom_minimum_size = Vector2(0, 180)
 	body.add_child(_tabs)
@@ -50,17 +66,7 @@ func open(state: KingdomState, origin: Vector2i) -> void:
 		_recruit_box = _tab_box("Chiêu hiền")
 		state.generals.changed.connect(_refresh)
 		state.advisors.changed.connect(_refresh)
-	_confirm_box = VBoxContainer.new()
-	_confirm_box.visible = false
 	body.add_child(_confirm_box)
-	_confirm_text = _label("", 15)
-	_confirm_text.add_theme_color_override("font_color", ACCENT)
-	_confirm_box.add_child(_confirm_text)
-	var confirm := _button("Xác nhận", _on_confirm_pressed)
-	confirm.custom_minimum_size = Vector2(140, 44)
-	var cancel := _button("Hủy", _cancel_action)
-	cancel.custom_minimum_size = Vector2(140, 44)
-	_confirm_box.add_child(_row([confirm, cancel]))
 	if _is_castle or (_building != null and _building.is_upgradable()):
 		_upgrade_button = add_action("Nâng cấp", _ask.bind(Action.UPGRADE))
 	if not _is_castle:
@@ -68,6 +74,28 @@ func open(state: KingdomState, origin: Vector2i) -> void:
 		add_action("Phá hủy", _ask.bind(Action.DEMOLISH), true)
 	state.stockpile.changed.connect(_refresh)
 	_refresh()
+
+
+## Turns left on this building's (or the castle's) construction; 0 when it is working.
+func _turns_left() -> int:
+	return _state.castle_turns if _is_castle else _state.board.get_cell(_origin).building_turns
+
+
+## Under construction: what is being built, the turns left and the one action that remains.
+func _open_construction(body: VBoxContainer, cell: CellData) -> void:
+	var upgrading := _is_castle or cell.building_upgrading
+	var target := _state.castle_level + 1 if _is_castle else cell.building_level + 1
+	var text := "Đang nâng cấp lên cấp %d." % target if upgrading else "Đang xây nền móng."
+	text += "\nHoàn thành sau %d lượt (lượt %d)." % [_turns_left(), _state.turn + _turns_left()]
+	text += "\nTrong lúc thi công công trình không hoạt động." if not _is_castle \
+			else "\nThành vẫn giữ các giới hạn của cấp %d; Chiêu hiền mở lại khi nâng cấp xong." % _state.castle_level
+	text += "\nĐội thợ: %d/%d đang làm." % [_state.builders_busy(), _state.builder_limit()]
+	body.add_child(_label(text, 15))
+	body.add_child(_confirm_box)
+	if upgrading:
+		add_action("Hủy nâng cấp", _ask.bind(Action.CANCEL_UPGRADE), true)
+	else:
+		add_action("Phá hủy", _ask.bind(Action.DEMOLISH), true)
 
 
 func _title() -> String:
@@ -143,10 +171,13 @@ func _refresh() -> void:
 		_upgrade_button.disabled = true
 		return
 	var result := _state.check_castle_upgrade()
-	var text := "Lên cấp %d: %s.\nCấp mới: thêm %d chỗ cho đơn vị lính, thêm 1 chỗ cho mỗi loại công trình, công trình nâng được tới cấp %d, tuyển được tướng và mưu sĩ tới %d sao." % [
-			next.level, UiFormat.amounts(_state.castle_upgrade_cost(), _resource_types), next.squad_capacity, next.level, next.level]
+	var text := "Lên cấp %d: %s. Mất %d lượt.\nCấp mới: thêm %d chỗ cho đơn vị lính, thêm 1 chỗ cho mỗi loại công trình, thêm 1 đội thợ, công trình nâng được tới cấp %d, tuyển được tướng và mưu sĩ tới %d sao." % [
+			next.level, UiFormat.amounts(_state.castle_upgrade_cost(), _resource_types), _state.castle_upgrade_turns(),
+			next.squad_capacity, next.level, next.level]
 	if result == KingdomState.CastleResult.CANNOT_AFFORD:
 		text += "\nChưa đủ tài nguyên."
+	elif result == KingdomState.CastleResult.NO_BUILDERS:
+		text += "\nKhông còn đội thợ rảnh: chờ một công trình xây xong."
 	_upgrade.text = text
 	_upgrade_button.disabled = result != KingdomState.CastleResult.OK
 
@@ -162,8 +193,8 @@ func _refresh_building_upgrade(cell: CellData) -> void:
 		_upgrade.text = "Đã đạt cấp cao nhất (%d)." % level
 		_upgrade_button.disabled = true
 		return
-	var text := "Lên cấp %d: %s.\nMỗi lượt: %s. Phí duy trì: %s mỗi lượt." % [level + 1,
-			UiFormat.amounts(_state.building_upgrade_cost(_origin), _resource_types),
+	var text := "Lên cấp %d: %s. Mất %d lượt, công trình ngừng hoạt động trong lúc nâng cấp.\nMỗi lượt: %s. Phí duy trì: %s mỗi lượt." % [level + 1,
+			UiFormat.amounts(_state.building_upgrade_cost(_origin), _resource_types), _state.building_upgrade_turns(_origin),
 			UiFormat.amounts(Economy.building_yield(_building, cell.is_key, level + 1), _resource_types, true),
 			UiFormat.amounts(_building.upkeep_at(level + 1), _resource_types)]
 	match result:
@@ -171,6 +202,8 @@ func _refresh_building_upgrade(cell: CellData) -> void:
 			text += "\nCần thành chính cấp %d (cấp công trình không vượt cấp thành)." % (level + 1)
 		KingdomState.UpgradeResult.CANNOT_AFFORD:
 			text += "\nChưa đủ tài nguyên."
+		KingdomState.UpgradeResult.NO_BUILDERS:
+			text += "\nKhông còn đội thợ rảnh: chờ một công trình xây xong."
 	_upgrade.text = text
 	_upgrade_button.disabled = result != KingdomState.UpgradeResult.OK
 
@@ -182,18 +215,24 @@ func _ask(action: Action) -> void:
 		Action.UPGRADE:
 			_tabs.current_tab = 1
 			if _is_castle:
-				_confirm_text.text = "Nâng thành chính lên cấp %d? Trả %s." % [_state.castle_level + 1,
-						UiFormat.amounts(_state.castle_upgrade_cost(), _resource_types)]
+				_confirm_text.text = "Nâng thành chính lên cấp %d? Trả %s, xong sau %d lượt." % [_state.castle_level + 1,
+						UiFormat.amounts(_state.castle_upgrade_cost(), _resource_types), _state.castle_upgrade_turns()]
 			else:
-				_confirm_text.text = "Nâng %s lên cấp %d? Trả %s." % [_building.display_name,
-						_state.board.get_building_level(_origin) + 1,
-						UiFormat.amounts(_state.building_upgrade_cost(_origin), _resource_types)]
+				_confirm_text.text = "Nâng %s lên cấp %d? Trả %s, xong sau %d lượt (ngừng hoạt động tới khi xong)." % [
+						_building.display_name, _state.board.get_building_level(_origin) + 1,
+						UiFormat.amounts(_state.building_upgrade_cost(_origin), _resource_types),
+						_state.building_upgrade_turns(_origin)]
+		Action.CANCEL_UPGRADE:
+			var cell := _state.board.get_cell(_origin)
+			var cost := _state.next_castle_level().cost if _is_castle else _building.upgrade_cost(cell.building_level + 1)
+			var back := UiFormat.amounts(_state.half_refund(cost), _resource_types)
+			_confirm_text.text = "Hủy nâng cấp? Hoàn lại %s; công trình giữ cấp hiện tại." % (back if not back.is_empty() else "không gì")
 		Action.MOVE:
 			_confirm_text.text = "Di chuyển %s? Bảng sẽ đóng; chọn ô mới trên bản đồ (miễn phí, đúng địa hình, trong lãnh thổ). Esc để hủy." % _building.display_name
 		Action.DEMOLISH:
 			var refund := UiFormat.amounts(_state.demolish_refund(_building.building_id), _resource_types)
-			_confirm_text.text = "Phá hủy %s? Hoàn lại %s. Không thể hoàn tác." % [_building.display_name,
-					refund if not refund.is_empty() else "không gì"]
+			_confirm_text.text = "Phá hủy %s? Hoàn lại %s. Không thể hoàn tác." % [
+					_building.display_name + (" đang xây" if _turns_left() > 0 else ""), refund if not refund.is_empty() else "không gì"]
 	_confirm_box.visible = true
 
 
@@ -208,15 +247,24 @@ func _on_confirm_pressed() -> void:
 	match action:
 		Action.UPGRADE:
 			if _is_castle and _state.upgrade_castle() == KingdomState.CastleResult.OK:
-				set_status("Thành chính đã lên cấp %d!" % _state.castle_level)
+				construction_started.emit("Bắt đầu nâng thành chính lên cấp %d, xong sau %d lượt." % [
+						_state.castle_level + 1, _state.castle_turns])
+				close()
 			elif not _is_castle and _state.upgrade_building(_origin) == KingdomState.UpgradeResult.OK:
-				set_status("%s đã lên cấp %d!" % [_building.display_name, _state.board.get_building_level(_origin)])
-			_refresh()
+				construction_started.emit("Bắt đầu nâng %s lên cấp %d, xong sau %d lượt." % [_building.display_name,
+						_state.board.get_building_level(_origin) + 1, _turns_left()])
+				close()
+			else:
+				_refresh()
+		Action.CANCEL_UPGRADE:
+			var refund := _state.cancel_castle_upgrade() if _is_castle else _state.cancel_upgrade(_origin)
+			demolished.emit("Đã hủy nâng cấp %s" % ("thành chính" if _is_castle else _building.display_name), refund)
+			close()
 		Action.MOVE:
 			move_requested.emit(_origin)
 			close()
 		Action.DEMOLISH:
-			demolished.emit(_building.display_name, _state.demolish(_origin))
+			demolished.emit("Đã phá hủy %s" % _building.display_name, _state.demolish(_origin))
 			close()
 		Action.CUSTOM:
 			_custom.call()

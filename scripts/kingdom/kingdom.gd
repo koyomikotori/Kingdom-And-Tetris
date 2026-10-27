@@ -4,7 +4,7 @@ extends Node2D
 const NO_SELECTION := -1
 const NO_BUILDING: StringName = &""
 const NO_MOVE := Vector2i(-1, -1)
-## Short titles: four tabs share the 300 px side panel.
+## Short titles: four tabs of equal width share the 340 px side panel (_build_tab_buttons).
 const TAB_TITLES: Array[String] = ["Đất", "Xây dựng", "Quân đội", "Tướng sĩ"]
 
 @export var board_size := 12
@@ -64,8 +64,7 @@ func _ready() -> void:
 	var units := UnitData.load_all()
 	_build_resource_labels()
 	_build_officers_tab()
-	for i in TAB_TITLES.size():
-		tabs.set_tab_title(i, TAB_TITLES[i])
+	_build_tab_buttons()
 
 	# A game picked in the main menu, or a new one.
 	var game := GameLaunch.take_pending_game()
@@ -90,12 +89,12 @@ func _ready() -> void:
 	state.turn_started.connect(_on_turn_started)
 
 	build_panel.setup(_buildings, _resource_types)
-	build_panel.building_toggled.connect(_toggle_building)
+	build_panel.build_window_requested.connect(_open_build_window)
 	state.castle_changed.connect(_refresh_economy)
 	state.generals.changed.connect(_refresh_economy)
 	state.advisors.changed.connect(_refresh_economy)
 	army_panel.setup(units, _resource_types)
-	army_panel.recruit_requested.connect(_on_recruit_requested)
+	army_panel.recruit_window_requested.connect(_open_recruit_window)
 	army_panel.disband_requested.connect(_on_disband_requested)
 	tabs.tab_changed.connect(func(_tab: int) -> void: _clear_selection())
 	end_turn_button.pressed.connect(_on_end_turn_pressed)
@@ -160,11 +159,15 @@ func _open_building(origin: Vector2i) -> void:
 	window.move_requested.connect(func(from: Vector2i) -> void:
 		_moving_from = from
 		placement_status.text = "Chọn ô mới cho %s. Esc: hủy." % _moving_building().display_name)
-	window.demolished.connect(func(building_name: String, refund: Dictionary) -> void:
+	window.demolished.connect(func(what: String, refund: Dictionary) -> void:
 		var amounts: Dictionary[StringName, int] = {}
 		amounts.assign(refund)
 		var back := UiFormat.amounts(amounts, _resource_types)
-		placement_status.text = "Đã phá hủy %s.%s" % [building_name, " Hoàn lại %s." % back if not back.is_empty() else ""])
+		placement_status.text = "%s.%s" % [what, " Hoàn lại %s." % back if not back.is_empty() else ""]
+		_refresh_economy())
+	window.construction_started.connect(func(text: String) -> void:
+		placement_status.text = text
+		_refresh_economy())
 
 
 func _moving_building() -> BuildingData:
@@ -202,18 +205,27 @@ func _build_selected(coord: Vector2i) -> void:
 		placement_status.text = BuildRules.describe(result)
 		return
 	_toggle_building(NO_BUILDING)
-	# The cost is paid before the building is placed, so refresh again for the build tab's counts.
 	_refresh_economy()
-	placement_status.text = "Đã xây %s." % building.display_name
+	placement_status.text = "Đã đặt nền móng %s, xây xong sau %d lượt." % [building.display_name, building.build_turns]
 	_on_cell_hovered(coord)
 
 
-func _on_recruit_requested(unit_id: StringName) -> void:
-	var unit := state.units[unit_id]
-	var result := state.recruit(unit_id)
-	placement_status.text = "Đã tuyển 1 đơn vị %s (+%d lính)." % [unit.display_name, unit.squad_size] \
-			if result == RecruitmentRules.Result.OK \
-			else RecruitmentRules.describe(result, unit, _buildings, _terrains)
+## The build shop in the middle of the screen (GDD §8, M12d); choosing a building enters build mode.
+func _open_build_window() -> void:
+	_clear_selection()
+	var window := BuildWindow.new()
+	$UI.add_child(window)
+	window.open(state)
+	window.building_chosen.connect(func(building_id: StringName) -> void:
+		tabs.current_tab = 1
+		_toggle_building(building_id))
+
+
+func _open_recruit_window() -> void:
+	_clear_selection()
+	var window := RecruitWindow.new()
+	$UI.add_child(window)
+	window.open(state)
 
 
 func _on_disband_requested(squad: Army.Squad) -> void:
@@ -232,6 +244,8 @@ func _on_end_turn_pressed() -> void:
 	var upkeep := UiFormat.amounts(report.upkeep, _resource_types)
 	if not upkeep.is_empty():
 		lines.append("Nuôi quân: %s." % upkeep)
+	for entry: Dictionary in report.completed:
+		lines.append("%s đã %s." % [entry.name, "lên cấp %d" % entry.level if entry.upgrade else "xây xong"])
 	for unit_id: StringName in report.deserted:
 		lines.append("%d %s bỏ đi vì thiếu lương thực!" % [report.deserted[unit_id], state.units[unit_id].display_name])
 	var replenished := _unit_amounts(report.replenished)
@@ -532,7 +546,6 @@ func _select(index: int) -> void:
 	_selected = index
 	if index != NO_SELECTION and _selected_building != NO_BUILDING:
 		_selected_building = NO_BUILDING
-		build_panel.set_selected(NO_BUILDING)
 	for i in piece_list.get_child_count():
 		(piece_list.get_child(i) as PieceCard).set_pressed_no_signal(i == _selected)
 	placement_status.text = "" if _selected == NO_SELECTION else "Nhấn chuột trái lên bản đồ để đặt. Esc: bỏ chọn."
@@ -544,7 +557,6 @@ func _toggle_building(building_id: StringName) -> void:
 	_selected_building = NO_BUILDING if building_id == _selected_building else building_id
 	if _selected_building != NO_BUILDING and _selected != NO_SELECTION:
 		_select(NO_SELECTION)
-	build_panel.set_selected(_selected_building)
 	placement_status.text = "" if _selected_building == NO_BUILDING \
 			else "Nhấn chuột trái lên bản đồ để xây. Esc: bỏ chọn."
 	_update_ghost()
@@ -581,7 +593,7 @@ func _update_ghost() -> void:
 		var building := _buildings[_selected_building]
 		var origin := coord - _building_anchor(building)
 		var result := BuildRules.check(state.board, state.stockpile, building, origin, state.castle_level,
-				state.building_cost(building))
+				state.building_cost(building), state.has_free_builder())
 		board_view.show_building_ghost(building, origin, result == BuildRules.Result.OK)
 		placement_status.text = BuildRules.describe(result)
 		return
@@ -603,6 +615,46 @@ func _update_ghost() -> void:
 ## The cell of a building that sits under the mouse cursor.
 func _building_anchor(building: BuildingData) -> Vector2i:
 	return (building.size - Vector2i.ONE) / 2
+
+
+## Tab buttons of equal width above the tab pages (GDD §8, M12d), drawn like the theme's tabs.
+func _build_tab_buttons() -> void:
+	tabs.tabs_visible = false
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 2)
+	var parent := tabs.get_parent()
+	parent.add_child(row)
+	parent.move_child(row, tabs.get_index())
+	var group := ButtonGroup.new()
+	var buttons: Array[Button] = []
+	for i in TAB_TITLES.size():
+		var button := Button.new()
+		button.text = TAB_TITLES[i]
+		button.toggle_mode = true
+		button.button_group = group
+		button.focus_mode = Control.FOCUS_NONE
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.add_theme_font_size_override("font_size", 14)
+		# The wooden buttons' text outline smudges the dark ink of the selected (paper) tab.
+		button.add_theme_constant_override("outline_size", 0)
+		var selected := tabs.get_theme_stylebox("tab_selected")
+		var unselected := tabs.get_theme_stylebox("tab_unselected")
+		for style in ["normal", "hover", "disabled"]:
+			button.add_theme_stylebox_override(style, unselected)
+		button.add_theme_stylebox_override("pressed", selected)
+		button.add_theme_stylebox_override("hover_pressed", selected)
+		button.add_theme_color_override("font_color", tabs.get_theme_color("font_unselected_color"))
+		button.add_theme_color_override("font_hover_color", tabs.get_theme_color("font_hovered_color"))
+		button.add_theme_color_override("font_pressed_color", tabs.get_theme_color("font_selected_color"))
+		button.add_theme_color_override("font_hover_pressed_color", tabs.get_theme_color("font_selected_color"))
+		button.pressed.connect(func() -> void: tabs.current_tab = i)
+		row.add_child(button)
+		buttons.append(button)
+	var sync := func(tab: int) -> void:
+		for i in buttons.size():
+			buttons[i].set_pressed_no_signal(i == tab)
+	tabs.tab_changed.connect(sync)
+	sync.call(tabs.current_tab)
 
 
 ## The "Tướng sĩ" tab (GDD §13, M12c): built in code after the scene's three tabs.
@@ -663,6 +715,7 @@ func _refresh_economy() -> void:
 	build_panel.refresh(state)
 	officers_panel.refresh(state)
 	board_view.castle_level = state.castle_level
+	board_view.castle_turns = state.castle_turns
 
 
 func _income_source_text(entry: Dictionary) -> String:
@@ -707,9 +760,11 @@ func _describe_cell(cell: CellData) -> String:
 		production = amounts if not amounts.is_empty() else "Không"
 	var building := "Không"
 	if cell.building_id == BoardData.CASTLE_ID:
-		building = "Thành chính"
+		building = "Thành chính" + (" (đang nâng cấp, còn %d lượt)" % state.castle_turns if state.castle_turns > 0 else "")
 	elif cell.has_building():
 		var data: BuildingData = _buildings.get(cell.building_id)
 		building = data.display_name if data != null else String(cell.building_id)
+		if cell.is_constructing():
+			building += " (%s, còn %d lượt)" % ["đang nâng cấp" if cell.building_upgrading else "đang xây", cell.building_turns]
 	return "Ô (%d, %d)\nĐịa hình: %s\nSở hữu: %s\nSản lượng mỗi lượt: %s\nCông trình: %s" % [
 		cell.coord.x, cell.coord.y, terrain, "Có" if cell.owned else "Không", production, building]
