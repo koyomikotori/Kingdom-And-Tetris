@@ -3,27 +3,33 @@ wood + paper UI frames. Everything is drawn here from code, so running the scrip
 the whole set with the same palette. Hand-drawn PNGs can replace any output file (same name).
 
 Run from the project folder:  python tools/art/generate.py
-Needs Pillow. Writes into assets/. Board art is drawn at its pixel size (16×16 tiles) and the game
+Needs Pillow. Writes into assets/. Board art is drawn at its pixel size (24×24 tiles, 16×16 buildings) and the game
 scales it ×2 with nearest filtering; icons and UI frames are written already scaled ×2.
 """
 
 import random
 
-from pixel import ASSETS, CLEAR, P, UI_SCALE, Canvas, speckle, speckle_area
+from pixel import ASSETS, CLEAR, P, UI_SCALE, Canvas, hex_color, speckle, speckle_area
 import battle_art
 import item_art
 import portrait_art
 import world_art
+import map_art
 
 
-# --- Tiles (16×16, seamless, no outline) -------------------------------------------------------
+# --- Tiles (24×24, seamless, no outline) -------------------------------------------------------
+# Cells are 48 px on screen (M13c): tiles are drawn at 24×24 so their pixels match the ×2 buildings,
+# which stand in the middle of the cell with room around them for the walkers.
+
+TILE = 24
+
 
 def tile_grass(seed: int = 1) -> Canvas:
     rng = random.Random(seed)
-    c = Canvas(16, 16, P["grass"])
-    speckle(c, rng, [P["grass_dark"], P["grass_light"]], 22)
-    for _ in range(3):  # small tufts
-        x, y = rng.randrange(1, 14), rng.randrange(2, 15)
+    c = Canvas(TILE, TILE, P["grass"])
+    speckle(c, rng, [P["grass_dark"], P["grass_light"]], 50)
+    for _ in range(6):  # small tufts
+        x, y = rng.randrange(1, TILE - 3), rng.randrange(2, TILE - 1)
         c.px(x, y, P["grass_dark"])
         c.px(x + 1, y - 1, P["grass_dark"])
         c.px(x + 2, y, P["grass_dark"])
@@ -32,18 +38,18 @@ def tile_grass(seed: int = 1) -> Canvas:
 
 def tile_farmland() -> Canvas:
     """A rice paddy: raised earth bund around water with rows of rice."""
-    c = Canvas(16, 16, P["paddy_water"])
-    c.rect(1, 1, 14, 14, P["paddy"])
-    for y in range(2, 15, 3):
-        for x in range(2, 15, 2):
+    c = Canvas(TILE, TILE, P["paddy_water"])
+    c.rect(1, 1, TILE - 2, TILE - 2, P["paddy"])
+    for y in range(2, TILE - 1, 3):
+        for x in range(2, TILE - 1, 2):
             c.px(x, y, P["paddy_dark"])
             c.px(x, y - 1, P["grass_light"])
-    c.hline(0, 15, 0, P["bund"])
-    c.vline(0, 0, 15, P["bund"])
-    c.hline(0, 15, 15, P["bund_dark"])
-    c.vline(15, 0, 15, P["bund_dark"])
-    c.px(6, 4, P["paddy_water"])
-    c.px(11, 10, P["paddy_water"])
+    c.hline(0, TILE - 1, 0, P["bund"])
+    c.vline(0, 0, TILE - 1, P["bund"])
+    c.hline(0, TILE - 1, TILE - 1, P["bund_dark"])
+    c.vline(TILE - 1, 0, TILE - 1, P["bund_dark"])
+    for x, y in ((6, 4), (15, 9), (9, 16), (18, 19)):
+        c.px(x, y, P["paddy_water"])
     return c
 
 
@@ -58,14 +64,22 @@ def tree(c: Canvas, x: int, y: int) -> None:
     shape.px(5, 5, P["leaf_dark"])
     shape.px(6, 4, P["leaf_dark"])
     shape.outline(P["leaf_dark"])
-    c.paste(shape, x - 1, y - 1)
+    c.paste(shape, x - 1, y - 1) if x >= 1 and y >= 1 else _paste_clipped(c, shape, x - 1, y - 1)
+
+
+def _paste_clipped(c: Canvas, shape: Canvas, x: int, y: int) -> None:
+    for yy in range(shape.height):
+        for xx in range(shape.width):
+            color = shape.get(xx, yy)
+            if color[3] and 0 <= x + xx < c.width and 0 <= y + yy < c.height:
+                c.px(x + xx, y + yy, color)
 
 
 def tile_forest() -> Canvas:
     rng = random.Random(7)
-    c = Canvas(16, 16, P["grass_dark"])
-    speckle(c, rng, [P["leaf_dark"], P["grass"]], 16)
-    for x, y in ((1, 0), (8, -1), (4, 6), (10, 7), (-2, 8)):
+    c = Canvas(TILE, TILE, P["grass_dark"])
+    speckle(c, rng, [P["leaf_dark"], P["grass"]], 36)
+    for x, y in ((1, 0), (9, -1), (17, 1), (5, 7), (13, 8), (20, 10), (-2, 11), (8, 15), (16, 16), (1, 17)):
         tree(c, x, y)
     return c
 
@@ -86,54 +100,85 @@ def rock(c: Canvas, x: int, y: int, w: int, h: int) -> None:
 
 def tile_hill() -> Canvas:
     rng = random.Random(3)
-    c = Canvas(16, 16, P["grass"])
-    speckle(c, rng, [P["grass_dark"], P["grass_light"]], 14)
-    rock(c, 2, 3, 10, 8)
-    rock(c, 9, 9, 6, 5)
-    rock(c, 1, 11, 4, 3)
+    c = Canvas(TILE, TILE, P["grass"])
+    speckle(c, rng, [P["grass_dark"], P["grass_light"]], 30)
+    rock(c, 3, 4, 13, 10)
+    rock(c, 14, 13, 8, 7)
+    rock(c, 2, 16, 6, 4)
     return c
 
 
 def tile_wild() -> Canvas:
     rng = random.Random(5)
-    c = Canvas(16, 16, P["wild"])
-    speckle(c, rng, [P["wild_dot"], P["wild_dark"]], 26)
+    c = Canvas(TILE, TILE, P["wild"])
+    speckle(c, rng, [P["wild_dot"], P["wild_dark"]], 58)
     return c
 
 
 def key_frame() -> Canvas:
     """Drawn over key cells, above buildings, so ×2 cells stay visible: thick gold corner brackets
     and a small diamond in the top-left corner."""
-    c = Canvas(16, 16)
-    for x0, y0, dx, dy in ((0, 0, 1, 1), (15, 0, -1, 1), (0, 15, 1, -1), (15, 15, -1, -1)):
-        for d in range(5):
+    c = Canvas(TILE, TILE)
+    last = TILE - 1
+    for x0, y0, dx, dy in ((0, 0, 1, 1), (last, 0, -1, 1), (0, last, 1, -1), (last, last, -1, -1)):
+        for d in range(6):
             for w in range(2):
                 c.px(x0 + dx * d, y0 + dy * w, P["gold"])
                 c.px(x0 + dx * w, y0 + dy * d, P["gold"])
         c.px(x0, y0, P["gold_light"])
-    for dy in range(-2, 3):  # mini diamond centered at (4, 4)
+    for dy in range(-2, 3):  # mini diamond centered at (5, 5)
         half = 2 - abs(dy)
-        c.hline(4 - half, 4 + half, 4 + dy, P["gold_light"] if dy < 0 else P["gold"])
+        c.hline(5 - half, 5 + half, 5 + dy, P["gold_light"] if dy < 0 else P["gold"])
     c.outline()
     return c
 
 
 def key_marker() -> Canvas:
     """Gold diamond for key cells (◆), drawn over the tile."""
-    c = Canvas(16, 16)
+    c = Canvas(TILE, TILE)
+    m = TILE // 2
     for dy in range(-3, 4):
         half = 3 - abs(dy)
-        c.hline(8 - half - 1, 8 + half - 1, 8 + dy - 1, P["gold"])
-    c.px(6, 6, P["gold_light"])
-    c.px(7, 5, P["gold_light"])
-    c.px(7, 6, P["gold_light"])
-    c.px(8, 9, P["gold_dark"])
-    c.px(7, 10, P["gold_dark"])
+        c.hline(m - half - 1, m + half - 1, m + dy - 1, P["gold"])
+    c.px(m - 2, m - 2, P["gold_light"])
+    c.px(m - 1, m - 3, P["gold_light"])
+    c.px(m - 1, m - 2, P["gold_light"])
+    c.px(m, m + 1, P["gold_dark"])
+    c.px(m - 1, m + 2, P["gold_dark"])
     c.outline()
     return c
 
 
 # --- Buildings (transparent, outlined) ----------------------------------------------------------
+# Each building also has an idle loop of ANIM_FRAMES frames (M13c), saved as "<id>_anim.png"; frame 0
+# is the still picture.
+
+ANIM_FRAMES = 4
+SMOKE = hex_color("ece8e0", 225)
+SMOKE_DARK = hex_color("c8c2b8", 200)
+
+
+def smoke_puffs(c: Canvas, x: int, y: int, frame: int) -> None:
+    """Two puffs rising from (x, y) and drifting right, one loop over ANIM_FRAMES frames. Drawn after
+    the outline so the smoke stays soft."""
+    for i in range(2):
+        k = (frame + 2 * i) % ANIM_FRAMES
+        yy = y - k
+        if yy < 0:
+            continue
+        c.px(x + k // 2, yy, SMOKE if k < 3 else SMOKE_DARK)
+        if k >= 2:
+            c.px(x + k // 2 + 1, yy, SMOKE_DARK)
+
+
+def anim_strip(draw) -> Canvas:
+    first = draw(0)
+    out = Canvas(first.width * ANIM_FRAMES, first.height)
+    for f in range(ANIM_FRAMES):
+        out.paste(draw(f) if f else first, f * first.width, 0)
+    return out
+
+
 
 def curved_roof(c: Canvas, x: int, y: int, w: int, h: int) -> None:
     """East Asian roof: tiled, wider at the eaves, eave tips curling up."""
@@ -168,7 +213,7 @@ def tower(c: Canvas, x: int, y: int, level: int) -> None:
         crenels(c, x, x + 6, y + 1)
 
 
-def castle(level: int) -> Canvas:
+def castle(level: int, frame: int = 0) -> Canvas:
     """A walled fortress filling the 2×2 castle footprint (32×32): stone walls with battlements,
     four corner towers and a gate around a courtyard, and a keep in the middle that gains roof
     tiers, banners and gold trim with the castle level."""
@@ -215,13 +260,21 @@ def castle(level: int) -> Canvas:
     # Corner towers over the walls.
     for x, y in ((0, 3), (25, 3), (0, 20), (25, 20)):
         tower(c, x, y, level)
+    wave = frame % 2  # banners flutter: a dip in the middle on odd frames
     if level >= 2:  # banner on the keep
         c.vline(16, top - 4, top, P["wood_dark"])
         c.rect(17, top - 4, 3, 2, P["red"])
+        if wave:
+            c.px(18, top - 4, CLEAR)
+            c.px(18, top - 2, P["red"])
     if level >= 5:  # banners on the front towers
         for x in (3, 28):
             c.vline(x, 14, 18, P["wood_dark"])
-            c.rect(x + 1 if x < 16 else x - 3, 14, 3, 2, P["red"])
+            left = x + 1 if x < 16 else x - 3
+            c.rect(left, 14, 3, 2, P["red"])
+            if wave:
+                c.px(left + 1, 14, CLEAR)
+                c.px(left + 1, 16, P["red"])
     if level >= 6:  # gold trim on every roof ridge
         for y in range(c.height):
             for x in range(c.width):
@@ -244,7 +297,7 @@ def hall(roof: str, roof_dark: str, wall_w: int = 12) -> Canvas:
     return c
 
 
-def barracks() -> Canvas:
+def barracks(frame: int = 0) -> Canvas:
     c = hall("red", "red_dark", 12)
     c.rect(7, 10, 3, 4, P["door"])
     c.rect(4, 10, 2, 2, P["door"])
@@ -253,11 +306,14 @@ def barracks() -> Canvas:
     c.px(14, 1, P["rock_light"])
     c.rect(1, 3, 1, 10, P["wood_dark"])  # banner pole
     c.rect(2, 3, 3, 3, P["roof"])
+    if frame % 2:  # the banner flutters
+        c.px(4, 3, CLEAR)
+        c.px(4, 6, P["roof"])
     c.outline()
     return c
 
 
-def watchtower() -> Canvas:
+def watchtower(frame: int = 0) -> Canvas:
     c = Canvas(16, 16)
     for x in (5, 10):
         c.vline(x, 6, 14, P["wood_dark"])
@@ -271,10 +327,12 @@ def watchtower() -> Canvas:
         c.hline(3 + 2 - row, 12 - 2 + row, row, P["red"] if row < 2 else P["red_dark"])
     c.px(7, 3, P["door"])
     c.outline()
+    # A lamp flickers in the lookout.
+    c.px(7, 3, (P["gold"], P["gold_light"], P["gold"], P["red_light"])[frame])
     return c
 
 
-def farm() -> Canvas:
+def farm(frame: int = 0) -> Canvas:
     c = Canvas(16, 16)
     c.rect(2, 9, 9, 5, P["wall"])
     c.rect(5, 10, 2, 4, P["door"])
@@ -284,11 +342,13 @@ def farm() -> Canvas:
     c.ellipse(13, 12, 2.6, 2.6, P["thatch"])  # haystack
     c.px(12, 11, P["thatch_dark"])
     c.px(14, 13, P["thatch_dark"])
+    c.vline(9, 5, 6, P["stone_dark"])  # chimney
     c.outline()
+    smoke_puffs(c, 9, 3, frame)
     return c
 
 
-def lumber_mill() -> Canvas:
+def lumber_mill(frame: int = 0) -> Canvas:
     c = hall("wood", "wood_dark", 9)
     c.rect(5, 10, 2, 4, P["door"])
     for i, y in enumerate((11, 13)):  # log pile
@@ -299,10 +359,14 @@ def lumber_mill() -> Canvas:
     c.vline(1, 8, 13, P["rock_light"])  # saw blade leaning on the wall
     c.vline(2, 9, 12, P["rock"])
     c.outline()
+    c.px(1, 8 + (frame * 2) % 6, P["white"])  # a glint runs down the blade
+    if frame % 2:  # sawdust by the log pile
+        c.px(10, 10, P["wood_light"])
+        c.px(12, 9, P["wood_light"])
     return c
 
 
-def mine() -> Canvas:
+def mine(frame: int = 0) -> Canvas:
     c = Canvas(16, 16)
     c.ellipse(8, 11, 7.2, 5.6, P["rock"])
     for y in range(c.height):
@@ -318,12 +382,16 @@ def mine() -> Canvas:
     c.px(12, 12, P["ore"])
     c.px(13, 10, P["ore_light"])
     c.outline()
+    # Ore glints in turn, and a lamp glows in the tunnel.
+    spots = ((13, 10), (12, 12), (3, 8), (12, 12))
+    c.px(*spots[frame], P["white"])
+    c.px(7 + frame % 2, 12, P["gold"])
     return c
 
 
 # --- Military buildings (GDD §8, M13) ------------------------------------------------------------
 
-def war_stable() -> Canvas:
+def war_stable(frame: int = 0) -> Canvas:
     """A long thatched stable with a horse looking out of its stall and a hay bale by the door."""
     c = Canvas(16, 16)
     c.rect(1, 8, 13, 6, P["wood"])
@@ -334,9 +402,10 @@ def war_stable() -> Canvas:
         inset = 3 - row
         c.hline(inset, 14 - inset, 4 + row, P["thatch"] if row % 2 == 0 else P["thatch_dark"])
     c.rect(3, 9, 3, 4, P["door"])  # stall with a horse head
-    c.rect(4, 9, 2, 2, P["horse"])
-    c.px(5, 11, P["horse_dark"])
-    c.px(3, 9, P["mane"])
+    bob = 1 if frame in (1, 2) else 0  # the horse nods
+    c.rect(4, 9 + bob, 2, 2, P["horse"])
+    c.px(5, 11 + bob if bob == 0 else 11, P["horse_dark"])
+    c.px(3, 9 + bob, P["mane"])
     c.rect(9, 10, 3, 4, P["door"])
     c.hline(8, 12, 10, P["wood_light"])  # stall bar
     c.ellipse(14, 13, 1.8, 1.6, P["thatch"])
@@ -345,7 +414,7 @@ def war_stable() -> Canvas:
     return c
 
 
-def archery_range() -> Canvas:
+def archery_range(frame: int = 0) -> Canvas:
     """A small roofed shed and a straw target with red and white rings on a stand, an arrow in it."""
     c = Canvas(16, 16)
     c.rect(1, 9, 6, 5, P["wall"])
@@ -359,13 +428,18 @@ def archery_range() -> Canvas:
     c.ellipse(12, 7, 2.4, 2.4, P["white"])
     c.ellipse(12, 7, 1.4, 1.4, P["red"])
     c.px(12, 7, P["gold"])
-    c.hline(8, 11, 6, P["wood_light"])  # arrow stuck in the target
-    c.px(8, 5, P["white"])
+    if frame == 0:
+        c.hline(8, 11, 6, P["wood_light"])  # arrow stuck in the target
+        c.px(8, 5, P["white"])
     c.outline()
+    if frame in (2, 3):  # the next arrow flies in from the shed
+        x = 4 if frame == 2 else 6
+        c.hline(x, x + 2, 6, P["wood_light"])
+        c.px(x + 3, 6, P["rock_light"])
     return c
 
 
-def martial_hall() -> Canvas:
+def martial_hall(frame: int = 0) -> Canvas:
     """A red-roofed training hall with a weapon rack (spear, dao, halberd) and a war banner."""
     c = hall("red", "red_dark", 10)
     c.rect(4, 10, 3, 4, P["door"])
@@ -380,11 +454,14 @@ def martial_hall() -> Canvas:
     c.vline(1, 2, 13, P["wood_dark"])  # banner
     c.rect(2, 2, 2, 4, P["gold"])
     c.px(2, 6, P["gold_dark"])
+    if frame % 2:  # the banner flutters
+        c.px(3, 5, CLEAR)
+        c.px(4, 3, P["gold"])
     c.outline()
     return c
 
 
-def military_academy() -> Canvas:
+def military_academy(frame: int = 0) -> Canvas:
     """A two-tier blue-roofed academy with gold ridge tips and a small cannon on the yard."""
     c = Canvas(16, 16)
     c.rect(2, 8, 12, 5, P["wall"])
@@ -402,6 +479,13 @@ def military_academy() -> Canvas:
     c.px(14, 13, P["rock_dark"])
     c.ellipse(10, 14.5, 1.2, 1.2, P["wood_dark"])
     c.outline()
+    c.px(8, 0, (P["gold"], P["gold_light"], P["gold"], P["gold"])[frame])
+    if frame == 2:  # a practice shot from the yard cannon
+        c.px(15, 12, P["gold_light"])
+        c.px(15, 13, SMOKE)
+    elif frame == 3:
+        c.px(15, 11, SMOKE)
+        c.px(14, 11, SMOKE_DARK)
     return c
 
 
@@ -440,20 +524,21 @@ def turns_badge(turns: int) -> Canvas:
 def foundation() -> Canvas:
     """A cell of a new building's foundation: packed earth, corner stones and string lines."""
     rng = random.Random(9)
-    c = Canvas(16, 16, P["dirt"])
-    speckle(c, rng, [P["dirt_dark"], P["dirt_light"]], 30)
-    for x, y in ((1, 1), (12, 1), (1, 12), (12, 12)):
+    c = Canvas(TILE, TILE, P["dirt"])
+    speckle(c, rng, [P["dirt_dark"], P["dirt_light"]], 60)
+    far = TILE - 4
+    for x, y in ((1, 1), (far, 1), (1, far), (far, far)):
         c.rect(x, y, 3, 3, P["stone"])
         c.hline(x, x + 2, y, P["stone_light"])
         c.hline(x, x + 2, y + 2, P["stone_dark"])
-    c.hline(4, 11, 2, P["wood_light"])
-    c.hline(4, 11, 13, P["wood_light"])
-    c.vline(2, 4, 11, P["wood_light"])
-    c.vline(13, 4, 11, P["wood_light"])
+    c.hline(4, far - 1, 2, P["wood_light"])
+    c.hline(4, far - 1, TILE - 3, P["wood_light"])
+    c.vline(2, 4, far - 1, P["wood_light"])
+    c.vline(TILE - 3, 4, far - 1, P["wood_light"])
     return c
 
 
-def scaffold() -> Canvas:
+def scaffold(frame: int = 0) -> Canvas:
     """Bamboo scaffolding laid over a cell under construction (transparent between the poles)."""
     c = Canvas(16, 16)
     for x in (1, 14):
@@ -467,6 +552,17 @@ def scaffold() -> Canvas:
     for x in (1, 2, 13, 14):
         for y in (4, 11):
             c.px(x, y, P["rope"])
+    # A builder on the plank swings a hammer (M13c).
+    c.rect(7, 8, 2, 3, P["red_dark"])
+    c.rect(7, 6, 2, 2, hex_color("f2c9a0"))
+    c.hline(6, 9, 6, P["thatch"])
+    if frame % 2 == 0:
+        c.vline(10, 5, 7, P["wood_dark"])
+        c.px(10, 4, P["rock_dark"])
+    else:
+        c.hline(9, 11, 9, P["wood_dark"])
+        c.px(12, 9, P["rock_dark"])
+        c.px(12, 10, P["gold_light"])
     return c
 
 
@@ -663,6 +759,14 @@ def main() -> None:
         turns_badge(turns).save(f"buildings/turns_{turns}.png")
     foundation().save("buildings/foundation.png")
     scaffold().save("buildings/scaffold.png")
+    anim_strip(scaffold).save("buildings/scaffold_anim.png")
+    for level in range(1, 7):
+        anim_strip(lambda f, lv=level: castle(lv, f)).save(f"buildings/castle_{level}_anim.png")
+    for name, draw in (("barracks", barracks), ("watchtower", watchtower), ("farm", farm),
+                       ("lumber_mill", lumber_mill), ("mine", mine), ("war_stable", war_stable),
+                       ("archery_range", archery_range), ("martial_hall", martial_hall),
+                       ("military_academy", military_academy)):
+        anim_strip(draw).save(f"buildings/{name}_anim.png")
     barracks().save("buildings/barracks.png")
     watchtower().save("buildings/watchtower.png")
     farm().save("buildings/farm.png")
@@ -685,6 +789,7 @@ def main() -> None:
     item_art.draw_all()
     portrait_art.draw_all()
     world_art.draw_all()
+    map_art.draw_all()
     print("Art written to", ASSETS)
 
 

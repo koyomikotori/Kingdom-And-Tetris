@@ -342,7 +342,7 @@ def item_frames() -> list:
 
 # --- The forge (16×16 building) ---------------------------------------------------------------
 
-def forge() -> Canvas:
+def forge(frame: int = 0) -> Canvas:
     """A smithy: dark tile roof, stone chimney with a glow and smoke, an anvil by the open front."""
     c = Canvas(16, 16)
     c.rect(2, 8, 11, 6, P["wall"])
@@ -361,6 +361,11 @@ def forge() -> Canvas:
     c.rect(10, 12, 2, 2, K["iron_dark"])
     c.px(12, 11, K["iron"])
     c.outline()
+    # The fire flickers and sparks fly off the anvil (M13c).
+    c.px(5, 12, (K["tassel"], K["gold"], K["red_light"], K["gold"])[frame])
+    c.px(6, 11, (K["red_light"], K["tassel"], K["gold"], K["red_light"])[frame])
+    if frame in (1, 3):
+        c.px(11 + frame // 2, 10, K["gold"])
     return c
 
 
@@ -372,3 +377,7 @@ def draw_all() -> None:
     for rarity, canvas in enumerate(frames[1:]):
         canvas.save(f"items/frame_{rarity}.png")
     forge().save("buildings/forge.png")
+    strip = Canvas(16 * 4, 16)
+    for f in range(4):
+        strip.paste(forge(f), f * 16, 0)
+    strip.save("buildings/forge_anim.png")

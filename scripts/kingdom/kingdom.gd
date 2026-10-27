@@ -45,6 +45,8 @@ var _save_system := SaveSystem.new()
 var _pending_victory := Victory.NO_PATH
 
 @onready var board_view: BoardView = $BoardView
+## Walkers on the map (M13c), a child of the board view.
+var _map_life: MapLifeView
 @onready var camera: CameraController = $Camera
 @onready var cell_info_label: Label = %CellInfo
 @onready var side_panel: Control = %SidePanel
@@ -103,6 +105,10 @@ func _ready() -> void:
 		board_view.queue_redraw()
 		_focus_camera())
 	state.turn_started.connect(_on_turn_started)
+	_map_life = MapLifeView.new()
+	board_view.add_child(_map_life)
+	_map_life.setup(state)
+	_apply_settings()
 
 	build_panel.setup(_buildings, _resource_types)
 	build_panel.build_window_requested.connect(_open_build_window)
@@ -595,6 +601,13 @@ func _open_game_menu() -> void:
 	var menu := GameMenuWindow.new()
 	$UI.add_child(menu)
 	menu.open(state, _save_system, $UI)
+	menu.settings_changed.connect(_apply_settings)
+
+
+## Map effects on or off (GameSettings, M13c): building animations and the walkers.
+func _apply_settings() -> void:
+	board_view.animate = GameSettings.map_effects()
+	_map_life.visible = GameSettings.map_effects()
 
 
 func _show_battle_report(raid: Dictionary, extra_lines: Array[String] = []) -> void:
