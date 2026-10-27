@@ -10,7 +10,13 @@ signal cell_tapped(coord: Vector2i)
 ## A left-button drag: the map should follow (screen pixels).
 signal pan_dragged(relative: Vector2)
 
-const TILE_SIZE := 32
+## Cells are 48 px; buildings (16×16 art ×2) stand in their middle with room around them for the
+## walkers (M13c).
+const TILE_SIZE := 48
+## Buildings sit this much below the center of their cells (their roofs need the room above).
+const BUILDING_DROP := 4.0
+## Building idle loops (GameArt.building_anim) advance this many frames per second.
+const ANIM_FPS := 4.0
 const OFF_BOARD := Vector2i(-1, -1)
 ## Screen pixels a press may move and still count as a click.
 const TAP_SLOP := 12.0
@@ -69,6 +75,22 @@ var _ghost_origin := Vector2i.ZERO
 var _ghost_valid := false
 var _ghost_building: BuildingData
 var _buildings: Dictionary[StringName, BuildingData] = {}
+## Buildings play their idle loops (the map effects setting, M13c).
+var animate := true:
+	set(value):
+		animate = value
+		_anim_frame = 0
+		queue_redraw()
+var _anim_frame := 0
+var _anim_time := 0.0
+## Level and turns badges are drawn on this child, above the walkers (MapLifeView, z_index 0).
+var _badges := Node2D.new()
+
+
+func _ready() -> void:
+	_badges.z_index = 1
+	_badges.draw.connect(_draw_level_badges)
+	add_child(_badges)
 
 
 func setup(board: BoardData, terrains: Dictionary[StringName, TerrainData],
@@ -78,6 +100,26 @@ func setup(board: BoardData, terrains: Dictionary[StringName, TerrainData],
 	_buildings = buildings
 	_board.cell_changed.connect(func(_coord: Vector2i) -> void: queue_redraw())
 	queue_redraw()
+
+
+func _process(delta: float) -> void:
+	if not animate or _board == null:
+		return
+	_anim_time += delta
+	var frame := int(_anim_time * ANIM_FPS) % GameArt.BUILDING_ANIM_FRAMES
+	if frame != _anim_frame:
+		_anim_frame = frame
+		queue_redraw()
+
+
+## Where a building's picture goes: `art_size` (its texture) ×2, centered on its cells and a
+## little lower (BUILDING_DROP), never past them.
+static func art_rect(origin: Vector2i, cells: Vector2i, art_size: Vector2) -> Rect2:
+	var bounds := Rect2(cell_to_local(origin), Vector2(cells * TILE_SIZE))
+	var drawn := (art_size * GameArt.ART_SCALE).min(bounds.size)
+	var pos := bounds.position + (bounds.size - drawn) * 0.5 + Vector2(0, BUILDING_DROP)
+	pos.y = minf(pos.y, bounds.end.y - drawn.y)
+	return Rect2(pos, drawn)
 
 
 ## Floor division so that positions left of / above the board map to negative cells.
@@ -176,7 +218,7 @@ func _draw() -> void:
 	_draw_territory_border()
 	_draw_buildings()
 	_draw_key_frames()
-	_draw_level_badges()
+	_badges.queue_redraw()
 	if show_coords:
 		_draw_coords()
 	if _ghost_piece != null:
@@ -219,7 +261,8 @@ func _draw_building_ghost() -> void:
 	var rect := Rect2(cell_to_local(_ghost_origin), Vector2(_ghost_building.size * TILE_SIZE))
 	var texture := GameArt.building(_ghost_building.building_id)
 	if texture != null:
-		draw_texture_rect(texture, rect, false, Color(1, 1, 1, GHOST_ALPHA))
+		draw_texture_rect(texture, art_rect(_ghost_origin, _ghost_building.size, texture.get_size()), false,
+				Color(1, 1, 1, GHOST_ALPHA))
 	else:
 		var fill := _ghost_building.color
 		fill.a = GHOST_ALPHA
@@ -301,14 +344,48 @@ func _draw_buildings() -> void:
 		var building: BuildingData = _buildings.get(cell.building_id)
 		var turns := castle_turns if is_castle else cell.building_turns
 		var new_building := turns > 0 and not is_castle and not cell.building_upgrading
+		var cells := Vector2i((bounds.size / TILE_SIZE).round())
 		if new_building:
 			_tile_over(cell.building_origin, GameArt.construction("foundation"))
 		elif texture != null:
-			draw_texture_rect(texture, bounds, false, Color(1, 1, 1, UPGRADING_ALPHA) if turns > 0 else Color.WHITE)
+			var rect := art_rect(cell.building_origin, cells, texture.get_size())
+			var tint := Color(1, 1, 1, UPGRADING_ALPHA) if turns > 0 else Color.WHITE
+			var anim: Texture2D = null
+			if animate and turns == 0:
+				anim = GameArt.castle_anim(castle_level) if is_castle else GameArt.building_anim(cell.building_id)
+			if anim != null:
+				_draw_frame(anim, rect, _anim_frame, tint)
+			else:
+				draw_texture_rect(texture, rect, false, tint)
 		else:
-			draw_rect(bounds.grow(-4), building.color if building != null else Color.WHITE)
+			draw_rect(bounds.grow(-8), building.color if building != null else Color.WHITE)
 		if turns > 0:
-			_tile_over(cell.building_origin, GameArt.construction("scaffold"))
+			_draw_scaffold(cell.building_origin, cells)
+
+
+## Frame `frame` of a strip of GameArt.BUILDING_ANIM_FRAMES frames, stretched over `rect`.
+func _draw_frame(strip: Texture2D, rect: Rect2, frame: int, tint: Color = Color.WHITE) -> void:
+	var size := Vector2(strip.get_width() / float(GameArt.BUILDING_ANIM_FRAMES), strip.get_height())
+	draw_texture_rect_region(strip, rect, Rect2(Vector2(size.x * frame, 0), size), tint)
+
+
+## Scaffolding (with a builder hammering away, M13c) over a construction's picture: one 32 px
+## piece per cell it covers.
+func _draw_scaffold(origin: Vector2i, cells: Vector2i) -> void:
+	var still := GameArt.construction("scaffold")
+	if still == null:
+		return
+	var anim := GameArt.construction("scaffold_anim") if animate else null
+	var area := art_rect(origin, cells, Vector2(cells * 16))
+	var piece := area.size / Vector2(cells)
+	for y in cells.y:
+		for x in cells.x:
+			var rect := Rect2(area.position + piece * Vector2(x, y), piece)
+			if anim != null:
+				# Neighboring pieces hammer out of step.
+				_draw_frame(anim, rect, (_anim_frame + x + y) % GameArt.BUILDING_ANIM_FRAMES)
+			else:
+				draw_texture_rect(still, rect, false)
 
 
 ## `texture` drawn on every cell of the building at `origin`.
@@ -320,15 +397,18 @@ func _tile_over(origin: Vector2i, texture: Texture2D) -> void:
 
 
 ## Each production building's level on a small plate in its bottom-right corner, and the turns
-## a construction still needs in its top-left corner, drawn last so the key cell frames never hide them.
+## a construction still needs in its top-left corner, drawn on `_badges` so neither the key cell
+## frames nor the walkers ever hide them.
 func _draw_level_badges() -> void:
+	if _board == null:
+		return
 	for cell in _board.get_all_cells():
 		if not cell.has_building() or cell.coord != cell.building_origin:
 			continue
 		var turns := castle_turns if cell.building_id == BoardData.CASTLE_ID else cell.building_turns
 		var plate := GameArt.turns_badge(turns) if turns > 0 else null
 		if plate != null:
-			draw_texture_rect(plate, Rect2(_cell_rect(cell.coord).position - Vector2(2, 2),
+			_badges.draw_texture_rect(plate, Rect2(_cell_rect(cell.coord).position + Vector2(3, 3),
 					plate.get_size() * GameArt.ART_SCALE), false)
 		if cell.is_constructing() and not cell.building_upgrading:
 			continue
@@ -338,7 +418,7 @@ func _draw_level_badges() -> void:
 			continue
 		var badge_size := badge.get_size() * GameArt.ART_SCALE
 		var bounds := _cell_rect(cell.coord)
-		draw_texture_rect(badge, Rect2(bounds.end - badge_size + Vector2(2, 2), badge_size), false)
+		_badges.draw_texture_rect(badge, Rect2(bounds.end - badge_size - Vector2(3, 3), badge_size), false)
 
 
 func _draw_coords() -> void:

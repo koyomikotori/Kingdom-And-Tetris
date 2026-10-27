@@ -24,6 +24,7 @@ const TEST_FILES := [
 	"res://tests/test_construction.gd",
 	"res://tests/test_equipment.gd",
 	"res://tests/test_military.gd",
+	"res://tests/test_map_life.gd",
 ]
 
 

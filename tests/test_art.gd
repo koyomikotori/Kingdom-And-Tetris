@@ -7,7 +7,7 @@ func test_every_terrain_has_a_tile() -> void:
 		var texture := GameArt.terrain(terrain_id)
 		check(texture != null, "Tile for %s" % terrain_id)
 		if texture != null:
-			check_eq(texture.get_size(), Vector2(16, 16), "%s is 16×16" % terrain_id)
+			check_eq(texture.get_size(), Vector2(24, 24), "%s is 24×24 (M13c)" % terrain_id)
 	check(GameArt.terrain(&"") != null, "Wild land outside the kingdom")
 	check(GameArt.key_marker() != null, "Key cell marker")
 	check(GameArt.key_frame() != null, "Key cell frame (drawn over buildings)")

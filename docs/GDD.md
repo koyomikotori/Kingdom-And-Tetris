@@ -471,7 +471,7 @@ Save cũ: đơn vị Kiếm sĩ / Thương binh / Cung thủ trở thành bậc 
 
 **Tiện lợi (M13b, đã chốt):** bảng Tuyển lính chia theo loại (Tất cả / Kiếm / Thương / Đao thuẫn / Kỵ binh / Cung / Nỏ / Hỏa khí, nút xuống 2 hàng); tên lính tô màu theo bậc (nông dân nâu, tinh nhuệ bạc, hoàng gia vàng) ở bảng tuyển và tab Quân đội; loại chưa đủ công trình hiện mờ. Tên tướng và mưu sĩ tô màu theo sao như độ hiếm trang bị (1–2★ xám, 3★ xanh lá, 4★ xanh lam, 5★ tím, 6★ vàng); trong bảng thông tin tướng sĩ, phím ← → chuyển sang người trước / sau. Tự bổ sung quân giảm từ 25% xuống 10% mỗi lượt; quân lang tộc vẫn hồi +2 lính mỗi lượt.
 
-**Sắp làm (M13c):** bản đồ sinh động: ô to hơn để công trình có khoảng trống, chấm người dân / ngựa / lính đi lại giữa các công trình, animation cho từng công trình.
+**Bản đồ sinh động (M13c, đã chốt):** ô bản đồ 48 px (ô đất vẽ 24×24), công trình giữ cỡ 32 px đứng giữa ô nên quanh nó có lối đi. Trên các mép ô (khe giữa các công trình) có dân làng đi giữa thành chính và ruộng / xưởng gỗ / mỏ rồi vác lúa, gỗ, đá về; xe bò chở hàng từ mỏ và xưởng gỗ; lính tuần tra (1 tốp cho 2 đơn vị) từ doanh trại và công trình quân sự ra biên giới, mặc màu của bạn; ngựa quanh chuồng ngựa chiến và trang trại cấp 3; hươu ở rừng ngoài lãnh thổ; chim bay ngang. Mỗi công trình có một vòng animation nhỏ 4 khung (khói, cờ bay, lưỡi cưa, quặng lấp lánh, đầu ngựa, mũi tên bay vào bia, lửa lò rèn…), công trình đang xây có thợ gõ búa. Menu có nút "Hiệu ứng bản đồ: Bật/Tắt", lưu theo máy.
 
 **Để sau:** công trình sản xuất trên ô cỏ (×2 sản lượng) khi có tài nguyên mới; công trình Hành chính (Sở cảnh sát, Quan phủ, Chính viện).
 

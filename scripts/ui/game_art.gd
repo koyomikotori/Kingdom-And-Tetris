@@ -12,6 +12,7 @@ const EFFECT_DIR := "res://assets/effects/"
 const PORTRAIT_DIR := "res://assets/portraits/"
 const WORLD_DIR := "res://assets/world/"
 const ITEM_DIR := "res://assets/items/"
+const MAP_DIR := "res://assets/map/"
 ## Hand-drawn portraits that replace the generated one: <officer name>.png.
 const CUSTOM_PORTRAIT_DIR := "res://assets/portraits/custom/"
 ## Hand-drawn / AI portraits (96×96, transparent, no frame) shared out to officers by group:
@@ -23,8 +24,11 @@ const LAYERS: Array[String] = ["", "_team", "_hair", "_accent"]
 ## Rows of every unit sprite sheet, top to bottom (tools/art/battle_art.py STATES); 2 frames each.
 const UNIT_STATES: Array[StringName] = [&"stand", &"walk", &"attack", &"fall", &"cheer"]
 const UNIT_FRAMES := 2
-## Board art is drawn at 16×16 and shown ×2 (BoardView.TILE_SIZE).
+## Board art is shown ×2: 24×24 tiles fill a cell (BoardView.TILE_SIZE), 16×16 buildings stand in
+## its middle (M13c).
 const ART_SCALE := 2
+## Frames in every building's idle loop ("<id>_anim.png", tools/art/generate.py ANIM_FRAMES).
+const BUILDING_ANIM_FRAMES := 4
 
 ## Keeps every texture alive: canvas draw commands only hold the texture's RID, so a texture
 ## loaded inside _draw() and dropped right after would render white.
@@ -65,6 +69,21 @@ static func castle(level: int) -> Texture2D:
 
 static func building(building_id: StringName) -> Texture2D:
 	return _load(BUILDING_DIR + String(building_id) + ".png")
+
+
+## The building's idle loop (BUILDING_ANIM_FRAMES frames side by side), or null (M13c).
+static func building_anim(building_id: StringName) -> Texture2D:
+	return _load(BUILDING_DIR + String(building_id) + "_anim.png")
+
+
+static func castle_anim(level: int) -> Texture2D:
+	return _load(BUILDING_DIR + "castle_%d_anim.png" % clampi(level, 1, 6))
+
+
+## A map walker strip (tools/art/map_art.py): &"villager_a", &"soldier" (+ "_team"), &"horse",
+## &"cart", &"deer", &"bird", &"carry_food"…
+static func map_sprite(sprite_id: StringName, layer: String = "") -> Texture2D:
+	return _load(MAP_DIR + String(sprite_id) + layer + ".png")
 
 
 static func level_badge(level: int) -> Texture2D:
