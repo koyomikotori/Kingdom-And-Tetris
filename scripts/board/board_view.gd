@@ -14,8 +14,10 @@ const GRID_COLOR := Color(0, 0, 0, 0.12)
 const TERRITORY_BORDER_COLOR := Color(1.0, 0.88, 0.4)
 const TERRITORY_SHADOW_COLOR := Color(0.17, 0.11, 0.07, 0.8)
 const HOVER_COLOR := Color(1, 1, 1, 0.9)
-## Land outside the kingdom is darkened.
+## Land outside the kingdom is darkened (wild land already has its own dull tile).
 const UNOWNED_TINT := Color(0.55, 0.55, 0.6)
+## Outline of the whole board, so wild land at the edges stands out from the background.
+const BOARD_EDGE_COLOR := Color(0.93, 0.85, 0.64, 0.7)
 const COORD_TEXT_COLOR := Color(1, 1, 1, 0.75)
 const COORD_FONT_SIZE := 8
 const KEY_MARKER_COLOR := Color(1.0, 0.85, 0.2)
@@ -129,6 +131,7 @@ func _draw() -> void:
 		return
 	for cell in _board.get_all_cells():
 		_draw_cell(cell)
+	draw_rect(Rect2(Vector2.ZERO, Vector2(_board.width, _board.height) * TILE_SIZE).grow(1), BOARD_EDGE_COLOR, false, 2.0)
 	_draw_territory_border()
 	_draw_buildings()
 	_draw_key_frames()
@@ -145,7 +148,7 @@ func _draw() -> void:
 
 func _draw_cell(cell: CellData) -> void:
 	var rect := _cell_rect(cell.coord)
-	var tint := Color.WHITE if cell.owned else UNOWNED_TINT
+	var tint := Color.WHITE if cell.owned or not cell.has_terrain() else UNOWNED_TINT
 	if not draw_terrain(self, rect, cell.terrain_id, tint):
 		draw_rect(rect, EMPTY_COLOR if not cell.has_terrain() else _terrain_color(cell.terrain_id) * tint)
 	draw_rect(rect, GRID_COLOR, false, 1.0)

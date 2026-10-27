@@ -495,7 +495,7 @@ Thang −100 → +100:
 
 **Sáp nhập:** khi người chơi thắng và sức mạnh của họ còn dưới 15% tối đa, họ đầu hàng:
 - Gia tộc bị sáp nhập (không còn giao thiệp).
-- **Bản đồ vương quốc nới rộng thêm 4 hàng/cột đất hoang về phía họ** (ví dụ 12×12 → 12×16). Người chơi tự đặt mảnh đất để chiếm.
+- **Bản đồ vương quốc nới rộng thêm 2 hàng/cột đất hoang về phía họ** (ví dụ 12×12 → 12×14; trước là 4, giảm để đất không dư thừa). Đất hoang vẽ màu ô liu nhạt và bản đồ có viền mép để thấy rõ phần mới. Người chơi tự đặt mảnh đất để chiếm.
 - Gia tộc ở xa có đường nối với họ trở thành **láng giềng mới cùng hướng** đó.
 
 **Nghị hòa:** thương thảo như hợp đồng, hiện khả năng đồng ý:
@@ -665,7 +665,7 @@ Lưu/tải được đưa lên trước sự kiện và tướng, vì trạng th
 
 **Phong cách:** **Đông Á cổ, tươi sáng kiểu Kairosoft**: thành mái ngói cong, tường đá, cờ hiệu; ruộng lúa, rừng tre / thông, đồi đá; lính đội nón, giáp vảy. Màu tươi, nét viền đậm, bảng màu chung cho cả game.
 
-**Độ phân giải:** ô bản đồ **16×16** hiện ở **32×32** (phóng ×2, lọc nearest để giữ nét pixel); lính 16×16; chân dung 48×48.
+**Độ phân giải:** ô bản đồ **16×16** hiện ở **32×32** (phóng ×2, lọc nearest để giữ nét pixel); lính 16×16; chân dung 96×96 (bộ phận vẽ sẵn 48×48 phóng ×2).
 
 **Giao diện:** **gỗ và giấy cuộn**: bảng nền giấy dó viền gỗ, nút gỗ nổi (thường / rê chuột / bấm / khóa), tab như thẻ treo, thanh trên cùng và cột bên phải nền gỗ. Dùng một `Theme` chung cho mọi bảng. **Font giữ nguyên** (đọc tiếng Việt rõ), chỉ đổi màu chữ và viền chữ cho hợp nền giấy; font pixel có thể thêm sau.
 
@@ -692,7 +692,7 @@ Lưu/tải được đưa lên trước sự kiện và tướng, vì trạng th
 - Danh sách: mỗi người một dòng với **hình pixel lúc ra trận** của chính người đó, tên, sao, chức vụ (Tổng tướng / Dự bị / Nội chính / Ngoại giao / Quân sự / chưa giữ chức), cấp, tình trạng (bị thương), dấu báo còn điểm cộng.
 - Bấm vào một người → bảng chi tiết giữa màn hình: **chân dung pixel** bên trái, 2 tab **Chỉ số** (chỉ số có thanh, cấp và kinh nghiệm, đặc tính hoặc bộ mưu kế, chức vụ và tác dụng, phí nuôi) và **Trang bị** (3 ô vũ khí / giáp / phụ kiện còn trống, ghi "sắp có" cho tới M12d); các nút bên dưới: tướng — Làm tổng tướng, cộng điểm, Sa thải; mưu sĩ — Giao chức, cộng điểm, Sa thải.
 - **Diện mạo** mỗi người (lưu trong bản lưu): giới tính (50% nam / 50% nữ, tên theo giới), màu da, kiểu tóc và màu tóc, kiểu mắt, lông mày, râu (nam), màu nhấn (mũ, lông trĩ, viền áo). Bản lưu cũ chưa có diện mạo thì tự tạo từ tên (luôn ra cùng một diện mạo).
-- **Chân dung 48×48** ghép từ bộ phận vẽ sẵn (mặt, mắt, mày, miệng, tóc sau / tóc trước, râu, mũ / trâm, áo), tô màu theo diện mạo; tướng mặc giáp, mưu sĩ mặc áo văn quan; sao cao có khung viền vàng. Chân dung vẽ tay / vẽ bằng AI (64×64, nền trong suốt, không khung) đặt vào `assets/portraits/pool/` theo nhóm (`general_m_01.png`, `advisor_f_02.png`…): mỗi người tự nhận một ảnh trong nhóm đúng loại và giới tính, cố định và lưu lại; game tự vẽ nền và khung; nhóm chưa có ảnh thì dùng chân dung ghép. Hướng dẫn: `docs/portrait_ai_guide.md`.
+- **Chân dung 96×96** ghép từ bộ phận vẽ sẵn (mặt, mắt, mày, miệng, tóc sau / tóc trước, râu, mũ / trâm, áo), tô màu theo diện mạo; tướng mặc giáp, mưu sĩ mặc áo văn quan; sao cao có khung viền vàng. Chân dung vẽ tay / vẽ bằng AI (96×96, nền trong suốt, không khung) đặt vào `assets/portraits/pool/` theo nhóm (`general_m_01.png`, `advisor_f_02.png`…): mỗi người tự nhận một ảnh trong nhóm đúng loại và giới tính, cố định và lưu lại; game tự vẽ nền và khung; nhóm chưa có ảnh thì dùng chân dung ghép. Hướng dẫn: `docs/portrait_ai_guide.md`.
 - **Hình ra trận theo người:** tướng và mưu sĩ có bản nam và nữ, tóc và màu nhấn theo diện mạo; trận đánh và danh sách dùng cùng hình.
 - **Bản đồ thế giới kiểu tranh cổ trên giấy:** nền giấy dó, núi, sông, rừng vẽ như bản đồ cổ; mỗi gia tộc là một tòa thành nhỏ cắm cờ màu của họ; đường nối là đường đất; biểu tượng chiến tranh / liên minh / bất tương xâm vẽ pixel.
 

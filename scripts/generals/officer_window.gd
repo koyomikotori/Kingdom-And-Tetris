@@ -26,11 +26,11 @@ func open(state: KingdomState, officer: Officer) -> void:
 	var left := VBoxContainer.new()
 	row.add_child(left)
 	var portrait := PortraitView.new()
-	portrait.setup(officer, 3)
+	portrait.setup(officer, 2)
 	left.add_child(portrait)
 	_role = _label("", 14)
 	_role.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_role.custom_minimum_size = Vector2(PortraitView.SIZE * 3, 0)
+	_role.custom_minimum_size = Vector2(PortraitView.SIZE * 2, 0)
 	left.add_child(_role)
 	var tabs := TabContainer.new()
 	tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL

@@ -13,7 +13,7 @@ const PORTRAIT_DIR := "res://assets/portraits/"
 const WORLD_DIR := "res://assets/world/"
 ## Hand-drawn portraits that replace the generated one: <officer name>.png.
 const CUSTOM_PORTRAIT_DIR := "res://assets/portraits/custom/"
-## Hand-drawn / AI portraits (64×64, transparent, no frame) shared out to officers by group:
+## Hand-drawn / AI portraits (96×96, transparent, no frame) shared out to officers by group:
 ## general_m_01.png, advisor_f_02.png… (docs/portrait_ai_guide.md).
 const PORTRAIT_POOL_DIR := "res://assets/portraits/pool/"
 ## Sprite sheet layers (tools/art/battle_art.py LAYER_SUFFIXES): base in full color, then grays

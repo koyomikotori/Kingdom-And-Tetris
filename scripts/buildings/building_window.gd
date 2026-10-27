@@ -13,7 +13,7 @@ signal demolished(building_name: String, refund: Dictionary)
 const ACCENT := UiPalette.ACCENT
 ## Height of the scrolling list in the castle's Chiêu hiền tab.
 const TAB_LIST_HEIGHT := 440
-const CANDIDATE_PORTRAIT_SCALE := 2
+const CANDIDATE_PORTRAIT_SCALE := 1
 
 enum Action { NONE, UPGRADE, MOVE, DEMOLISH, CUSTOM }
 

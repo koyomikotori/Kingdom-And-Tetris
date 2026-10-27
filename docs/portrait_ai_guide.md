@@ -16,11 +16,11 @@ Gợi ý: dùng **PixelLab hoặc Retro Diffusion** làm chính. Nếu muốn m�
 
 ## 2. Kích thước và định dạng
 
-- **Ảnh gốc 64×64 pixel** (pixel thật, không phải ảnh lớn được làm giống pixel). Đủ chỗ cho mắt anime, tóc và mũ, mà vẫn đúng chất pixel.
-- Game sẽ phóng **nguyên lần**: ×2 (128 px) trong Chiêu hiền, ×3 (192 px) trong bảng chi tiết, nên giữ nét pixel sắc.
+- **Ảnh gốc 96×96 pixel** (pixel thật, không phải ảnh lớn được làm giống pixel). Đủ chỗ cho mắt anime, tóc, mũ và hoa văn áo, mà vẫn đúng chất pixel.
+- Game hiện **nguyên lần**: ×1 (96 px) trong Chiêu hiền, ×2 (192 px) trong bảng chi tiết, nên giữ nét pixel sắc.
 - **PNG, nền trong suốt.** Game tự vẽ nền và khung (khung gỗ, khung vàng cho 4★ trở lên), nên ảnh không cần khung.
-- **Khung hình:** ngực trở lên (bust), mặt nhìn thẳng hoặc hơi nghiêng 3/4, đầu chiếm khoảng 1/2 chiều cao, chừa 3–4 pixel trống ở mép trên để mũ và lông trĩ không bị cắt.
-- **Tối đa khoảng 32 màu** mỗi ảnh, viền tối (nâu đen) 1 pixel.
+- **Khung hình:** ngực trở lên (bust), mặt nhìn thẳng hoặc hơi nghiêng 3/4, đầu chiếm khoảng 1/2 chiều cao, chừa khoảng 5 pixel trống ở mép trên để mũ và lông trĩ không bị cắt. Khung của game đè lên **4 pixel ngoài cùng** mỗi cạnh.
+- **Tối đa khoảng 48 màu** mỗi ảnh, viền tối (nâu đen) 1 pixel.
 
 ## 3. Prompt mẫu
 
@@ -29,7 +29,7 @@ Viết prompt bằng tiếng Anh (các mô hình hiểu tốt hơn). Giữ nguy�
 **Phần phong cách** (dùng cho mọi ảnh):
 
 ```
-pixel art portrait, 64x64, anime style, bust shot, facing viewer, clean 1px dark outline,
+pixel art portrait, 96x96, anime style, bust shot, facing viewer, clean 1px dark outline,
 limited palette, flat shading with 2-3 tones, crisp pixels, no anti-aliasing, transparent
 background, ancient East Asian setting, bright Kairosoft-like colors
 ```
@@ -75,8 +75,8 @@ background scenery, full body, extra fingers
 ## 5. Xử lý lại (bắt buộc với Midjourney / ChatGPT / Gemini)
 
 1. Mở ảnh trong **Aseprite** (hoặc LibreSprite, Pixelorama miễn phí).
-2. Thu nhỏ về **64×64** bằng chế độ **Nearest Neighbor** (không dùng Bilinear).
-3. Giảm còn **≤ 32 màu** (Sprite → Color Mode → Indexed), sửa vài pixel lỗi ở mắt và viền.
+2. Thu nhỏ về **96×96** bằng chế độ **Nearest Neighbor** (không dùng Bilinear).
+3. Giảm còn **≤ 48 màu** (Sprite → Color Mode → Indexed), sửa vài pixel lỗi ở mắt và viền.
 4. Xóa nền thành trong suốt, xuất **PNG**.
 
 ## 6. Đưa vào game
