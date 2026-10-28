@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ClanData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/diplomacy/clan_data.gd" id="1_clan"]
+
+[resource]
+script = ExtResource("1_clan")
+clan_id = &"red_banner"
+display_name = "Xích Kỳ Quân"
+description = "Đạo quân cờ đỏ chiếm giữ ngã tư giữa thiên hạ, sống nhờ chinh chiến."
+color = Color(0.41, 0.82, 0.48, 1)
+grid = Vector2i(2, 2)
+personality = 1
+military_strength = 155
+surplus = Array[StringName]([&"stone"])
+deficit = Array[StringName]([&"ore"])
+start_relation = -10
+base_relation = -15
+friends = Array[StringName]([&"bamboo_village"])
+army_units = Dictionary[StringName, float]({&"swordsman": 1.0, &"spearman": 1.0, &"archer": 1.0, &"elite_swordsman": 2.0, &"elite_spearman": 2.0, &"elite_archer": 2.0, &"shield_veteran": 1.0, &"crossbow_pro": 1.0, &"light_cavalry": 1.0})

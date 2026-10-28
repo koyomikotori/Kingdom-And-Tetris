@@ -6,10 +6,11 @@ extends RefCounted
 signal changed
 
 enum Tier { HOSTILE, TENSE, NEUTRAL, FRIENDLY, CLOSE }
-enum GiftResult { OK, EMPTY, CANNOT_AFFORD, LIMIT_REACHED, ANNEXED, TOO_SMALL }
-enum TradeResult { OK, REFUSED, SAME_RESOURCE, EMPTY, CANNOT_AFFORD, OVER_CAPACITY, TOO_SMALL }
+enum GiftResult { OK, EMPTY, CANNOT_AFFORD, LIMIT_REACHED, ANNEXED, TOO_SMALL, TOO_FAR }
+enum TradeResult { OK, REFUSED, SAME_RESOURCE, EMPTY, CANNOT_AFFORD, OVER_CAPACITY, TOO_SMALL, TOO_FAR }
 ## OK = the clan signed. DECLINED = valid offer, but the clan said no.
-enum ProposalResult { OK, DECLINED, REFUSED, SAME_RESOURCE, EMPTY, TOO_LARGE, BAD_DURATION, ALREADY_HAS, ASKED_THIS_TURN }
+enum ProposalResult { OK, DECLINED, REFUSED, SAME_RESOURCE, EMPTY, TOO_LARGE, BAD_DURATION, ALREADY_HAS, ASKED_THIS_TURN,
+		TOO_FAR }
 
 const TIER_NAMES: Array[String] = ["Thù địch", "Căng thẳng", "Trung lập", "Thân thiện", "Thân thiết"]
 ## Lowest relation of each tier above HOSTILE.
@@ -34,14 +35,13 @@ const MEMORY_TREATY: StringName = &"treaty"
 const MEMORY_EVENT: StringName = &"event"
 const MEMORY_OTHER: StringName = &"other"
 ## Lasting factors in relation_factors(), in display order.
-const LASTING_FACTORS: Array[StringName] = [&"base", &"wariness", &"agreement_bonus", &"alliance_bonus", &"pact_bonus"]
+const LASTING_FACTORS: Array[StringName] = [&"base", &"wariness", &"agreement_bonus", &"alliance_bonus"]
 ## Display names of the lasting factors, the memory sources and the clamp ("limit").
 const FACTOR_NAMES: Dictionary[StringName, String] = {
 	&"base": "Thiện cảm gốc",
 	&"wariness": "E dè vương quốc lớn mạnh",
 	&"agreement_bonus": "Đang có hợp đồng giao thương",
 	&"alliance_bonus": "Đang liên minh",
-	&"pact_bonus": "Đang có hiệp ước bất tương xâm",
 	&"limit": "Giới hạn −100 → 100",
 	&"first_impression": "Ấn tượng ban đầu",
 	&"gift": "Quà tặng",
@@ -86,8 +86,9 @@ const AGREEMENT_CANCEL_PENALTY := 20
 const AGREEMENT_BASE_BONUS := 15
 ## Added to the relation while allied with the kingdom (GDD §9.7).
 const ALLIANCE_BASE_BONUS := 30
-## Added to the relation while a non-aggression pact runs.
-const PACT_BASE_BONUS := 10
+## Clans farther than this many steps from the kingdom's territory (GDD §15) cannot trade, take
+## gifts, sign agreements or ally with it; only those 1 step away can go to war with it.
+const REACH := 2
 ## How strongly each personality reacts to the kingdom's threat (GDD §9.3):
 ## PEACEFUL, AGGRESSIVE, MERCHANT, ISOLATED.
 const WARINESS: Array[float] = [0.5, 1.0, 0.4, 0.8]
@@ -126,15 +127,11 @@ class ClanState:
 	var annexed := false
 	## Treaties (GDD §9.7, managed by Alliances): turns left, 0 = none.
 	var alliance_turns := 0
-	var pact_turns := 0
 	## Turns before the clan hears another alliance offer after refusing one.
 	var alliance_cooldown := 0
 
 	func is_allied() -> bool:
 		return alliance_turns > 0
-
-	func has_pact() -> bool:
-		return pact_turns > 0
 
 	func _init(p_data: ClanData) -> void:
 		data = p_data
@@ -145,8 +142,7 @@ class ClanState:
 	func lasting_factors() -> Dictionary[StringName, int]:
 		return {&"base": data.base_relation, &"wariness": -wariness,
 				&"agreement_bonus": AGREEMENT_BASE_BONUS if agreement != null else 0,
-				&"alliance_bonus": ALLIANCE_BASE_BONUS if is_allied() else 0,
-				&"pact_bonus": PACT_BASE_BONUS if has_pact() else 0}
+				&"alliance_bonus": ALLIANCE_BASE_BONUS if is_allied() else 0}
 
 	func unclamped_relation() -> int:
 		var total := 0
@@ -201,6 +197,55 @@ static func tier_for(relation: int) -> Tier:
 		if relation >= threshold:
 			tier += 1
 	return tier as Tier
+
+
+# --- The campaign map (GDD §15) ---------------------------------------------------------
+
+## The squares the kingdom holds: its home corner and every annexed clan.
+func territory() -> Array[Vector2i]:
+	var result: Array[Vector2i] = [ClanData.HOME]
+	for clan_id in clans:
+		if clans[clan_id].annexed:
+			result.append(clans[clan_id].data.grid)
+	return result
+
+
+## Steps on the campaign map from the kingdom's territory to the clan (0 once annexed).
+func distance(clan_id: StringName) -> int:
+	var grid := clans[clan_id].data.grid
+	var best := ClanData.GRID_SIZE * 2
+	for square in territory():
+		best = mini(best, ClanData.grid_distance(square, grid))
+	return best
+
+
+## Close enough to trade, give gifts, sign agreements and ally (not annexed).
+func in_reach(clan_id: StringName) -> bool:
+	return not clans[clan_id].annexed and distance(clan_id) <= REACH
+
+
+## Next to the kingdom's territory: war can be declared either way, and it can invade.
+func borders(clan_id: StringName) -> bool:
+	return not clans[clan_id].annexed and distance(clan_id) == 1
+
+
+## The kingdom board's side facing the clan: from the nearest held square toward it.
+func direction_to(clan_id: StringName) -> ClanData.Direction:
+	var grid := clans[clan_id].data.grid
+	var nearest := ClanData.HOME
+	for square in territory():
+		if ClanData.grid_distance(square, grid) < ClanData.grid_distance(nearest, grid):
+			nearest = square
+	return ClanData.direction_of(grid - nearest)
+
+
+## Clans annexed or allied: they count toward the castle's levels and the victory (GDD §15).
+func count_united() -> int:
+	var total := 0
+	for clan_id in clans:
+		if clans[clan_id].annexed or clans[clan_id].is_allied():
+			total += 1
+	return total
 
 
 func get_tier(clan_id: StringName) -> Tier:
@@ -302,6 +347,8 @@ func gift_gain(clan_id: StringName, amounts: Dictionary[StringName, int]) -> int
 func check_gift(stockpile: Stockpile, clan_id: StringName, amounts: Dictionary[StringName, int]) -> GiftResult:
 	if clans[clan_id].annexed:
 		return GiftResult.ANNEXED
+	if not in_reach(clan_id):
+		return GiftResult.TOO_FAR
 	if value_of(amounts) <= 0:
 		return GiftResult.EMPTY
 	if clans[clan_id].gift_gain_this_turn >= MAX_GIFT_GAIN_PER_TURN:
@@ -339,6 +386,8 @@ static func describe_gift(result: GiftResult) -> String:
 			return "Gia tộc này đã thuộc về vương quốc."
 		GiftResult.TOO_SMALL:
 			return "Món quà quá nhỏ, họ sẽ không để ý (quan hệ +0)."
+		GiftResult.TOO_FAR:
+			return "Quá xa: chỉ qua lại được với gia tộc cách lãnh thổ tối đa %d vùng." % REACH
 	return ""
 
 
@@ -354,7 +403,7 @@ func price_factor(clan_id: StringName, give_id: StringName, get_id: StringName) 
 		factor *= DEFICIT_BONUS
 	if clan.data.surplus.has(get_id):
 		factor *= SURPLUS_BONUS
-	if not clan.data.is_neighbor():
+	if distance(clan_id) > 1:
 		factor *= DISTANT_PENALTY
 	return factor * (1.0 + envoy * ENVOY_PRICE)
 
@@ -371,6 +420,8 @@ func remaining_capacity(clan_id: StringName) -> int:
 
 func check_trade(stockpile: Stockpile, clan_id: StringName, give_id: StringName, give_amount: int,
 		get_id: StringName) -> TradeResult:
+	if not clans[clan_id].annexed and not in_reach(clan_id):
+		return TradeResult.TOO_FAR
 	if clans[clan_id].annexed or get_tier(clan_id) < MIN_TRADE_TIER:
 		return TradeResult.REFUSED
 	if give_id == get_id:
@@ -421,6 +472,8 @@ static func describe_trade(result: TradeResult) -> String:
 			return "Lượt này họ không nhận thêm nhiều hàng như vậy."
 		TradeResult.TOO_SMALL:
 			return "Số lượng quá ít để đổi được gì."
+		TradeResult.TOO_FAR:
+			return "Quá xa: chỉ qua lại được với gia tộc cách lãnh thổ tối đa %d vùng." % REACH
 	return ""
 
 
@@ -463,6 +516,8 @@ static func chance_name(chance: float) -> String:
 
 func check_proposal(clan_id: StringName, give_id: StringName, give_amount: int, get_id: StringName,
 		get_amount: int, turns: int) -> ProposalResult:
+	if not clans[clan_id].annexed and not in_reach(clan_id):
+		return ProposalResult.TOO_FAR
 	if clans[clan_id].annexed or get_tier(clan_id) < MIN_TRADE_TIER:
 		return ProposalResult.REFUSED
 	if get_agreement(clan_id) != null:
@@ -561,6 +616,8 @@ static func describe_proposal(result: ProposalResult) -> String:
 			return "Đã có hợp đồng với gia tộc này."
 		ProposalResult.ASKED_THIS_TURN:
 			return "Họ cần thời gian cân nhắc. Hãy đề nghị lại vào lượt sau."
+		ProposalResult.TOO_FAR:
+			return "Quá xa: chỉ qua lại được với gia tộc cách lãnh thổ tối đa %d vùng." % REACH
 	return ""
 
 
@@ -568,7 +625,7 @@ static func describe_proposal(result: ProposalResult) -> String:
 
 ## ClanState fields written as they are (ints and bools); add new plain fields here.
 const SAVED_CLAN_FIELDS: Array[StringName] = [&"wariness", &"gift_gain_this_turn", &"trade_gain_this_turn",
-		&"traded_value_this_turn", &"proposed_this_turn", &"annexed", &"alliance_turns", &"pact_turns",
+		&"traded_value_this_turn", &"proposed_this_turn", &"annexed", &"alliance_turns",
 		&"alliance_cooldown"]
 const SAVED_AGREEMENT_FIELDS: Array[StringName] = [&"give_amount", &"get_amount", &"total_turns", &"turns_left"]
 

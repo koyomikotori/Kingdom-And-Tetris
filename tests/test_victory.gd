@@ -22,82 +22,44 @@ func _ally(state: KingdomState, clan_ids: Array[StringName]) -> void:
 		state.diplomacy.clans[clan_id].alliance_turns = 99
 
 
-## 150+ cells of land with 25 farms, 15 lumber mills and 15 mines (placed straight on the board,
-## past the limits): +95 food, +75 wood, +75 stone per turn after upkeep.
-func _prosperous(state: KingdomState) -> void:
-	state.board.expand(Vector2i.RIGHT, 4)
-	var plan: Array = []
-	for entry: Array in [[&"farmland", &"farm", 25], [&"forest", &"lumber_mill", 15], [&"hill", &"mine", 15]]:
-		for i in 51:
-			plan.append([entry[0], entry[1] if i < entry[2] else &""])
-	for cell in state.board.get_all_cells():
-		if cell.building_id != BoardData.CASTLE_ID and not plan.is_empty():
-			var next: Array = plan.pop_back()
-			state.board.set_land(cell.coord, next[0], false)
-			if next[1] != &"":
-				state.board.place_building(next[1], cell.coord, Vector2i.ONE)
+func _all_clans(state: KingdomState) -> Array[StringName]:
+	var ids: Array[StringName] = []
+	ids.assign(state.diplomacy.clans.keys())
+	ids.sort()
+	return ids
 
 
-func _end_turns(state: KingdomState, count: int) -> int:
-	var won := Victory.NO_PATH
-	for i in count:
-		var path := state.victory.end_turn(state)
-		if path != Victory.NO_PATH:
-			won = path
-	return won
-
-
-func test_conquest_wins_once_every_clan_is_annexed() -> void:
+func test_uniting_every_clan_wins_and_allies_count() -> void:
 	var state := _state()
-	_annex(state, [&"north_wolves", &"east_merchants", &"south_farmers", &"west_fortress", &"golden_eagle"])
-	check_eq(state.victory.check(state), Victory.NO_PATH, "5 of 6")
-	_annex(state, [&"steppe_tribes"])
-	check_eq(state.victory.check(state), Victory.Path.CONQUEST, "All 6")
+	var ids := _all_clans(state)
+	check_eq(ids.size(), 24, "24 clans on the map")
+	_annex(state, ids.slice(0, 20))
+	_ally(state, ids.slice(20, 23))
+	check_eq(state.victory.check(state), Victory.NO_PATH, "23 of 24")
+	check_eq(state.victory.progress(state), {"united": 23, "total": 24}, "Progress")
+	_ally(state, ids.slice(23))
+	check_eq(state.victory.check(state), Victory.Path.CONQUEST, "Every clan annexed or allied")
 	check_eq(state.victory.check(state), Victory.NO_PATH, "Reported only once")
 	check_eq(state.victory.won_path, Victory.Path.CONQUEST, "Remembered")
 
 
-func test_prosperity_needs_allies_land_and_income_for_ten_turns() -> void:
+func test_castle_levels_need_united_clans() -> void:
+	KingdomState.castle_needs_clans = true
 	var state := _state()
-	_prosperous(state)
-	_annex(state, [&"north_wolves", &"west_fortress", &"golden_eagle", &"steppe_tribes", &"south_farmers"])
-	var prosperity: Dictionary = state.victory.progress(state)[Victory.Path.PROSPERITY]
-	check(not prosperity.met, "Rich, but the merchants are not allied")
-	check_eq(prosperity.conditions.size(), 5, "Allies + land + 3 resources")
-	_ally(state, [&"east_merchants"])
-	check(state.victory.progress(state)[Victory.Path.PROSPERITY].met, "One ally is enough")
-	check_eq(_end_turns(state, 9), Victory.NO_PATH, "Not yet")
-	check_eq(state.victory.holds[Victory.Path.PROSPERITY], 9, "Counter")
-	check_eq(_end_turns(state, 1), Victory.Path.PROSPERITY, "Held 10 turns")
-
-
-func test_prosperity_needs_every_remaining_clan_allied_and_resets() -> void:
-	var state := _state()
-	_prosperous(state)
-	_ally(state, [&"north_wolves", &"west_fortress", &"golden_eagle", &"steppe_tribes", &"south_farmers"])
-	_end_turns(state, 12)
-	check_eq(state.victory.holds[Victory.Path.PROSPERITY], 0, "The merchants are not allied")
-	_ally(state, [&"east_merchants"])
-	_end_turns(state, 5)
-	state.diplomacy.clans[&"golden_eagle"].alliance_turns = 0
-	_end_turns(state, 1)
-	check_eq(state.victory.holds[Victory.Path.PROSPERITY], 0, "Losing an ally resets the count")
-
-
-func test_prosperity_needs_land_and_income_too() -> void:
-	var state := _state()
-	_ally(state, [&"north_wolves", &"west_fortress", &"golden_eagle", &"steppe_tribes", &"south_farmers", &"east_merchants"])
-	_end_turns(state, 12)
-	check_eq(state.victory.holds[Victory.Path.PROSPERITY], 0, "Allied with everyone but small and poor")
-
-
-func test_prosperity_progress_shows_what_is_missing() -> void:
-	var state := _state()
-	var prosperity: Dictionary = state.victory.progress(state)[Victory.Path.PROSPERITY]
-	check(not prosperity.met, "Starting kingdom is not prosperous")
-	check_eq([prosperity.conditions[0].current, prosperity.conditions[0].needed], [0, 6], "Allies 0/6")
-	check_eq([prosperity.conditions[1].current, prosperity.conditions[1].needed], [16, 120], "Land 16/120")
-	check(prosperity.fraction > 0.0 and prosperity.fraction < 0.2, "Some progress from the land")
+	state.stockpile.add({&"food": 999, &"wood": 999, &"stone": 999, &"ore": 999, &"hardwood": 999, &"horses": 999})
+	check_eq(state.check_castle_upgrade(), KingdomState.CastleResult.NEEDS_CLANS, "Level 2 needs one clan")
+	_ally(state, [&"south_farmers"])
+	check_eq(state.check_castle_upgrade(), KingdomState.CastleResult.OK, "An ally counts")
+	state.upgrade_castle()
+	check_eq(state.castle_level, 2, "Level 2")
+	check_eq(state.check_castle_upgrade(), KingdomState.CastleResult.NEEDS_CLANS, "Level 3 needs three")
+	_annex(state, [&"north_wolves", &"east_merchants"])
+	check_eq(state.check_castle_upgrade(), KingdomState.CastleResult.OK, "1 ally + 2 annexed")
+	var needed: Array[int] = []
+	for level in state.castle_levels:
+		needed.append(level.required_clans)
+	check_eq(needed, [0, 1, 3, 6, 12, 24] as Array[int], "1 / 3 / 6 / 12 / 24 clans")
+	KingdomState.castle_needs_clans = false
 
 
 func test_castle_falls_when_an_invasion_wins_with_no_land_left() -> void:
@@ -123,17 +85,10 @@ func _lost_battle(state: KingdomState) -> BattleRecord:
 
 func test_victory_state_is_saved() -> void:
 	var state := _state()
-	state.victory.holds[Victory.Path.PROSPERITY] = 4
-	state.victory.won_path = Victory.Path.PROSPERITY
+	state.victory.won_path = Victory.Path.CONQUEST
 	state.stats.battles_won = 3
 	var data: Dictionary = JSON.parse_string(JSON.stringify(state.to_save()))
 	var loaded := _state()
 	loaded.load_save(data)
-	check_eq(loaded.victory.holds, [0, 4] as Array[int], "Hold counters")
-	check_eq(loaded.victory.won_path, Victory.Path.PROSPERITY, "Won path")
+	check_eq(loaded.victory.won_path, Victory.Path.CONQUEST, "Won path")
 	check_eq(loaded.stats.battles_won, 3, "Stats")
-	data.erase("victory")
-	data.erase("stats")
-	var old := _state()
-	old.load_save(data)
-	check_eq(old.victory.won_path, Victory.NO_PATH, "Saves from before M11a still load")

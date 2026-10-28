@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ClanData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/diplomacy/clan_data.gd" id="1_clan"]
+
+[resource]
+script = ExtResource("1_clan")
+clan_id = &"horse_lords"
+display_name = "Mã Vương Tộc"
+description = "Những kỵ sĩ trên đồng cỏ phương Nam, ngựa tốt và thích cướp bóc."
+color = Color(0.41, 0.61, 0.82, 1)
+grid = Vector2i(1, 3)
+personality = 1
+military_strength = 155
+surplus = Array[StringName]([&"stone"])
+deficit = Array[StringName]([&"horses"])
+start_relation = -10
+base_relation = -15
+friends = Array[StringName]([&"jade_valley"])
+army_units = Dictionary[StringName, float]({&"swordsman": 1.0, &"spearman": 1.0, &"archer": 1.0, &"elite_swordsman": 2.0, &"elite_spearman": 2.0, &"elite_archer": 2.0, &"shield_veteran": 1.0, &"crossbow_pro": 1.0, &"light_cavalry": 1.0})

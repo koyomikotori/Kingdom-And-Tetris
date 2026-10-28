@@ -190,7 +190,14 @@ func _refresh() -> void:
 	var text := "Lên cấp %d: %s. Mất %d lượt.\nCấp mới: thêm %d chỗ cho đơn vị lính, thêm 1 chỗ cho mỗi loại công trình, thêm 1 đội thợ, công trình nâng được tới cấp %d, tuyển được tướng và mưu sĩ tới %d sao." % [
 			next.level, UiFormat.amounts(_state.castle_upgrade_cost(), _resource_types), _state.castle_upgrade_turns(),
 			next.squad_capacity, next.level, next.level]
-	if result == KingdomState.CastleResult.CANNOT_AFFORD:
+	if next.required_clans > 0:
+		text += "
+Cần thôn tính hoặc liên minh %d gia tộc (đang có %d)." % [next.required_clans,
+				_state.diplomacy.count_united()]
+	if result == KingdomState.CastleResult.NEEDS_CLANS:
+		text += "
+Chưa đủ chiến công: hãy thôn tính hoặc liên minh thêm gia tộc."
+	elif result == KingdomState.CastleResult.CANNOT_AFFORD:
 		text += "\nChưa đủ tài nguyên."
 	elif result == KingdomState.CastleResult.NO_BUILDERS:
 		text += "\nKhông còn đội thợ rảnh: chờ một công trình xây xong."

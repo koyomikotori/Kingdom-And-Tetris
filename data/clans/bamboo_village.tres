@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ClanData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/diplomacy/clan_data.gd" id="1_clan"]
+
+[resource]
+script = ExtResource("1_clan")
+clan_id = &"bamboo_village"
+display_name = "Trúc Lâm Trang"
+description = "Làng nghề tre trúc trù phú, dân hiền và khéo tay."
+color = Color(0.82, 0.76, 0.41, 1)
+grid = Vector2i(2, 1)
+personality = 0
+military_strength = 85
+surplus = Array[StringName]([&"wood"])
+deficit = Array[StringName]([&"stone"])
+start_relation = 20
+base_relation = 25
+friends = Array[StringName]([&"red_banner"])
+army_units = Dictionary[StringName, float]({&"swordsman": 1.0, &"spearman": 1.0, &"archer": 1.0, &"elite_swordsman": 2.0, &"elite_spearman": 2.0, &"elite_archer": 2.0, &"shield_veteran": 1.0, &"crossbow_pro": 1.0, &"light_cavalry": 1.0})

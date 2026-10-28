@@ -6,12 +6,18 @@ extends RefCounted
 const BANDIT_COLOR := Color(0.5, 0.36, 0.24)
 
 
-## Chance (0..1) that bandits raid at the start of `state.turn`.
+## Weight of a late unit (RaidData.late_units) once it has joined the bandits.
+const LATE_UNIT_WEIGHT := 1.5
+
+
+## Chance (0..1) that bandits raid at the start of `state.turn`: it grows every 10 turns (GDD §15).
 ## Watchtowers only help when their upkeep was paid at the end of the previous turn.
 static func get_raid_chance(state: KingdomState, raid: RaidData) -> float:
 	if state.turn < raid.first_turn:
 		return 0.0
-	var chance := raid.base_chance
+	var grown := raid.base_chance + raid.chance_per_ten_turns * floori(state.turn / 10.0)
+	# The cap only limits the growth: a base chance above it stays as it is.
+	var chance := maxf(raid.base_chance, minf(raid.max_chance, grown))
 	if state.buildings_supplied:
 		for building_id in state.buildings:
 			var building := state.buildings[building_id]
@@ -27,6 +33,10 @@ static func create_bandit_side(raid: RaidData, enemy_units: Dictionary[StringNam
 	for unit_id in raid.unit_weights:
 		ids.append(unit_id)
 		weights.append(raid.unit_weights[unit_id])
+	for unit_id in raid.late_units:
+		if turn >= raid.late_units[unit_id]:
+			ids.append(unit_id)
+			weights.append(LATE_UNIT_WEIGHT)
 	var picked := {}
 	for i in squad_count:
 		var unit_id := ids[rng.rand_weighted(weights)]

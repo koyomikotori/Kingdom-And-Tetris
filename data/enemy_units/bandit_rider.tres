@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="UnitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/army/unit_data.gd" id="1_unit"]
+
+[resource]
+script = ExtResource("1_unit")
+unit_id = &"bandit_rider"
+display_name = "Kỵ cướp"
+sprite_id = &"light_cavalry"
+sort_order = 2
+squad_size = 10
+row = 0
+attack_kind = 0
+melee_attack = 6
+melee_defense = 4
+armor = 2
+charge_attack = 9
+unit_type = 3
+morale = 5
+range_attack = 0
+reload_time = 5.0
+is_cavalry = true

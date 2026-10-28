@@ -13,36 +13,49 @@ func _stock(amounts: Dictionary[StringName, int]) -> Stockpile:
 	return stockpile
 
 
-func test_clans_load_with_four_neighbours_and_two_distant() -> void:
+func test_campaign_map_has_24_clans_on_a_5x5_grid() -> void:
 	var clans := ClanData.load_all()
-	check_eq(clans.size(), 6, "Six clans")
-	var directions := []
-	var distant := 0
+	check_eq(clans.size(), 24, "24 clans")
+	var by_grid := {}
 	for clan in clans:
-		if clan.is_neighbor():
-			directions.append(clan.direction)
-		else:
-			distant += 1
-	directions.sort()
-	check_eq(directions, [ClanData.Direction.NORTH, ClanData.Direction.EAST, ClanData.Direction.SOUTH,
-			ClanData.Direction.WEST], "One neighbour per direction")
-	check_eq(distant, 2, "Two distant clans")
+		check(clan.grid != ClanData.HOME, "%s is not on the kingdom's square" % clan.clan_id)
+		check(Rect2i(0, 0, ClanData.GRID_SIZE, ClanData.GRID_SIZE).has_point(clan.grid), "%s is on the map" % clan.clan_id)
+		by_grid[clan.grid] = clan
+	check_eq(by_grid.size(), 24, "One clan per square")
+	var ids := clans.map(func(c: ClanData) -> StringName: return c.clan_id)
+	for clan in clans:
+		for friend in clan.friends:
+			check(ids.has(friend), "%s -> %s exists" % [clan.clan_id, friend])
+			var other: ClanData = clans[ids.find(friend)] if ids.has(friend) else null
+			if other != null:
+				check(other.friends.has(clan.clan_id), "%s <-> %s goes both ways" % [clan.clan_id, friend])
+				check_eq(ClanData.grid_distance(clan.grid, other.grid), 1, "%s and %s are neighbours" % [clan.clan_id, friend])
+	# Farther clans are stronger: the far corner beats the kingdom's neighbours.
+	check(by_grid[Vector2i(4, 4)].military_strength > 3 * by_grid[Vector2i(1, 0)].military_strength, "The far corner is strongest")
+	check(by_grid[Vector2i(4, 4)].army_units.has(&"heavy_cavalry"), "…and fields the best units")
+	check(by_grid[Vector2i(1, 0)].army_units.keys().all(func(id: StringName) -> bool:
+			return id in [&"swordsman", &"spearman", &"archer"]), "Neighbours field peasants")
 
 
-func test_roads_point_to_known_places_and_go_both_ways() -> void:
-	var by_id := {}
-	for clan in ClanData.load_all():
-		by_id[clan.clan_id] = clan
-	for clan_id in by_id:
-		var clan: ClanData = by_id[clan_id]
-		check(not clan.roads.is_empty(), "%s has a road" % clan_id)
-		check_eq(clan.roads.has(WorldMapView.KINGDOM_ID), clan.is_neighbor(), "%s: only neighbours border the kingdom" % clan_id)
-		for other in clan.roads:
-			if other == WorldMapView.KINGDOM_ID:
-				continue
-			check(by_id.has(other), "%s -> %s exists" % [clan_id, other])
-			if by_id.has(other):
-				check(by_id[other].roads.has(clan_id), "%s <-> %s goes both ways" % [clan_id, other])
+func test_distance_and_reach_follow_the_territory() -> void:
+	var diplomacy := _diplomacy()
+	check_eq(diplomacy.distance(&"north_wolves"), 1, "Wolves border the corner")
+	check(diplomacy.borders(&"north_wolves") and diplomacy.in_reach(&"north_wolves"), "…so they border and are in reach")
+	check_eq(diplomacy.distance(&"east_merchants"), 2, "Merchants are two steps away")
+	check(not diplomacy.borders(&"east_merchants") and diplomacy.in_reach(&"east_merchants"), "In reach, not bordering")
+	check_eq(diplomacy.distance(&"golden_eagle"), 8, "The far corner")
+	check(not diplomacy.in_reach(&"golden_eagle"), "Out of reach")
+	check_eq(diplomacy.check_gift(_stock({&"food": 50}), &"golden_eagle", {&"food": 50} as Dictionary[StringName, int]),
+			Diplomacy.GiftResult.TOO_FAR, "No gifts that far")
+	check_eq(diplomacy.check_trade(_stock({&"food": 50}), &"golden_eagle", &"food", 10, &"wood"),
+			Diplomacy.TradeResult.TOO_FAR, "No trade that far")
+	check_eq(diplomacy.direction_to(&"north_wolves"), ClanData.Direction.EAST, "Wolves are east of the corner")
+	check_eq(diplomacy.direction_to(&"south_farmers"), ClanData.Direction.SOUTH, "Farmers are south")
+	diplomacy.clans[&"north_wolves"].annexed = true
+	check_eq(diplomacy.distance(&"north_wolves"), 0, "Annexed: part of the territory")
+	check(not diplomacy.in_reach(&"north_wolves"), "No more diplomacy with it")
+	check_eq(diplomacy.distance(&"east_merchants"), 1, "The merchants border the kingdom now")
+	check_eq(diplomacy.count_united(), 1, "One clan united")
 
 
 func test_tiers() -> void:
@@ -110,11 +123,11 @@ func test_gift_rejections_change_nothing() -> void:
 
 func test_trade_price_follows_the_formula() -> void:
 	var diplomacy := _diplomacy()
-	# East merchants: relation 10, merchant, lack wood, plenty of food.
-	# factor = (0.6 + 0.1 * 0.2 + 0.15) * 1.4 * 1.3 = 1.4014 -> 10 wood (value 10) buys 14 food.
-	check_eq(diplomacy.trade_quote(&"east_merchants", &"wood", 10, &"food"), 14, "Good deal: they need wood")
-	# Same clan, stone for wood: (0.77) * no bonuses -> 10 stone (value 20) buys 15 wood.
-	check_eq(diplomacy.trade_quote(&"east_merchants", &"stone", 10, &"wood"), 15, "Ordinary deal")
+	# East merchants: relation 10, merchant, lack wood, plenty of food, two steps away (×0.85).
+	# factor = (0.6 + 0.1 * 0.2 + 0.15) * 1.4 * 1.3 * 0.85 = 1.191 -> 10 wood (value 10) buys 11 food.
+	check_eq(diplomacy.trade_quote(&"east_merchants", &"wood", 10, &"food"), 11, "Good deal: they need wood")
+	# Same clan, stone for wood: 0.77 * 0.85 -> 10 stone (value 20) buys 13 wood.
+	check_eq(diplomacy.trade_quote(&"east_merchants", &"stone", 10, &"wood"), 13, "Ordinary deal")
 	# Distant clans pay less than they would as neighbours.
 	var steppe := diplomacy.price_factor(&"steppe_tribes", &"stone", &"food")
 	check(is_equal_approx(steppe, 0.6 * 1.4 * 1.3 * 0.85), "Distant penalty applied (got %.3f)" % steppe)
@@ -124,7 +137,7 @@ func test_trade_swaps_goods_and_improves_relation() -> void:
 	var diplomacy := _diplomacy()
 	var stockpile := _stock({&"wood": 30})
 	check_eq(diplomacy.trade(stockpile, &"east_merchants", &"wood", 10, &"food"), Diplomacy.TradeResult.OK, "Trade done")
-	check_eq([stockpile.get_amount(&"wood"), stockpile.get_amount(&"food")], [20, 14], "Goods swapped")
+	check_eq([stockpile.get_amount(&"wood"), stockpile.get_amount(&"food")], [20, 11], "Goods swapped")
 	check_eq(diplomacy.clans[&"east_merchants"].relation, 11, "+1 relation")
 	diplomacy.trade(stockpile, &"east_merchants", &"wood", 5, &"food")
 	diplomacy.trade(stockpile, &"east_merchants", &"wood", 5, &"food")

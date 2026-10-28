@@ -36,9 +36,7 @@ func open(state: KingdomState, path: int, system: SaveSystem, host: Node) -> voi
 func _story(path: int) -> String:
 	match path:
 		Victory.Path.CONQUEST:
-			return "Mọi gia tộc đã quy phục dưới cờ của bạn. Cả vùng đất giờ là một vương quốc."
-		Victory.Path.PROSPERITY:
-			return "Các gia tộc còn lại đều đứng chung chiến tuyến với bạn, ruộng đồng trải khắp, kho lẫm đầy ắp. Hòa bình và thịnh vượng phủ khắp vùng đất."
+			return "Mọi gia tộc đã quy phục hoặc kết minh dưới cờ của bạn. Thiên hạ giờ là một."
 	return "Quân địch tràn vào thành chính. Vương quốc của bạn đã sụp đổ."
 
 

@@ -795,8 +795,8 @@ Thiết kế bản điện thoại (đã chốt, làm ở M15):
 | M12d | **Bố cục tab + thi công mất lượt:** tab rộng và đều, bảng Xây dựng / Tuyển lính giữa màn hình có danh mục, xây và nâng cấp mất lượt, đội thợ (§8) | Xong |
 | M12e | **Trang bị** cho tướng và mưu sĩ: 5 bậc độ hiếm, Xưởng rèn, chiến lợi phẩm, kho 20 món, vũ khí hiện trong trận, khung chân dung theo sao, sửa hình ngựa và vũ khí lính (§8 Trang bị) | Xong |
 | M12f | Phần tiện cho chuột lấy từ M13: kéo chuột trái để cuộn bản đồ, kéo danh sách để cuộn, bấm ô / tài nguyên xem chi tiết, cửa sổ vừa màn hình, icon game (§10.2) | Xong |
-| M13 | **Công trình và lính mới:** Doanh trại 6 cấp với 3 bậc lính, Chuồng ngựa chiến, Trại bắn tên, Võ trường, Học viện quân sự, 21 loại lính (kỵ binh, nỏ xuyên giáp, đao thuẫn, pháo, hỏa mai) (§8) | Đang làm |
-| M14 | Âm thanh, cân bằng, build Windows, phát hành bản máy tính | |
+| M13 | **Công trình và lính mới:** Doanh trại 6 cấp với 3 bậc lính, Chuồng ngựa chiến, Trại bắn tên, Võ trường, Học viện quân sự, 21 loại lính (kỵ binh, nỏ xuyên giáp, đao thuẫn, pháo, hỏa mai) (§8); M13b tiện ích, M13c bản đồ sinh động | Xong |
+| M14 | M14a âm thanh (§14, xong); **M14b chiến dịch** (bản đồ 5×5, 24 gia tộc, chỉ thắng bằng thống nhất, bảng thông báo, §15); M14c build Windows, phát hành bản máy tính | Đang làm |
 | M15 | **Bản điện thoại:** cảm ứng (chạm xem trước + thanh Đặt/Hủy, chụm để zoom, nút Back), giao diện cho màn nhỏ, xuất APK, giả lập (nhánh `m13/touch-apk`, §10.2) | Để cuối |
 
 Đồ họa được đưa lên trước cảm ứng (chốt sau M11f) để lần sắp xếp lại bố cục dùng luôn giao diện mới. Bản điện thoại dời xuống cuối (chốt sau khi chơi thử M13 trên điện thoại): hoàn thiện bản máy tính trước.
@@ -863,3 +863,39 @@ M14 chia 3 đợt: **M14a âm thanh**, M14b cân bằng, M14c bản phát hành 
 **Âm nền bản đồ (nhẹ):** thỉnh thoảng chim hót, tiếng búa khi đang có công trình thi công; tắt cùng "Hiệu ứng bản đồ" và im khi đang đánh trận.
 
 **Cửa sổ Cài đặt** (nút "Cài đặt" ở Menu trong game và ở menu chính): thanh âm lượng Nhạc nền và Âm thanh hiệu ứng (0–100%), Hiệu ứng bản đồ Bật/Tắt, Toàn màn hình Bật/Tắt. Lưu theo máy (`user://settings.cfg`), không nằm trong file save.
+
+## 15. Chiến dịch (M14b, đã chốt)
+
+Mục tiêu: biến game thành chơi kiểu **chiến dịch**, mở rộng dần từ một góc bản đồ, mục tiêu rõ ràng, dễ tiếp cận hơn kiểu tự do. Thay cho phần bản đồ thế giới 6 gia tộc (§9.1–9.2), thắng hòa bình thịnh vượng (§9b) và hiệp ước bất tương xâm (§9.7).
+
+**Bản đồ chiến dịch:** lưới **5×5**, vẽ trên một tấm bản đồ cổ lớn hơn màn hình, kéo chuột để di chuyển; các thành không xếp thẳng hàng mà lệch nhau tự nhiên, đường đất uốn lượn, có sông, hồ, dãy núi tuyết, rừng thông, đồi và xóm làng. Vương quốc của bạn ở ô góc trên-trái, **24 ô còn lại là 24 gia tộc**. Hai ô kề nhau (trên / dưới / trái / phải) là láng giềng. Lúc đầu chỉ có 2 láng giềng; đánh xong thì gặp thêm gia tộc mới, càng vào giữa bản đồ càng giáp nhiều mặt: mở rộng quá nhanh thì phải đối đầu nhiều gia tộc hiếu chiến cùng lúc, đánh quá chậm thì quân cướp ngày càng đông và mạnh.
+
+**Khoảng cách** tính từ lãnh thổ hiện tại (ô gốc + mọi gia tộc đã thôn tính), theo số bước trên lưới:
+- **Giáp ranh (1 bước):** tuyên chiến, tấn công được; chỉ những gia tộc này mới tuyên chiến và xâm lược bạn.
+- **Trong 2 bước:** giao thương, tặng quà, hợp đồng giao thương, liên minh.
+- **Xa hơn:** chỉ xem trên bản đồ, chưa qua lại được.
+
+**Sức mạnh gia tộc** theo vành (số bước từ góc của bạn, 1–8) và tăng dần theo thời gian:
+- Vành 1–2 dùng lính bậc nông dân; vành 3–4 có lính tinh nhuệ; vành 5 trở đi có cấm quân, kỵ binh nặng, hỏa khí. Quân số tối đa tăng theo vành. Góc đối diện là gia tộc mạnh nhất.
+- Quân số tối đa của mọi gia tộc tăng 1% mỗi lượt (tối đa gấp đôi).
+- Mọi gia tộc hồi **10% quân số tối đa mỗi lượt** (trước đây +2 lính).
+
+**Thôn tính và mở đất:** cứ thôn tính **2 gia tộc** thì bản đồ vương quốc thêm 2 hàng / cột đất hoang (mở đất chậm, dễ kiểm soát), lần lượt theo chiều kim đồng hồ **trên → phải → dưới → trái**, không phụ thuộc gia tộc ở hướng nào. Tối đa 8 lần (2 vòng, sau 16 gia tộc): bản đồ từ 12×12 lên 20×20. Chỉ thôn tính mới mở đất: thắng trận phòng thủ, hay đánh thắng mà gia tộc chưa đầu hàng, thì không. Thua một trận bị xâm lược thì mất đất ở cạnh bản đồ hướng về phía gia tộc đó.
+
+**Thành trì bị khóa theo chiến công:** muốn lên cấp thành phải đã thôn tính đủ số gia tộc: cấp 2 cần 1, cấp 3 cần 3, cấp 4 cần 6, cấp 5 cần 12, cấp 6 cần 24 (vẫn trả tài nguyên và mất lượt như trước). **Đồng minh tính như đã thôn tính** cho mốc thành; liên minh bị phá thì không tính nữa (thành đã lên cấp vẫn giữ).
+
+**Chiến thắng duy nhất: thống nhất** — mọi gia tộc trên bản đồ hoặc đã bị thôn tính, hoặc đang là đồng minh. Bỏ thắng hòa bình thịnh vượng, bỏ nút "Mục tiêu". Thua vẫn như cũ: thành chính thất thủ.
+
+**Bỏ hiệp ước bất tương xâm** (không còn coi trọng hòa bình).
+
+**Quân cướp** nhiều và mạnh dần theo lượt: cứ mỗi 10 lượt tỉ lệ cướp tăng (có trần), số đội cướp tăng như trước, về sau có thêm kỵ binh cướp.
+
+**Bảng thông báo** (cột bên trái, thu gọn được cả cột): thống kê mỗi lượt và những gì đang diễn ra, không ghi tài nguyên đã thu. Ba nhóm, mỗi dòng có tiêu đề với nút mũi tên bên phải để xổ ra / thu lại phần chi tiết, mặc định mở, người chơi tự ẩn dòng không quan tâm (nhớ theo máy):
+- **Công trình:** đang thi công (còn mấy lượt), vừa xây / nâng cấp xong, xưởng rèn, thiếu phí duy trì.
+- **Ngoại giao:** đang chiến tranh với…, vừa tuyên chiến, đình chiến, hợp đồng giao thương (đưa / nhận gì, còn mấy lượt), đang liên minh với… (còn mấy lượt), liên minh hết hạn / tan vỡ.
+- **Quân đội & tướng sĩ:** bổ sung quân, lính bỏ trốn vì thiếu lương, tướng sĩ bị thương / vừa lành, ứng viên mới, thành chính nguy hiểm.
+Bảng thông tin ô đất chuyển xuống đáy cột này.
+
+**Bản lưu cũ** (bản đồ 6 gia tộc) không tải được nữa: báo phiên bản cũ, bắt đầu ván mới.
+
+**Sửa lỗi kèm theo:** khi chiêu mộ hoặc cộng điểm cho tướng sĩ, cửa sổ không còn co giãn làm khựng.

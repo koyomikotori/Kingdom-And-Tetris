@@ -1,7 +1,9 @@
 class_name Wars
 extends RefCounted
-## War and peace between the kingdom and the clans (GDD §9.6): declarations, clan armies that
-## regrow over time, invasions, peace talks and annexation. Pure logic, owned by KingdomState.
+## War and peace between the kingdom and the clans (GDD §9.6, campaign rules §15): declarations,
+## clan armies that regrow and grow stronger over time, invasions, peace talks and annexation.
+## Only clans bordering the kingdom's territory on the campaign map (Diplomacy.borders) go to war
+## with it. Pure logic, owned by KingdomState.
 
 signal changed
 
@@ -18,13 +20,16 @@ const DECLARE_OTHERS_PENALTY := -5
 const DECLARE_FRIEND_PENALTY := -15
 ## Added to every other clan's change when the player breaks a treaty by declaring war (GDD §9.7).
 const BETRAY_ALLY_PENALTY := -20
-const BREAK_PACT_PENALTY := -10
 ## Chance per turn that a hostile neighbour declares war, by personality:
 ## PEACEFUL, AGGRESSIVE, MERCHANT, ISOLATED.
 const AI_DECLARE_CHANCE: Array[float] = [0.02, 0.15, 0.05, 0.05]
 ## Same, for clans that are only Tense: only aggressive clans go to war that early.
 const AI_DECLARE_CHANCE_TENSE: Array[float] = [0.0, 0.05, 0.0, 0.0]
-const STRENGTH_REGEN_PER_TURN := 2
+## Share of its (current) maximum a clan's army regrows every turn.
+const STRENGTH_REGEN_SHARE := 0.1
+## Every clan's maximum grows by this share of its starting strength per turn, up to MAX_GROWTH more.
+const GROWTH_PER_TURN := 0.01
+const MAX_GROWTH := 1.0
 const INVASION_CHANCE := 0.25
 const INVASION_COOLDOWN := 3
 ## Share of its current soldiers a clan sends to invade.
@@ -39,8 +44,13 @@ const LOOT_PER_SOLDIER: Dictionary[StringName, int] = {&"food": 1, &"wood": 1, &
 const ATTACK_DEFEAT_COMPENSATION := 0.25
 ## A clan whose army falls below this share of its maximum surrenders and is annexed.
 const ANNEX_THRESHOLD := 0.15
-## Rows/columns of wild land the kingdom board gains on the annexed clan's side.
+## Rows/columns of wild land the kingdom board gains for every CLANS_PER_EXPANSION annexations,
+## on the sides in EXPANSION_ORDER (clockwise from the top) whatever the clans' direction,
+## EXPANSION_LIMIT times at most (2 rounds: 12×12 → 20×20, after 16 annexations).
 const ANNEX_EXPANSION := 2
+const CLANS_PER_EXPANSION := 2
+const EXPANSION_ORDER: Array[Vector2i] = [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
+const EXPANSION_LIMIT := 8
 const PEACE_BASE_CHANCE := 0.1
 const PEACE_LOSSES_WEIGHT := 0.8
 const PEACE_TRIBUTE_PER_POINT := 100.0
@@ -58,14 +68,9 @@ class Front:
 	var strength: int
 	var max_strength: int
 	var truce_turns := 0
-	## Which board edge the clan borders; distant clans become neighbours after an annexation.
-	var direction: ClanData.Direction
 	var turns_since_invasion := 0
 	var attacked_this_turn := false
 	var peace_offered_this_turn := false
-
-	func is_neighbor() -> bool:
-		return direction != ClanData.Direction.NONE and not annexed
 
 	func losses_share() -> float:
 		return 1.0 - float(strength) / max_strength if max_strength > 0 else 1.0
@@ -83,12 +88,29 @@ func _init(diplomacy: Diplomacy) -> void:
 		front.clan_id = clan_id
 		front.strength = data.military_strength
 		front.max_strength = data.military_strength
-		front.direction = data.direction
 		fronts[clan_id] = front
 
 
 func at_war_with(clan_id: StringName) -> bool:
 	return fronts[clan_id].at_war
+
+
+## Next to the kingdom's territory on the campaign map (and not annexed).
+func is_neighbor(clan_id: StringName) -> bool:
+	return _diplomacy.borders(clan_id)
+
+
+## The clan's maximum strength on `turn`: its starting strength, GROWTH_PER_TURN more every turn.
+func max_strength_at(clan_id: StringName, turn: int) -> int:
+	var base := _diplomacy.clans[clan_id].data.military_strength
+	return roundi(base * (1.0 + minf(MAX_GROWTH, GROWTH_PER_TURN * maxi(0, turn - 1))))
+
+
+func count_annexed() -> int:
+	var total := 0
+	for front in fronts.values():
+		total += 1 if front.annexed else 0
+	return total
 
 
 # --- Declaring war ------------------------------------------------------------------------
@@ -97,7 +119,7 @@ func check_declare(clan_id: StringName) -> DeclareResult:
 	var front := fronts[clan_id]
 	if front.annexed:
 		return DeclareResult.ANNEXED
-	if not front.is_neighbor():
+	if not is_neighbor(clan_id):
 		return DeclareResult.NOT_NEIGHBOR
 	if front.at_war:
 		return DeclareResult.ALREADY_AT_WAR
@@ -107,7 +129,7 @@ func check_declare(clan_id: StringName) -> DeclareResult:
 
 
 ## The player declares war: the target turns hostile and every other clan trusts the kingdom less,
-## its friends most. Breaking an alliance or a non-aggression pact costs extra with everyone.
+## its friends most. Breaking an alliance costs extra with everyone.
 func declare_war(clan_id: StringName) -> DeclareResult:
 	var result := check_declare(clan_id)
 	if result != DeclareResult.OK:
@@ -128,8 +150,6 @@ func declare_penalty(clan_id: StringName, other: StringName) -> int:
 	var penalty := DECLARE_FRIEND_PENALTY if clan.data.friends.has(other) else DECLARE_OTHERS_PENALTY
 	if clan.is_allied():
 		penalty += BETRAY_ALLY_PENALTY
-	if clan.has_pact():
-		penalty += BREAK_PACT_PENALTY
 	return penalty
 
 
@@ -138,7 +158,6 @@ func _start_war(clan_id: StringName) -> void:
 	front.at_war = true
 	front.turns_since_invasion = 0
 	_diplomacy.clans[clan_id].alliance_turns = 0
-	_diplomacy.clans[clan_id].pact_turns = 0
 	_diplomacy.remove_agreement(clan_id)
 	changed.emit()
 
@@ -151,15 +170,17 @@ func clan_declares_war(clan_id: StringName) -> bool:
 	return true
 
 
-## End of turn: armies regrow, truces count down, wars keep relations hostile, and hostile
-## neighbours may declare war. Returns the clans that declared war this turn.
-func end_turn(rng: RandomNumberGenerator) -> Array[StringName]:
+## End of turn (`turn` is the turn that ends): armies grow stronger and regrow, truces count
+## down, wars keep relations hostile, and hostile neighbours may declare war. Returns the clans
+## that declared war this turn.
+func end_turn(rng: RandomNumberGenerator, turn: int = 1) -> Array[StringName]:
 	var declared: Array[StringName] = []
 	for clan_id in fronts:
 		var front := fronts[clan_id]
 		if front.annexed:
 			continue
-		front.strength = mini(front.max_strength, front.strength + STRENGTH_REGEN_PER_TURN)
+		front.max_strength = max_strength_at(clan_id, turn + 1)
+		front.strength = mini(front.max_strength, front.strength + ceili(front.max_strength * STRENGTH_REGEN_SHARE))
 		front.truce_turns = maxi(0, front.truce_turns - 1)
 		front.turns_since_invasion += 1
 		front.attacked_this_turn = false
@@ -176,11 +197,8 @@ func end_turn(rng: RandomNumberGenerator) -> Array[StringName]:
 	return declared
 
 
-## Chance this turn that the clan declares war on its own (0 unless Tense or Hostile, and never
-## during a non-aggression pact).
+## Chance this turn that the clan declares war on its own (0 unless Tense or Hostile).
 func _declare_chance(clan_id: StringName) -> float:
-	if _diplomacy.clans[clan_id].has_pact():
-		return 0.0
 	var personality := _diplomacy.clans[clan_id].data.personality
 	match _diplomacy.get_tier(clan_id):
 		Diplomacy.Tier.HOSTILE:
@@ -198,7 +216,7 @@ func pick_invader(rng: RandomNumberGenerator) -> StringName:
 	ids.sort()
 	for clan_id: StringName in ids:
 		var front := fronts[clan_id]
-		if front.at_war and front.is_neighbor() and front.strength > 0 \
+		if front.at_war and is_neighbor(clan_id) and front.strength > 0 \
 				and front.turns_since_invasion >= INVASION_COOLDOWN and rng.randf() < INVASION_CHANCE:
 			front.turns_since_invasion = 0
 			return clan_id
@@ -274,19 +292,37 @@ func should_annex(clan_id: StringName) -> bool:
 	return front.at_war and front.strength < front.max_strength * ANNEX_THRESHOLD
 
 
-## The clan surrenders and joins the kingdom. Distant clans on its roads become neighbours on
-## the same side. Returns the board direction to expand toward.
+## The clan surrenders and joins the kingdom; the clans around its square now border the kingdom.
+## Returns the board side to add land to (EXPANSION_ORDER, clockwise from the top) on every
+## CLANS_PER_EXPANSION-th annexation, otherwise (and once the board has grown EXPANSION_LIMIT
+## times) Vector2i.ZERO.
 func annex(clan_id: StringName) -> Vector2i:
 	var front := fronts[clan_id]
 	front.annexed = true
 	front.at_war = false
 	_diplomacy.clans[clan_id].annexed = true
+	_diplomacy.clans[clan_id].alliance_turns = 0
 	_diplomacy.remove_agreement(clan_id)
-	for other in _diplomacy.clans[clan_id].data.roads:
-		if fronts.has(other) and not fronts[other].annexed and fronts[other].direction == ClanData.Direction.NONE:
-			fronts[other].direction = front.direction
 	changed.emit()
-	return ClanData.direction_vector(front.direction)
+	var annexed := count_annexed()
+	if annexed % CLANS_PER_EXPANSION != 0:
+		return Vector2i.ZERO
+	return expansion_side(annexed / CLANS_PER_EXPANSION - 1)
+
+
+## Annexations still needed before the board next grows (0 once it has grown EXPANSION_LIMIT times).
+func annexations_to_expand() -> int:
+	var annexed := count_annexed()
+	if annexed / CLANS_PER_EXPANSION >= EXPANSION_LIMIT:
+		return 0
+	return CLANS_PER_EXPANSION - annexed % CLANS_PER_EXPANSION
+
+
+## The board side the `index`-th expansion (0-based) adds land to, or ZERO past EXPANSION_LIMIT.
+static func expansion_side(index: int) -> Vector2i:
+	if index >= EXPANSION_LIMIT:
+		return Vector2i.ZERO
+	return EXPANSION_ORDER[index % EXPANSION_ORDER.size()]
 
 
 # --- Peace --------------------------------------------------------------------------------
@@ -379,9 +415,9 @@ static func describe_peace(result: PeaceResult) -> String:
 
 # --- Save (GDD §10.1) ---------------------------------------------------------------------
 
-## Front fields written as they are (ints, bools and the direction enum). max_strength comes
-## from the clan data so rebalancing applies to old saves.
-const SAVED_FRONT_FIELDS: Array[StringName] = [&"at_war", &"annexed", &"strength", &"truce_turns", &"direction",
+## Front fields written as they are (ints and bools). max_strength comes from the clan data and
+## the turn (max_strength_at) so rebalancing applies to old saves.
+const SAVED_FRONT_FIELDS: Array[StringName] = [&"at_war", &"annexed", &"strength", &"truce_turns",
 		&"turns_since_invasion", &"attacked_this_turn", &"peace_offered_this_turn"]
 
 
@@ -395,7 +431,9 @@ func to_save() -> Dictionary:
 	return result
 
 
-func load_save(data: Dictionary) -> void:
+func load_save(data: Dictionary, turn: int = 1) -> void:
+	for clan_id in fronts:
+		fronts[clan_id].max_strength = max_strength_at(clan_id, turn)
 	for clan_name: String in data:
 		var front: Front = fronts.get(StringName(clan_name))
 		if front == null:

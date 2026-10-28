@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ClanData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/diplomacy/clan_data.gd" id="1_clan"]
+
+[resource]
+script = ExtResource("1_clan")
+clan_id = &"dragon_gate"
+display_name = "Long Môn Quan"
+description = "Cửa ải hiểm yếu canh giữ con đường vào đất Kim Ưng."
+color = Color(0.82, 0.41, 0.47, 1)
+grid = Vector2i(3, 4)
+personality = 1
+military_strength = 310
+surplus = Array[StringName]([&"food"])
+deficit = Array[StringName]([&"hardwood"])
+start_relation = -10
+base_relation = -15
+friends = Array[StringName]([&"golden_eagle"])
+army_units = Dictionary[StringName, float]({&"royal_swordguard": 2.0, &"royal_pikeguard": 2.0, &"marksman_archer": 2.0, &"crossbow_elite": 1.0, &"heavy_cavalry": 2.0, &"elite_musketeer": 2.0, &"heavy_artillery": 1.0, &"shield_guard": 1.0})

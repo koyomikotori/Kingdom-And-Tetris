@@ -6,3 +6,4 @@
 script = ExtResource("1_castle")
 level = 1
 squad_capacity = 0
+required_clans = 0
