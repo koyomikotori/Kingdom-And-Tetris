@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ClanData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/diplomacy/clan_data.gd" id="1_clan"]
+
+[resource]
+script = ExtResource("1_clan")
+clan_id = &"salt_coast"
+display_name = "Diêm Hải Bang"
+description = "Bang hội buôn muối ven biển, giàu và nhiều mối giao thương."
+color = Color(0.61, 0.82, 0.41, 1)
+grid = Vector2i(4, 1)
+personality = 2
+military_strength = 160
+surplus = Array[StringName]([&"stone"])
+deficit = Array[StringName]([&"food"])
+start_relation = 10
+base_relation = 15
+friends = Array[StringName]([&"thunder_cliff"])
+army_units = Dictionary[StringName, float]({&"elite_swordsman": 1.0, &"elite_spearman": 1.0, &"royal_swordguard": 2.0, &"royal_pikeguard": 2.0, &"marksman_archer": 2.0, &"crossbow_elite": 1.0, &"lancer_cavalry": 1.0, &"elite_musketeer": 1.0, &"light_artillery": 1.0, &"shield_guard": 1.0})

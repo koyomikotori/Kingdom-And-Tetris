@@ -84,8 +84,8 @@ func refresh() -> void:
 	_name_label.add_theme_color_override("font_color", UiPalette.ink(data.color))
 	_description.text = data.description
 	var front := _wars.fronts[_clan_id]
-	_info.text = "%s · %s · Quân: %d/%d lính" % [ClanData.DIRECTION_NAMES[front.direction],
-			ClanData.PERSONALITY_NAMES[data.personality], front.strength, front.max_strength]
+	_info.text = "%s · %s · Quân: %d/%d lính" % [_distance_text(), ClanData.PERSONALITY_NAMES[data.personality],
+			front.strength, front.max_strength]
 	var tier := Diplomacy.tier_for(clan.relation)
 	_relation_bar.value = clan.relation
 	var fill := StyleBoxFlat.new()
@@ -113,6 +113,18 @@ func refresh() -> void:
 		reason.visible = button.visible and not reason.text.is_empty()
 
 
+## How far the clan is on the campaign map (GDD §15): bordering, within reach, or too far.
+func _distance_text() -> String:
+	if _diplomacy.clans[_clan_id].annexed:
+		return "Lãnh thổ của bạn"
+	var steps := _diplomacy.distance(_clan_id)
+	if steps == 1:
+		return "Giáp ranh"
+	if steps <= Diplomacy.REACH:
+		return "Cách %d vùng" % steps
+	return "Cách %d vùng (quá xa)" % steps
+
+
 ## War or peace, then every treaty with its turns left.
 func _standing_text() -> String:
 	var clan := _diplomacy.clans[_clan_id]
@@ -128,8 +140,6 @@ func _standing_text() -> String:
 		parts.append("Hòa bình")
 	if clan.is_allied():
 		parts.append("Đồng minh (còn %d lượt)" % clan.alliance_turns)
-	if clan.has_pact():
-		parts.append("Bất tương xâm (còn %d lượt)" % clan.pact_turns)
 	var agreement := clan.agreement
 	if agreement != null:
 		parts.append("Hợp đồng (còn %d lượt)" % agreement.turns_left)
@@ -210,16 +220,6 @@ func _update_alliance(button: Button, reason: Label) -> void:
 		reason.text = Alliances.describe_alliance(result)
 
 
-func _update_pact(button: Button, reason: Label) -> void:
-	button.visible = not _wars.at_war_with(_clan_id)
-	var result := _alliances.check_pact(_clan_id)
-	button.disabled = result != Alliances.PactResult.OK
-	if _diplomacy.clans[_clan_id].has_pact():
-		reason.text = "Đang có hiệp ước (còn %d lượt)." % _diplomacy.clans[_clan_id].pact_turns
-	elif button.disabled:
-		reason.text = Alliances.describe_pact(result)
-
-
 func _update_declare(button: Button, reason: Label) -> void:
 	button.visible = not _wars.at_war_with(_clan_id)
 	var result := _wars.check_declare(_clan_id)
@@ -281,7 +281,6 @@ func _build_details() -> void:
 	_add_command("Tặng quà", GiftDialog, _update_gift)
 	_add_command("Hợp đồng giao thương", AgreementDialog, _update_agreement)
 	_add_command("Liên minh", AllianceDialog, _update_alliance)
-	_add_command("Bất tương xâm", PactDialog, _update_pact)
 	_add_command("Tuyên chiến", DeclareWarDialog, _update_declare, true)
 
 

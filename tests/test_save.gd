@@ -27,7 +27,6 @@ func _busy_state() -> KingdomState:
 	state.army.add_squad(&"archer", 7)
 	state.diplomacy.change_relation(&"south_farmers", 50, Diplomacy.MEMORY_GIFT)
 	state.alliances.propose_alliance(_low_rng(), &"south_farmers")
-	state.alliances.sign_pact(&"east_merchants")
 	state.diplomacy.propose(_low_rng(), &"east_merchants", &"wood", 5, &"food", 4, 10)
 	state.wars.declare_war(&"north_wolves")
 	state.wars.lose_soldiers(&"north_wolves", 25)

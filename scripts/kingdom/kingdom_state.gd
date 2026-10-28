@@ -48,6 +48,9 @@ var castle_level := 1
 var castle_turns := 0
 ## Tests and previews: building and upgrading finish at once instead of taking turns.
 static var instant_construction := false
+## Castle levels need united clans (CastleLevelData.required_clans, GDD §15). Tests and previews
+## that are about something else turn this off.
+static var castle_needs_clans := true
 var castle_levels: Array[CastleLevelData] = CastleLevelData.load_all()
 var rng := RandomNumberGenerator.new()
 
@@ -124,7 +127,7 @@ func load_save(data: Dictionary) -> void:
 	stockpile.load_save(data.stockpile)
 	army.load_save(data.army, units)
 	diplomacy.load_save(data.diplomacy)
-	wars.load_save(data.wars)
+	wars.load_save(data.wars, turn)
 	# Saves from before M11a have no victory state or stats.
 	if data.has("victory"):
 		victory.load_save(data.victory)
@@ -400,7 +403,7 @@ func get_squad_capacity() -> int:
 
 # --- Castle (GDD §8, M11c) ----------------------------------------------------------------
 
-enum CastleResult { OK, MAX_LEVEL, CANNOT_AFFORD, NO_BUILDERS, IN_PROGRESS }
+enum CastleResult { OK, MAX_LEVEL, CANNOT_AFFORD, NO_BUILDERS, IN_PROGRESS, NEEDS_CLANS }
 
 
 ## The level the castle would reach next, or null at the top.
@@ -424,6 +427,8 @@ func check_castle_upgrade() -> CastleResult:
 		return CastleResult.MAX_LEVEL
 	if castle_turns > 0:
 		return CastleResult.IN_PROGRESS
+	if castle_needs_clans and diplomacy.count_united() < next.required_clans:
+		return CastleResult.NEEDS_CLANS
 	if not has_free_builder():
 		return CastleResult.NO_BUILDERS
 	if not stockpile.can_afford(castle_upgrade_cost()):
@@ -668,7 +673,7 @@ func end_turn() -> Dictionary:
 	diplomacy.threat = get_threat()
 	diplomacy.end_turn()
 	var treaties := alliances.end_turn()
-	var declared := wars.end_turn(rng)
+	var declared := wars.end_turn(rng, turn)
 	turn += 1
 	var healed := generals.end_turn(castle_level, turn)
 	var advisors_healed := advisors.end_turn()
@@ -756,7 +761,7 @@ func get_threat() -> int:
 			+ annexed * THREAT_PER_ANNEXED_CLAN + army.count_soldiers() / THREAT_SOLDIERS_PER_POINT
 
 ## Applies a finished invasion battle: the kingdom defended. Losing costs squads (§7.6), up to
-## Wars.LAND_LOST_PER_DEFEAT cells on the clan's edge and Wars.INVASION_RESOURCE_LOSS of every
+## Wars.LAND_LOST_PER_DEFEAT cells on the board's edge facing the clan and Wars.INVASION_RESOURCE_LOSS of every
 ## resource. The clan loses the soldiers it lost.
 ## Losing with no land left outside the castle makes the castle fall: the game is lost (GDD §9b).
 ## Returns {"record", "won", "clan_id", "casualties", "scattered", "retreat_losses",
@@ -777,7 +782,7 @@ func finish_invasion(clan_id: StringName, record: BattleRecord) -> Dictionary:
 	var lost_cells: Array[Vector2i] = []
 	var resources_lost: Dictionary[StringName, int] = {}
 	if not won:
-		var edge := ClanData.direction_vector(wars.fronts[clan_id].direction)
+		var edge := ClanData.direction_vector(diplomacy.direction_to(clan_id))
 		lost_cells = board.lose_edge_cells(edge, Wars.LAND_LOST_PER_DEFEAT)
 		for resource_id in stockpile.get_all():
 			var amount := floori(stockpile.get_amount(resource_id) * Wars.INVASION_RESOURCE_LOSS)
@@ -803,10 +808,11 @@ func start_attack(clan_id: StringName) -> BattleSimulator:
 
 
 ## Applies a finished attack. Winning loots resources and may make the clan surrender: it is
-## annexed and the board grows toward it. Losing costs the whole army (half of the unbroken
+## annexed and the board grows (Wars.annex: clockwise from the top, 16 times at most). Losing costs the whole army (half of the unbroken
 ## squads if the player retreated) and a compensation of every resource.
 ## Returns {"record", "won", "clan_id", "casualties", "scattered", "retreat_losses", "enemy_lost",
-##          "loot", "compensation", "annexed": bool, "allies", "helpers"}.
+##          "loot", "compensation", "annexed": bool, "expanded": Vector2i (board side grown, ZERO = none),
+##          "allies", "helpers"}.
 func finish_attack(clan_id: StringName, record: BattleRecord) -> Dictionary:
 	var won := record.winner == BattleRecord.ATTACKER
 	_record_battle(won)
@@ -824,7 +830,10 @@ func finish_attack(clan_id: StringName, record: BattleRecord) -> Dictionary:
 			loot[resource_id] = Wars.LOOT_PER_SOLDIER[resource_id] * enemy_lost
 		stockpile.add(loot)
 		if wars.should_annex(clan_id):
-			board.expand(wars.annex(clan_id), Wars.ANNEX_EXPANSION)
+			var side := wars.annex(clan_id)
+			if side != Vector2i.ZERO:
+				board.expand(side, Wars.ANNEX_EXPANSION)
+			result["expanded"] = side
 			annexed = true
 			events.annexed_turn = turn
 	else:

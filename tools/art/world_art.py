@@ -55,6 +55,75 @@ def trees() -> Canvas:
     return c
 
 
+def mountain_range() -> Canvas:
+    """Three peaks in a row, the middle one tall with snow (44×24), for mountain chains."""
+    c = Canvas(44, 24)
+    # The side peaks first; the tall snowy one in front covers them.
+    for cx, top, snow in ((10, 9, False), (34, 7, False), (22, 0, True)):
+        for y in range(top, 24):
+            half = (y - top) * 0.8
+            x0, x1 = round(cx - half), round(cx + half)
+            for x in range(max(0, x0), min(43, x1) + 1):
+                c.px(x, y, hex_color("cdb88a") if x > cx else hex_color("b9a275"))
+            c.px(max(0, x0), y, INK)
+            c.px(min(43, x1), y, INK)
+        for y in range(top + 4, 23, 2):
+            c.hline(round(cx - (y - top) * 0.8) + 2, cx - 2, y, INK_LIGHT)
+        if snow:
+            for y in range(top, top + 5):
+                half = (y - top) * 0.8
+                c.hline(round(cx - half) + 1, round(cx + half) - 1, y, hex_color("f4ecd8"))
+    return c
+
+
+def hills() -> Canvas:
+    """Low rolling hills (26×10): two humps with grass ticks."""
+    c = Canvas(26, 10)
+    for cx, r in ((8, 7), (18, 6)):
+        for x in range(cx - r, cx + r + 1):
+            h = round((1 - ((x - cx) / r) ** 2) ** 0.5 * (r * 0.9))
+            for y in range(9 - h, 10):
+                c.px(x, y, hex_color("b5b36e"))
+            c.px(x, 9 - h, INK)
+    for x in range(3, 24, 4):
+        c.px(x, 7, hex_color("7d8a45"))
+    return c
+
+
+def pines() -> Canvas:
+    """A dark pine forest (26×18): five narrow pines."""
+    c = Canvas(26, 18)
+    for x0, y0 in ((1, 4), (6, 0), (11, 3), (16, 1), (20, 5)):
+        for y in range(10):
+            half = y * 0.35 + (0.6 if y % 3 == 2 else 0)
+            c.hline(round(x0 + 2 - half), round(x0 + 2 + half), y0 + y, hex_color("5f7a4a"))
+        c.vline(x0 + 2, y0 + 10, min(17, y0 + 12), INK)
+    c.outline(INK)
+    return c
+
+
+def village() -> Canvas:
+    """A hamlet of three thatched huts (22×14)."""
+    c = Canvas(22, 14)
+    for x0, y0 in ((1, 5), (8, 2), (14, 6)):
+        for y in range(4):
+            c.hline(x0 + 3 - y, x0 + 3 + y, y0 + y, hex_color("c99a50"))
+        c.rect(x0 + 1, y0 + 4, 5, 4, hex_color("e8d8b0"))
+        c.px(x0 + 3, y0 + 6, INK)
+        c.px(x0 + 3, y0 + 7, INK)
+    c.outline(INK)
+    return c
+
+
+def reeds() -> Canvas:
+    """Marsh reeds (14×10) for lake shores."""
+    c = Canvas(14, 10)
+    for x in (1, 4, 6, 9, 12):
+        c.vline(x, 2 + x % 3, 9, hex_color("7d8a45"))
+        c.px(x, 1 + x % 3, INK)
+    return c
+
+
 def fort() -> tuple:
     """A clan's walled fort (24×22): stone walls and gate, a roofed keep, a banner. The banner and
     the roof trim are in the team layer."""
@@ -127,6 +196,11 @@ def draw_all() -> None:
     parchment().save("world/parchment.png")
     mountain().save("world/mountain.png")
     trees().save("world/trees.png")
+    mountain_range().save("world/mountain_range.png")
+    hills().save("world/hills.png")
+    pines().save("world/pines.png")
+    village().save("world/village.png")
+    reeds().save("world/reeds.png")
     base, team = fort()
     base.save("world/fort.png")
     team.save("world/fort_team.png")

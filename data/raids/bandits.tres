@@ -11,3 +11,6 @@ squads_per_turn = 0.15
 unit_weights = Dictionary[StringName, float]({&"bandit_thug": 3.0, &"bandit_archer": 1.0})
 resource_loss_on_defeat = 0.3
 reward_per_squad = Dictionary[StringName, int]({&"food": 3, &"wood": 3})
+chance_per_ten_turns = 0.03
+max_chance = 0.45
+late_units = Dictionary[StringName, int]({&"bandit_rider": 25})

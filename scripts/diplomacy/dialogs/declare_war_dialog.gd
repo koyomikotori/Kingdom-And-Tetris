@@ -37,13 +37,18 @@ func _refresh() -> void:
 		lines.append("  • Hợp đồng giao thương với họ bị hủy (mất +%d)." % Diplomacy.AGREEMENT_BASE_BONUS)
 	if clan.is_allied():
 		lines.append("  • Phản bội liên minh (mất +%d)." % Diplomacy.ALLIANCE_BASE_BONUS)
-	if clan.has_pact():
-		lines.append("  • Phá hiệp ước bất tương xâm (mất +%d)." % Diplomacy.PACT_BASE_BONUS)
+	# 23 clans are too many to list: the friends by name, everyone else in one line.
 	lines.append("  • Các gia tộc khác:")
+	var others_penalty := 0
 	for other in state.diplomacy.clans:
-		if other != clan_id and not state.diplomacy.clans[other].annexed:
-			var friend := " (bạn của họ)" if clan.data.friends.has(other) else ""
-			lines.append("      %s%s: quan hệ %d" % [_clan_name(other), friend, state.wars.declare_penalty(clan_id, other)])
+		if other == clan_id or state.diplomacy.clans[other].annexed:
+			continue
+		if clan.data.friends.has(other):
+			lines.append("      %s (bạn của họ): quan hệ %d" % [_clan_name(other), state.wars.declare_penalty(clan_id, other)])
+		else:
+			others_penalty = state.wars.declare_penalty(clan_id, other)
+	if others_penalty != 0:
+		lines.append("      Mọi gia tộc còn lại: quan hệ %d" % others_penalty)
 	lines.append("  • Họ có thể kéo quân xâm lược bạn; bạn có thể đem quân tấn công họ mỗi lượt một lần.")
 	_consequences.text = "\n".join(lines)
 

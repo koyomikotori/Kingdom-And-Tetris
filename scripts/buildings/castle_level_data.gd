@@ -8,6 +8,9 @@ extends Resource
 @export var cost: Dictionary[StringName, int] = {}
 ## Extra army squads this level adds (on top of the levels below).
 @export var squad_capacity: int = 0
+## Clans annexed or allied (Diplomacy.count_united) needed before upgrading to this level
+## (GDD §15, M14b).
+@export var required_clans: int = 0
 
 
 ## All levels, sorted by level.

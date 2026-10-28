@@ -100,14 +100,15 @@ func test_expand_keeps_building_levels() -> void:
 func test_player_declares_war() -> void:
 	var state := _state()
 	var wars := state.wars
-	var others_before := state.diplomacy.clans[&"south_farmers"].relation
-	state.diplomacy.propose(_low_rng(), &"east_merchants", &"wood", 5, &"food", 4, 10)
-	check_eq(wars.declare_war(&"east_merchants"), Wars.DeclareResult.OK, "Declared")
-	check(wars.at_war_with(&"east_merchants"), "At war")
-	check(state.diplomacy.clans[&"east_merchants"].relation <= Wars.DECLARE_RELATION, "Target turns hostile")
-	check_eq(state.diplomacy.clans[&"south_farmers"].relation, others_before + Wars.DECLARE_OTHERS_PENALTY, "Others trust less")
-	check(state.diplomacy.get_agreement(&"east_merchants") == null, "Trade agreement ends")
-	check_eq(wars.check_declare(&"east_merchants"), Wars.DeclareResult.ALREADY_AT_WAR, "Already at war")
+	var others_before := state.diplomacy.clans[&"north_wolves"].relation
+	state.diplomacy.propose(_low_rng(), &"south_farmers", &"wood", 5, &"food", 4, 10)
+	check_eq(wars.declare_war(&"south_farmers"), Wars.DeclareResult.OK, "Declared")
+	check(wars.at_war_with(&"south_farmers"), "At war")
+	check(state.diplomacy.clans[&"south_farmers"].relation <= Wars.DECLARE_RELATION, "Target turns hostile")
+	check_eq(state.diplomacy.clans[&"north_wolves"].relation, others_before + Wars.DECLARE_OTHERS_PENALTY, "Others trust less")
+	check(state.diplomacy.get_agreement(&"south_farmers") == null, "Trade agreement ends")
+	check_eq(wars.check_declare(&"south_farmers"), Wars.DeclareResult.ALREADY_AT_WAR, "Already at war")
+	check_eq(wars.check_declare(&"east_merchants"), Wars.DeclareResult.NOT_NEIGHBOR, "Two steps away: not yet")
 	check_eq(wars.check_declare(&"golden_eagle"), Wars.DeclareResult.NOT_NEIGHBOR, "Distant clans cannot be fought")
 
 
@@ -130,10 +131,20 @@ func test_war_keeps_relation_hostile_and_armies_regrow() -> void:
 		state.diplomacy.end_turn()
 		state.wars.end_turn(_high_rng())
 	check(state.diplomacy.clans[&"north_wolves"].relation <= Wars.DECLARE_RELATION, "No drift back to friendly during war")
-	check_eq(state.wars.fronts[&"north_wolves"].strength, 70 - 30 + 5 * Wars.STRENGTH_REGEN_PER_TURN, "+2 soldiers per turn")
+	var front := state.wars.fronts[&"north_wolves"]
+	check_eq(front.strength, 50 - 30 + 5 * ceili(front.max_strength * Wars.STRENGTH_REGEN_SHARE), "+10% of the maximum per turn")
 	for i in 50:
 		state.wars.end_turn(_high_rng())
-	check_eq(state.wars.fronts[&"north_wolves"].strength, 70, "Capped at the maximum")
+	check_eq(front.strength, front.max_strength, "Capped at the maximum")
+
+
+func test_clan_armies_grow_over_time() -> void:
+	var state := _state()
+	check_eq(state.wars.max_strength_at(&"north_wolves", 1), 50, "Starting strength on turn 1")
+	check_eq(state.wars.max_strength_at(&"north_wolves", 51), 75, "+1% of it per turn")
+	check_eq(state.wars.max_strength_at(&"north_wolves", 500), 100, "At most twice as many")
+	state.wars.end_turn(_high_rng(), 50)
+	check_eq(state.wars.fronts[&"north_wolves"].max_strength, 75, "End of turn 50: the maximum for turn 51")
 
 
 func test_clan_army_follows_its_composition() -> void:
@@ -144,7 +155,7 @@ func test_clan_army_follows_its_composition() -> void:
 	for unit in side.units:
 		by_type[unit.data.unit_id] = by_type.get(unit.data.unit_id, 0) + unit.start_soldiers
 		check(unit.start_soldiers <= unit.data.squad_size, "Squads are not oversized")
-	check(by_type[&"swordsman"] > by_type[&"spearman"], "Wolves are mostly swordsmen (3:1:1)")
+	check(by_type[&"swordsman"] > by_type[&"spearman"], "Wolves are mostly swordsmen (3:2:2)")
 
 
 # --- Invasions ----------------------------------------------------------------------------
@@ -168,7 +179,7 @@ func test_lost_invasion_costs_land_on_their_side() -> void:
 	check(not result.won, "No army: the invasion wins")
 	check_eq(result.lost_cells.size(), Wars.LAND_LOST_PER_DEFEAT, "Six cells lost")
 	for coord: Vector2i in result.lost_cells:
-		check(coord.y <= 5, "Lost cells are on the north side (%s)" % coord)
+		check(coord.x >= 6, "The wolves are east of the kingdom: lost cells are on the east side (%s)" % coord)
 
 
 func test_won_invasion_weakens_the_clan() -> void:
@@ -181,7 +192,7 @@ func test_won_invasion_weakens_the_clan() -> void:
 	var result := state.finish_invasion(&"south_farmers", _run(simulator))
 	check(result.won, "Four squads beat 18 farmers")
 	check(result.lost_cells.is_empty(), "No land lost")
-	check_eq(state.wars.fronts[&"south_farmers"].strength, 30 - result.enemy_lost, "The clan lost soldiers")
+	check_eq(state.wars.fronts[&"south_farmers"].strength, 40 - result.enemy_lost, "The clan lost soldiers")
 	check(result.enemy_lost > 0, "Some of them fell")
 
 
@@ -233,9 +244,15 @@ func test_winning_attack_loots_and_can_annex() -> void:
 	check_eq(result.loot, {&"food": result.enemy_lost, &"wood": result.enemy_lost, &"stone": result.enemy_lost}, "1 of each per fallen enemy")
 	check(result.annexed, "Below 15%: the clan surrenders")
 	check(state.wars.fronts[&"south_farmers"].annexed, "Marked annexed")
-	check_eq([state.board.width, state.board.height], [12, 12 + Wars.ANNEX_EXPANSION], "Board grew to the south")
-	check_eq(state.wars.fronts[&"steppe_tribes"].direction, ClanData.Direction.SOUTH, "Steppe tribes are the new southern neighbour")
-	check_eq(state.wars.check_declare(&"steppe_tribes"), Wars.DeclareResult.OK, "...and can now be fought")
+	check_eq([state.board.width, state.board.height], [12, 12], "First annexation: no land yet (every second one)")
+	check_eq(result.expanded, Vector2i.ZERO, "…reported")
+	check_eq(state.wars.check_declare(&"steppe_tribes"), Wars.DeclareResult.OK, "Steppe tribes border the kingdom now")
+	state.wars.declare_war(&"steppe_tribes")
+	state.wars.fronts[&"steppe_tribes"].strength = 6
+	result = state.finish_attack(&"steppe_tribes", _run(state.start_attack(&"steppe_tribes")))
+	check(result.annexed, "Second annexation")
+	check_eq([state.board.width, state.board.height], [12, 12 + Wars.ANNEX_EXPANSION], "Second annexation: land on top")
+	check_eq(result.expanded, Vector2i.UP, "…reported")
 	var stock: Dictionary[StringName, int] = {&"food": 50}
 	state.stockpile.add(stock)
 	check_eq(state.diplomacy.check_trade(state.stockpile, &"south_farmers", &"food", 5, &"wood"),
@@ -251,7 +268,7 @@ func test_winning_without_crushing_them_does_not_annex() -> void:
 	state.wars.fronts[&"south_farmers"].max_strength = 1000
 	var result := state.finish_attack(&"south_farmers", _run(state.start_attack(&"south_farmers")))
 	check(not result.annexed or state.wars.fronts[&"south_farmers"].strength < 150, "Annex only below 15% of maximum")
-	check_eq([state.board.width, state.board.height], [12, 12] if not result.annexed else [12, 12 + Wars.ANNEX_EXPANSION], "Board grows only on annexation")
+	check_eq([state.board.width, state.board.height], [12, 12], "No land (and a first annexation adds none either)")
 
 
 # --- Peace ------------------------------------------------------------------------------

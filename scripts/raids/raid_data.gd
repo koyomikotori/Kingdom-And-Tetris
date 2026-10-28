@@ -6,11 +6,16 @@ extends Resource
 @export var first_turn: int = 6
 ## Chance per turn before watchtowers, 0..1.
 @export var base_chance: float = 0.15
+## The chance grows by this much every 10 turns (M14b), up to max_chance.
+@export var chance_per_ten_turns: float = 0.03
+@export var max_chance: float = 0.45
 ## Bandit squads = base_squads + floor(turn * squads_per_turn).
 @export var base_squads: int = 1
 @export var squads_per_turn: float = 0.12
 ## Enemy unit id -> relative weight when picking each bandit squad's type.
 @export var unit_weights: Dictionary[StringName, float] = {}
+## Enemy units that join only later: unit id -> first turn they appear (picked with weight 1.5).
+@export var late_units: Dictionary[StringName, int] = {}
 ## Fraction of each resource lost when the raid wins.
 @export var resource_loss_on_defeat: float = 0.3
 ## Reward per bandit squad when the kingdom wins.

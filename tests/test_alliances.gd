@@ -133,100 +133,74 @@ func test_alliance_breaks_below_friendly_and_cancelling_costs_30() -> void:
 	check_eq(state.diplomacy.clans[&"east_merchants"].relation, 30, "90 - 30 penalty - 30 alliance bonus")
 
 
-# --- Non-aggression pact --------------------------------------------------------------------
-
-func test_pact_needs_friendly_and_lasts_ten_turns() -> void:
-	var state := _state()
-	check_eq(state.alliances.sign_pact(&"north_wolves"), Alliances.PactResult.NOT_FRIENDLY, "Wolves are not friendly")
-	check_eq(state.alliances.sign_pact(&"south_farmers"), Alliances.PactResult.OK, "Farmers sign")
-	check_eq(state.alliances.sign_pact(&"south_farmers"), Alliances.PactResult.ALREADY_HAS, "Once")
-	var events: Array[Dictionary] = []
-	for i in Alliances.PACT_TURNS:
-		events = state.alliances.end_turn()
-	check(not state.diplomacy.clans[&"south_farmers"].has_pact(), "Expired")
-	check_eq(events, [{"clan_id": &"south_farmers", "event": &"pact_expired"}], "Reported")
-
-
-func test_pact_stops_the_clan_declaring_war_even_when_hostile() -> void:
-	var state := _state()
-	_set_relation(state, &"north_wolves", 30)
-	state.alliances.sign_pact(&"north_wolves")
-	_set_relation(state, &"north_wolves", -90)
-	check(state.wars.end_turn(_low_rng()).is_empty(), "No declaration during the pact")
-	state.diplomacy.clans[&"north_wolves"].pact_turns = 0
-	check_eq(state.wars.end_turn(_low_rng()), [&"north_wolves"] as Array[StringName], "Declares once it is over")
-
-
 # --- Declaring war on friends and treaty partners -------------------------------------------
 
 func test_declaring_war_angers_the_targets_friends_most() -> void:
 	var state := _state()
-	var eagle := state.diplomacy.clans[&"golden_eagle"].relation
+	var merchants := state.diplomacy.clans[&"east_merchants"].relation
 	var farmers := state.diplomacy.clans[&"south_farmers"].relation
 	state.wars.declare_war(&"north_wolves")
-	check_eq(state.diplomacy.clans[&"golden_eagle"].relation, eagle - 15, "Friend of the wolves: -15")
+	check_eq(state.diplomacy.clans[&"east_merchants"].relation, merchants - 15, "Friend of the wolves: -15")
 	check_eq(state.diplomacy.clans[&"south_farmers"].relation, farmers - 5, "Others: -5")
 
 
-func test_betraying_an_ally_costs_everyone_and_ends_the_treaties() -> void:
+func test_betraying_an_ally_costs_everyone_and_ends_the_alliance() -> void:
 	var state := _state()
 	_ally(state, &"south_farmers")
-	state.alliances.sign_pact(&"south_farmers")
 	var steppe := state.diplomacy.clans[&"steppe_tribes"].relation
 	var wolves := state.diplomacy.clans[&"north_wolves"].relation
-	check_eq(state.wars.declare_penalty(&"south_farmers", &"north_wolves"), -5 - 20 - 10, "Preview")
+	check_eq(state.wars.declare_penalty(&"south_farmers", &"north_wolves"), -5 - 20, "Preview")
 	state.wars.declare_war(&"south_farmers")
-	var farmers := state.diplomacy.clans[&"south_farmers"]
-	check(not farmers.is_allied() and not farmers.has_pact(), "Both treaties are gone")
-	check_eq(state.diplomacy.clans[&"north_wolves"].relation, wolves - 35, "Others: -5 - 20 (ally) - 10 (pact)")
-	check_eq(state.diplomacy.clans[&"steppe_tribes"].relation, steppe - 45, "Their friend: -15 - 20 - 10")
+	check(not state.diplomacy.clans[&"south_farmers"].is_allied(), "The alliance is gone")
+	check_eq(state.diplomacy.clans[&"north_wolves"].relation, wolves - 25, "Others: -5 - 20 (ally)")
+	check_eq(state.diplomacy.clans[&"steppe_tribes"].relation, steppe - 35, "Their friend: -15 - 20")
 
 
 # --- Lent soldiers --------------------------------------------------------------------------
 
 func test_allies_send_thirty_percent_unless_weak_or_friends_with_the_enemy() -> void:
 	var state := _state()
-	_ally(state, &"east_merchants")  # 40 soldiers, friend of golden_eagle
-	_ally(state, &"south_farmers")  # 30 soldiers
-	check_eq(_lent_soldiers(state.create_kingdom_side(&"")), {&"east_merchants": 12, &"south_farmers": 9},
+	_ally(state, &"east_merchants")  # 65 soldiers, friend of north_wolves
+	_ally(state, &"south_farmers")  # 40 soldiers
+	check_eq(_lent_soldiers(state.create_kingdom_side(&"")), {&"east_merchants": 20, &"south_farmers": 12},
 			"Both help against bandits")
-	check_eq(_lent_soldiers(state.create_kingdom_side(&"golden_eagle")), {&"south_farmers": 9},
+	check_eq(_lent_soldiers(state.create_kingdom_side(&"north_wolves")), {&"south_farmers": 12},
 			"Merchants will not fight their friend")
-	state.wars.fronts[&"south_farmers"].strength = 8  # below 30% of 30
-	check_eq(_lent_soldiers(state.create_kingdom_side(&"")), {&"east_merchants": 12}, "Weak allies stay home")
+	state.wars.fronts[&"south_farmers"].strength = 11  # below 30% of 40
+	check_eq(_lent_soldiers(state.create_kingdom_side(&"")), {&"east_merchants": 20}, "Weak allies stay home")
 
 
 func test_shared_victory_costs_the_ally_soldiers_and_raises_relation() -> void:
 	var state := _state()
-	_ally(state, &"east_merchants")
+	_ally(state, &"south_farmers")
 	state.army.add_squad(&"swordsman", 20)
 	state.army.add_squad(&"swordsman", 20)
 	state.wars.declare_war(&"north_wolves")
-	var relation := state.diplomacy.clans[&"east_merchants"].relation
+	var relation := state.diplomacy.clans[&"south_farmers"].relation
 	var invaders := state.wars.create_clan_side(&"north_wolves", 6, state.units)
 	var record := _run(BattleSimulator.new(invaders, state.create_kingdom_side(&"north_wolves"), 1))
 	var result := state.finish_invasion(&"north_wolves", record)
 	check(result.won, "Invasion beaten")
-	var sent: int = result.allies[&"east_merchants"].sent
-	var lost: int = result.allies[&"east_merchants"].lost
-	check_eq(sent, 12, "Merchants sent 12")
-	check_eq(state.wars.fronts[&"east_merchants"].strength, 40 - lost, "Their losses come out of their army")
-	check_eq(state.diplomacy.clans[&"east_merchants"].relation, relation + 5, "Shared win: +5")
-	check_eq(result.allies[&"east_merchants"].relation, 5, "Reported")
+	var sent: int = result.allies[&"south_farmers"].sent
+	var lost: int = result.allies[&"south_farmers"].lost
+	check_eq(sent, 12, "Farmers sent 12")
+	check_eq(state.wars.fronts[&"south_farmers"].strength, 40 - lost, "Their losses come out of their army")
+	check_eq(state.diplomacy.clans[&"south_farmers"].relation, relation + 5, "Shared win: +5")
+	check_eq(result.allies[&"south_farmers"].relation, 5, "Reported")
 	check_eq(state.army.count_squads(), 2, "Ally units never touch the kingdom's squads")
 
 
 func test_shared_defeat_lowers_relation_and_counts_only_own_losses() -> void:
 	var state := _state()
-	_ally(state, &"east_merchants")
+	_ally(state, &"south_farmers")
 	state.army.add_squad(&"swordsman", 10)
 	state.wars.declare_war(&"north_wolves")
-	var relation := state.diplomacy.clans[&"east_merchants"].relation
+	var relation := state.diplomacy.clans[&"south_farmers"].relation
 	var invaders := state.wars.create_clan_side(&"north_wolves", 70, state.units)
 	var record := _run(BattleSimulator.new(invaders, state.create_kingdom_side(&"north_wolves"), 1))
 	var result := state.finish_invasion(&"north_wolves", record)
 	check(not result.won, "Overrun")
-	check_eq(state.diplomacy.clans[&"east_merchants"].relation, relation - 10, "Shared defeat: -10")
+	check_eq(state.diplomacy.clans[&"south_farmers"].relation, relation - 10, "Shared defeat: -10")
 	var own_lost := 0
 	for bucket in [result.casualties, result.scattered, result.retreat_losses]:
 		for unit_id in bucket:
@@ -234,38 +208,40 @@ func test_shared_defeat_lowers_relation_and_counts_only_own_losses() -> void:
 	check(own_lost <= 10, "Kingdom losses only count its own 10 soldiers (got %d)" % own_lost)
 
 
-func test_friends_defend_the_attacked_clan_unless_allied_or_at_peace() -> void:
+func test_friends_defend_the_attacked_clan_unless_allied() -> void:
 	var state := _state()
 	state.army.add_squad(&"swordsman", 20)
-	state.wars.declare_war(&"west_fortress")  # friend: steppe_tribes (45)
-	var simulator := state.start_attack(&"west_fortress")
-	check_eq(_lent_soldiers(simulator.record.sides[BattleRecord.DEFENDER]), {&"steppe_tribes": 14}, "Steppe helps")
+	state.wars.declare_war(&"north_wolves")  # friends: east_merchants (65), west_fortress (75)
+	var simulator := state.start_attack(&"north_wolves")
+	check_eq(_lent_soldiers(simulator.record.sides[BattleRecord.DEFENDER]), {&"east_merchants": 20, &"west_fortress": 23},
+			"Both friends help")
 	var state2 := _state()
 	state2.army.add_squad(&"swordsman", 20)
-	_set_relation(state2, &"steppe_tribes", 30)
-	state2.alliances.sign_pact(&"steppe_tribes")
-	state2.wars.declare_war(&"west_fortress")
-	check(_lent_soldiers(state2.start_attack(&"west_fortress").record.sides[BattleRecord.DEFENDER]).is_empty(),
-			"A pact keeps the friend out")
-	var state3 := _state()
-	state3.army.add_squad(&"swordsman", 20)
-	_ally(state3, &"steppe_tribes")
-	state3.wars.declare_war(&"west_fortress")
-	var sim3 := state3.start_attack(&"west_fortress")
-	check(_lent_soldiers(sim3.record.sides[BattleRecord.DEFENDER]).is_empty(), "An ally does not defend them")
-	check(_lent_soldiers(sim3.record.sides[BattleRecord.ATTACKER]).is_empty(), "…nor attack its own friend")
+	_ally(state2, &"east_merchants")
+	state2.wars.declare_war(&"north_wolves")
+	var sim2 := state2.start_attack(&"north_wolves")
+	check_eq(_lent_soldiers(sim2.record.sides[BattleRecord.DEFENDER]), {&"west_fortress": 23}, "An ally does not defend them")
+	check(_lent_soldiers(sim2.record.sides[BattleRecord.ATTACKER]).is_empty(), "…nor attack its own friend")
 
 
 func test_helpers_lose_their_own_soldiers_not_the_targets() -> void:
 	var state := _state()
 	state.army.add_squad(&"swordsman", 20)
-	state.wars.declare_war(&"west_fortress")
-	var record := _run(state.start_attack(&"west_fortress"))
-	var result := state.finish_attack(&"west_fortress", record)
-	var helper_lost: int = result.helpers[&"steppe_tribes"].lost
-	check_eq(state.wars.fronts[&"steppe_tribes"].strength, 45 - helper_lost, "Steppe pays for its own losses")
-	check_eq(state.wars.fronts[&"west_fortress"].strength, 55 - result.enemy_lost, "Fortress only loses its own")
-	check(result.enemy_lost <= 55, "enemy_lost excludes the helpers")
+	state.wars.declare_war(&"north_wolves")
+	var record := _run(state.start_attack(&"north_wolves"))
+	var result := state.finish_attack(&"north_wolves", record)
+	var helper_lost: int = result.helpers[&"east_merchants"].lost
+	check_eq(state.wars.fronts[&"east_merchants"].strength, 65 - helper_lost, "The merchants pay for their own losses")
+	check_eq(state.wars.fronts[&"north_wolves"].strength, 50 - result.enemy_lost, "The wolves only lose their own")
+	check(result.enemy_lost <= 50, "enemy_lost excludes the helpers")
+
+
+func test_alliance_needs_the_clan_in_reach() -> void:
+	var state := _state()
+	_set_relation(state, &"golden_eagle", 80)
+	check_eq(state.alliances.check_alliance(&"golden_eagle"), Alliances.AllianceResult.TOO_FAR, "The far corner is out of reach")
+	_set_relation(state, &"east_merchants", 80)
+	check_eq(state.alliances.check_alliance(&"east_merchants"), Alliances.AllianceResult.OK, "Two steps away is fine")
 
 
 func test_alliance_can_be_renewed_in_its_last_turns() -> void:
@@ -288,13 +264,3 @@ func test_alliance_bonus_is_part_of_the_relation_at_once() -> void:
 	state.diplomacy.clans[&"south_farmers"].alliance_turns = 1
 	state.alliances.end_turn()
 	check_eq(state.diplomacy.clans[&"south_farmers"].relation, 60, "…and gone when it expires")
-
-
-func test_pact_adds_ten_while_it_runs() -> void:
-	var state := _state()
-	var before := state.diplomacy.clans[&"south_farmers"].relation
-	state.alliances.sign_pact(&"south_farmers")
-	check_eq(state.diplomacy.clans[&"south_farmers"].relation, before + 10, "+10 once signed")
-	state.diplomacy.clans[&"south_farmers"].pact_turns = 1
-	state.alliances.end_turn()
-	check_eq(state.diplomacy.clans[&"south_farmers"].relation, before, "-10 when it expires")

@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ClanData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/diplomacy/clan_data.gd" id="1_clan"]
+
+[resource]
+script = ExtResource("1_clan")
+clan_id = &"river_pirates"
+display_name = "Thủy Trại Bạch Giang"
+description = "Thủy tặc chiếm cứ khúc sông lớn, sống bằng thu thuế thuyền buôn."
+color = Color(0.82, 0.48, 0.41, 1)
+grid = Vector2i(3, 0)
+personality = 1
+military_strength = 115
+surplus = Array[StringName]([&"food"])
+deficit = Array[StringName]([&"hardwood"])
+start_relation = -10
+base_relation = -15
+friends = Array[StringName]([&"snow_monks"])
+army_units = Dictionary[StringName, float]({&"swordsman": 1.0, &"spearman": 1.0, &"archer": 1.0, &"elite_swordsman": 2.0, &"elite_spearman": 2.0, &"elite_archer": 2.0, &"shield_veteran": 1.0, &"crossbow_pro": 1.0, &"light_cavalry": 1.0})

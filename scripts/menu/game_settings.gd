@@ -1,7 +1,8 @@
 class_name GameSettings
 extends RefCounted
 ## Player preferences kept on this computer (user://settings.cfg), apart from the saves: map effects
-## (building animations and walkers, M13c), music and sound volumes and full screen (M14a).
+## (building animations and walkers, M13c), music and sound volumes and full screen (M14a), the
+## notice column's folded items and whether the column is open (M14b).
 ## Changed in SettingsWindow; `changed` lets open scenes apply them at once.
 
 const PATH := "user://settings.cfg"
@@ -15,6 +16,8 @@ static var _map_effects := true
 static var _music_volume := DEFAULT_MUSIC_VOLUME
 static var _sound_volume := DEFAULT_SOUND_VOLUME
 static var _fullscreen := false
+static var _folded_notices: Array[String] = []
+static var _notices_open := true
 ## Emitted after any setting changed (a static signal: listeners connect to `GameSettings.notifier.changed`).
 static var notifier := Notifier.new()
 
@@ -42,6 +45,34 @@ static func sound_volume() -> float:
 static func fullscreen() -> bool:
 	_load()
 	return _fullscreen
+
+
+## Notices.key()s of the items the player folded away.
+static func folded_notices() -> Array[String]:
+	_load()
+	return _folded_notices.duplicate()
+
+
+static func notices_open() -> bool:
+	_load()
+	return _notices_open
+
+
+static func set_notice_folded(notice_key: String, folded: bool) -> void:
+	_load()
+	if folded == _folded_notices.has(notice_key):
+		return
+	if folded:
+		_folded_notices.append(notice_key)
+	else:
+		_folded_notices.erase(notice_key)
+	_store("notices", "folded", _folded_notices)
+
+
+static func set_notices_open(open: bool) -> void:
+	_load()
+	_notices_open = open
+	_store("notices", "open", open)
 
 
 static func set_map_effects(on: bool) -> void:
@@ -94,3 +125,5 @@ static func _load() -> void:
 	_fullscreen = bool(file.get_value("display", "fullscreen", false))
 	_music_volume = clampf(float(file.get_value("audio", "music_volume", DEFAULT_MUSIC_VOLUME)), 0.0, 1.0)
 	_sound_volume = clampf(float(file.get_value("audio", "sound_volume", DEFAULT_SOUND_VOLUME)), 0.0, 1.0)
+	_folded_notices.assign(file.get_value("notices", "folded", []))
+	_notices_open = bool(file.get_value("notices", "open", true))

@@ -63,7 +63,10 @@ var officers_panel: OfficersPanel
 @onready var end_turn_button: Button = %EndTurnButton
 @onready var diplomacy_button: Button = %DiplomacyButton
 @onready var game_menu_button: Button = %GameMenuButton
-@onready var objectives_button: Button = %ObjectivesButton
+## The notice column on the left (M14b), built in code.
+var _notices: NoticePanel
+## The last end_turn() report, for the notice column (empty after loading a game).
+var _last_report: Dictionary = {}
 
 
 func _ready() -> void:
@@ -82,6 +85,10 @@ func _ready() -> void:
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			_info_collapsed = not _info_collapsed
 			_on_cell_hovered(board_view.get_hovered_cell()))
+	_notices = NoticePanel.new()
+	$UI.add_child(_notices)
+	$UI.move_child(_notices, 0)
+	_notices.setup(top_bar.get_combined_minimum_size().y, info_panel, $UI)
 
 	# A game picked in the main menu, or a new one.
 	var game := GameLaunch.take_pending_game()
@@ -124,7 +131,6 @@ func _ready() -> void:
 	end_turn_button.pressed.connect(_on_end_turn_pressed)
 	diplomacy_button.pressed.connect(_open_world_map)
 	game_menu_button.pressed.connect(_open_game_menu)
-	objectives_button.pressed.connect(_open_objectives)
 	if game.is_empty():
 		state.give_starting_resources()
 		state.start()
@@ -327,42 +333,9 @@ func _on_end_turn_pressed() -> void:
 	Sfx.play(&"end_turn")
 	if not report.completed.is_empty():
 		Sfx.play(&"complete")
-	var lines: Array[String] = []
-	var collected := UiFormat.amounts(report.collected, _resource_types)
-	lines.append("Đã thu: %s." % collected if not collected.is_empty() else "Lượt trước không thu được tài nguyên nào.")
-	var upkeep := UiFormat.amounts(report.upkeep, _resource_types)
-	if not upkeep.is_empty():
-		lines.append("Nuôi quân: %s." % upkeep)
-	if report.forged != null:
-		var forged: Item = report.forged
-		lines.append("Xưởng rèn xong %s (%s)." % [forged.display_name, Item.RARITY_NAMES[forged.rarity]])
-	for entry: Dictionary in report.completed:
-		lines.append("%s đã %s." % [entry.name, "lên cấp %d" % entry.level if entry.upgrade else "xây xong"])
-	for unit_id: StringName in report.deserted:
-		lines.append("%d %s bỏ đi vì thiếu lương thực!" % [report.deserted[unit_id], state.units[unit_id].display_name])
-	var replenished := _unit_amounts(report.replenished)
-	if not replenished.is_empty():
-		lines.append("Bổ sung quân: %s." % replenished)
-	for entry: Dictionary in report.agreements:
-		lines.append(_describe_agreement_turn(entry))
-	if not report.buildings_supplied:
-		lines.append("Không đủ phí duy trì công trình: công trình tạm ngưng tác dụng lượt này.")
-	for entry: Dictionary in report.treaties:
-		lines.append(_describe_treaty_event(entry))
-	for clan_id: StringName in report.war_declared:
-		lines.append("%s đã tuyên chiến với vương quốc!" % _clan_name(clan_id))
-	for general: General in report.generals_healed:
-		lines.append("Tướng %s đã lành vết thương." % general.name)
-	for advisor: Advisor in report.advisors_healed:
-		lines.append("Mưu sĩ %s đã lành vết thương." % advisor.name)
-	if state.generals.candidates_turn == state.turn:
-		lines.append("Có ứng viên mới (thành chính, tab Chiêu hiền).")
-	var held: int = state.victory.holds[Victory.Path.PROSPERITY]
-	if held > 0 and state.victory.won_path == Victory.NO_PATH:
-		lines.append("Đang giữ điều kiện chiến thắng %s: %d/%d lượt." % [Victory.PATH_NAMES[Victory.Path.PROSPERITY],
-				held, Victory.HOLD_TURNS])
-	if report.castle_in_danger:
-		lines.append("Thành chính nguy hiểm: chỉ còn %d ô đất ngoài thành!" % state.board.count_land_outside_castle())
+	_last_report = report
+	_refresh_notices()
+	var lines: Array[String] = ["Lượt %d bắt đầu. Xem bảng thông báo bên trái." % state.turn]
 	_pending_victory = report.victory
 	if report.has("pending_invasion"):
 		var invasion: Dictionary = report.pending_invasion
@@ -378,14 +351,6 @@ func _on_end_turn_pressed() -> void:
 	if not report.has("pending_invasion") and not report.has("pending_raid"):
 		_autosave()
 		_continue_turn_start()
-
-
-## "+5 Kiếm sĩ, +4 Cung thủ" from unit_id -> soldiers.
-func _unit_amounts(counts: Dictionary) -> String:
-	var parts: Array[String] = []
-	for unit_id: StringName in counts:
-		parts.append("+%d %s" % [counts[unit_id], state.units[unit_id].display_name])
-	return ", ".join(parts)
 
 
 ## Plays a battle on the battle screen, then calls `on_finished` with its record.
@@ -425,7 +390,7 @@ func _play_invasion(clan_id: StringName, simulator: BattleSimulator) -> void:
 		lines.append_array(_ally_lines(result))
 		if not result.lost_cells.is_empty():
 			lines.append("Mất %d ô đất %s." % [result.lost_cells.size(),
-					ClanData.DIRECTION_NAMES[state.wars.fronts[clan_id].direction].to_lower()])
+					ClanData.DIRECTION_NAMES[state.diplomacy.direction_to(clan_id)].to_lower()])
 		var plundered := UiFormat.amounts(result.resources_lost, _resource_types)
 		if not plundered.is_empty():
 			lines.append("Bị cướp phá: %s." % plundered)
@@ -464,11 +429,7 @@ func _attack_clan(clan_id: StringName) -> void:
 		if not compensation.is_empty():
 			lines.append("Bồi thường chiến phí: %s." % compensation)
 		if result.annexed:
-			var direction := state.wars.fronts[clan_id].direction
-			var line_name := "cột" if direction in [ClanData.Direction.EAST, ClanData.Direction.WEST] else "hàng"
-			lines.append("%s đầu hàng và sáp nhập vào vương quốc! Bản đồ mở rộng thêm %d %s đất hoang %s." % [
-					_clan_name(clan_id), Wars.ANNEX_EXPANSION, line_name,
-					ClanData.DIRECTION_NAMES[direction].to_lower()])
+			lines.append(_annex_line(clan_id, result.get("expanded", Vector2i.ZERO)))
 		var title_text := "Chiến thắng!" if result.won else "Thất bại!"
 		if result.annexed:
 			title_text = "%s đã bị sáp nhập!" % _clan_name(clan_id)
@@ -508,17 +469,6 @@ func _ally_lines(result: Dictionary) -> Array[String]:
 	return lines
 
 
-func _describe_treaty_event(entry: Dictionary) -> String:
-	var clan_name := _clan_name(entry.clan_id)
-	match entry.event:
-		&"alliance_expired":
-			return "Liên minh với %s đã hết hạn. Có thể ký lại trên bản đồ thế giới." % clan_name
-		&"alliance_broken":
-			return "%s rời bỏ liên minh vì quan hệ đi xuống." % clan_name
-		_:
-			return "Hiệp ước bất tương xâm với %s đã hết hạn." % clan_name
-
-
 func _clan_name(clan_id: StringName) -> String:
 	return state.diplomacy.clans[clan_id].data.display_name
 
@@ -526,25 +476,29 @@ func _clan_name(clan_id: StringName) -> String:
 ## Fits the whole board in the free screen area (again after the board grows).
 func _focus_camera() -> void:
 	# Container sizes are only sorted next frame, so use the top bar's minimum height.
-	camera.focus_on(board_view.get_board_rect(), side_panel.size.x, top_bar.get_combined_minimum_size().y)
+	camera.focus_on(board_view.get_board_rect(), side_panel.size.x, top_bar.get_combined_minimum_size().y,
+			_notices.custom_minimum_size.x if _notices != null else 0.0)
 
 
-func _describe_agreement_turn(entry: Dictionary) -> String:
-	var agreement: Diplomacy.Agreement = entry.agreement
-	var clan_name := state.diplomacy.clans[agreement.clan_id].data.display_name
-	var text: String
-	match entry.event:
-		&"delivered":
-			text = "Hợp đồng với %s: đưa %s, nhận %s." % [clan_name,
-					_amount_text(agreement.give_id, agreement.give_amount), _amount_text(agreement.get_id, agreement.get_amount)]
-		&"missed":
-			text = "Không đủ %s để giao cho %s (quan hệ -%d)." % [_amount_text(agreement.give_id, agreement.give_amount),
-					clan_name, Diplomacy.AGREEMENT_MISSED_PENALTY]
-		_:
-			text = "%s đã hủy hợp đồng vì quan hệ thù địch." % clan_name
-	if entry.completed:
-		text += " Hợp đồng đã hoàn thành."
-	return text
+## The report line for an annexation and the land it added (Wars.annex: every second one, 8 times at most).
+func _annex_line(clan_id: StringName, side: Vector2i) -> String:
+	var united := "%s đầu hàng và sáp nhập vào vương quốc! Đã thống nhất %d/%d gia tộc." % [_clan_name(clan_id),
+			state.diplomacy.count_united(), state.diplomacy.clans.size()]
+	if side == Vector2i.ZERO:
+		var needed := state.wars.annexations_to_expand()
+		if needed > 0:
+			return united + " Sáp nhập thêm %d gia tộc nữa để mở rộng bản đồ." % needed
+		return united + " Bản đồ vương quốc đã rộng hết cỡ."
+	var line_name := "cột" if side.x != 0 else "hàng"
+	var side_names := {Vector2i.UP: "phía trên", Vector2i.RIGHT: "bên phải", Vector2i.DOWN: "phía dưới",
+			Vector2i.LEFT: "bên trái"}
+	return united + " Bản đồ mở rộng thêm %d %s đất hoang %s." % [Wars.ANNEX_EXPANSION, line_name, side_names[side]]
+
+
+## Rebuilds the notice column from the state and the last turn's report.
+func _refresh_notices() -> void:
+	if _notices != null and state != null:
+		_notices.show_notices(Notices.build(state, _last_report), state.turn)
 
 
 func _amount_text(resource_id: StringName, amount: int) -> String:
@@ -594,13 +548,6 @@ func _show_end_game_if_any() -> void:
 	var window := EndGameWindow.new()
 	$UI.add_child(window)
 	window.open(state, Victory.NO_PATH if state.victory.lost else path, _save_system, $UI)
-
-
-func _open_objectives() -> void:
-	_clear_selection()
-	var window := ObjectivesWindow.new()
-	$UI.add_child(window)
-	window.open(state)
 
 
 ## Saves into the autosave slot (start of a game and of every turn).
@@ -819,6 +766,7 @@ func _build_resource_labels() -> void:
 ## Resource bar (stock, net income per turn and its breakdown) and the army tab depend on stock,
 ## army, territory and trade agreements.
 func _refresh_economy() -> void:
+	_refresh_notices()
 	var net := state.get_net_income()
 	var breakdown := state.get_income_breakdown()
 	for type in _resource_types:

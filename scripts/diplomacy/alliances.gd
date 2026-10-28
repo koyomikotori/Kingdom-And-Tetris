@@ -1,11 +1,10 @@
 class_name Alliances
 extends RefCounted
-## Alliances and non-aggression pacts with the clans (GDD §9.7), and the soldiers clans lend to
+## Alliances with the clans (GDD §9.7; no more non-aggression pacts since M14b), and the soldiers clans lend to
 ## each other's battles: the kingdom's allies join its battles, a clan's friends defend it when
 ## the kingdom attacks. Treaty state lives on Diplomacy.ClanState. Pure logic, owned by KingdomState.
 
-enum AllianceResult { OK, DECLINED, ANNEXED, AT_WAR, NOT_CLOSE, ALREADY_ALLIED, COOLDOWN }
-enum PactResult { OK, ANNEXED, AT_WAR, NOT_FRIENDLY, ALREADY_HAS }
+enum AllianceResult { OK, DECLINED, ANNEXED, AT_WAR, NOT_CLOSE, ALREADY_ALLIED, COOLDOWN, TOO_FAR }
 
 const ALLIANCE_TURNS := 20
 ## A running alliance can be renewed during its last turns, before its relation bonus is lost.
@@ -20,8 +19,6 @@ const ALLIANCE_THREAT_SCALE := 200.0
 const ALLIANCE_MAX_CHANCE := 0.95
 const ALLIANCE_RETRY_TURNS := 3
 const ALLIANCE_CANCEL_PENALTY := 30
-const PACT_TURNS := 10
-const PACT_MIN_TIER := Diplomacy.Tier.FRIENDLY
 ## Share of its current soldiers a clan lends to a battle.
 const HELP_SHARE := 0.3
 ## A clan below this share of its maximum strength keeps its soldiers at home.
@@ -62,6 +59,8 @@ func check_alliance(clan_id: StringName) -> AllianceResult:
 		return AllianceResult.ANNEXED
 	if _wars.at_war_with(clan_id):
 		return AllianceResult.AT_WAR
+	if not _diplomacy.in_reach(clan_id):
+		return AllianceResult.TOO_FAR
 	if clan.alliance_turns > ALLIANCE_RENEW_TURNS:
 		return AllianceResult.ALREADY_ALLIED
 	if _diplomacy.get_tier(clan_id) < ALLIANCE_MIN_TIER:
@@ -97,33 +96,8 @@ func cancel_alliance(clan_id: StringName) -> void:
 	_diplomacy.change_relation(clan_id, -ALLIANCE_CANCEL_PENALTY, Diplomacy.MEMORY_TREATY)
 
 
-# --- Non-aggression pact ------------------------------------------------------------------
-
-func check_pact(clan_id: StringName) -> PactResult:
-	var clan := _diplomacy.clans[clan_id]
-	if clan.annexed:
-		return PactResult.ANNEXED
-	if _wars.at_war_with(clan_id):
-		return PactResult.AT_WAR
-	if clan.has_pact():
-		return PactResult.ALREADY_HAS
-	if _diplomacy.get_tier(clan_id) < PACT_MIN_TIER:
-		return PactResult.NOT_FRIENDLY
-	return PactResult.OK
-
-
-## Friendly clans always sign: no war declarations from them for PACT_TURNS turns.
-func sign_pact(clan_id: StringName) -> PactResult:
-	var result := check_pact(clan_id)
-	if result == PactResult.OK:
-		_diplomacy.clans[clan_id].pact_turns = PACT_TURNS
-		_diplomacy.changed.emit()
-	return result
-
-
 ## Treaties count down; an alliance falls apart once the relation drops below Friendly.
-## Returns one entry per change: {"clan_id", "event": &"alliance_expired" | &"alliance_broken" |
-## &"pact_expired"}.
+## Returns one entry per change: {"clan_id", "event": &"alliance_expired" | &"alliance_broken"}.
 func end_turn() -> Array[Dictionary]:
 	var events: Array[Dictionary] = []
 	for clan_id in _sorted_ids():
@@ -139,10 +113,6 @@ func end_turn() -> Array[Dictionary]:
 				clan.alliance_turns -= 1
 				if clan.alliance_turns == 0:
 					events.append({"clan_id": clan_id, "event": &"alliance_expired"})
-		if clan.has_pact():
-			clan.pact_turns -= 1
-			if clan.pact_turns == 0:
-				events.append({"clan_id": clan_id, "event": &"pact_expired"})
 	_diplomacy.changed.emit()
 	return events
 
@@ -167,12 +137,12 @@ func helping_allies(enemy_clan: StringName) -> Array[StringName]:
 	return result
 
 
-## Friends of `target` that defend it against the kingdom, unless allied or at peace by pact with it.
+## Friends of `target` that defend it against the kingdom, unless allied with it.
 func helping_friends(target: StringName) -> Array[StringName]:
 	var result: Array[StringName] = []
 	for clan_id in _diplomacy.clans[target].data.friends:
 		var clan: Diplomacy.ClanState = _diplomacy.clans.get(clan_id)
-		if clan != null and clan_id != target and not clan.is_allied() and not clan.has_pact() \
+		if clan != null and clan_id != target and not clan.is_allied() \
 				and help_size(clan_id) > 0:
 			result.append(clan_id)
 	return result
@@ -229,19 +199,6 @@ static func describe_alliance(result: AllianceResult) -> String:
 			return "Đang liên minh."
 		AllianceResult.COOLDOWN:
 			return "Họ vừa từ chối, cần thêm thời gian cân nhắc."
-	return ""
-
-
-static func describe_pact(result: PactResult) -> String:
-	match result:
-		PactResult.OK:
-			return "Đã ký hiệp ước bất tương xâm %d lượt." % PACT_TURNS
-		PactResult.ANNEXED:
-			return "Gia tộc này đã bị sáp nhập."
-		PactResult.AT_WAR:
-			return "Đang chiến tranh, phải nghị hòa trước."
-		PactResult.ALREADY_HAS:
-			return "Đang có hiệp ước bất tương xâm."
-		PactResult.NOT_FRIENDLY:
-			return "Cần quan hệ Thân thiện (≥ %d) để ký bất tương xâm." % Diplomacy.TIER_THRESHOLDS[Diplomacy.Tier.FRIENDLY - 1]
+		AllianceResult.TOO_FAR:
+			return "Quá xa: chỉ liên minh được với gia tộc cách lãnh thổ tối đa %d vùng." % Diplomacy.REACH
 	return ""
