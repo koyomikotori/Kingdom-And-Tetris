@@ -18,6 +18,9 @@ const ACCENT := UiPalette.ACCENT
 const TAB_LIST_HEIGHT := 440
 ## Screen height the rest of the window needs (ModalWindow.fit_height).
 const TAB_LIST_RESERVED := 330
+## Room the confirm line and its two buttons take: the tab lists give it up while they show, so
+## the window does not grow past the screen and get shrunk by ScreenFit (M14b fix).
+const CONFIRM_HEIGHT := 100
 const CANDIDATE_PORTRAIT_SCALE := 1
 
 enum Action { NONE, UPGRADE, MOVE, DEMOLISH, CUSTOM, CANCEL_UPGRADE }
@@ -37,6 +40,8 @@ var _pending := Action.NONE
 ## What CUSTOM does once confirmed (recruit, refresh, appoint, dismiss).
 var _custom: Callable
 var _recruit_box: VBoxContainer
+## The tab pages' scrolling lists (_tab_box), sized by _fit_tab_lists.
+var _tab_scrolls: Array[ScrollContainer] = []
 ## The forge's "Rèn" tab (GDD §8 "Trang bị", M12e) and what it is set to make.
 var _forge_box: VBoxContainer
 var _forge_kind: StringName = &"general"
@@ -122,7 +127,8 @@ func _tab_box(title: String) -> VBoxContainer:
 	_tabs.add_child(margin)
 	# Long lists (three advisors with their stratagems) scroll instead of growing off screen.
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(0, fit_height(TAB_LIST_HEIGHT, TAB_LIST_RESERVED))
+	_tab_scrolls.append(scroll)
+	_fit_tab_lists()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	margin.add_child(scroll)
 	var box := VBoxContainer.new()
@@ -280,12 +286,24 @@ func _ask(action: Action) -> void:
 			var refund := UiFormat.amounts(_state.demolish_refund(_building.building_id), _resource_types)
 			_confirm_text.text = "Phá hủy %s? Hoàn lại %s. Không thể hoàn tác." % [
 					_building.display_name + (" đang xây" if _turns_left() > 0 else ""), refund if not refund.is_empty() else "không gì"]
-	_confirm_box.visible = true
+	_show_confirm(true)
 
 
 func _cancel_action() -> void:
 	_pending = Action.NONE
-	_confirm_box.visible = false
+	_show_confirm(false)
+
+
+func _show_confirm(shown: bool) -> void:
+	_confirm_box.visible = shown
+	_fit_tab_lists()
+
+
+## The tab lists' height: the screen's share, less the confirm box while it shows.
+func _fit_tab_lists() -> void:
+	var confirm := CONFIRM_HEIGHT if _confirm_box.visible else 0
+	for scroll in _tab_scrolls:
+		scroll.custom_minimum_size = Vector2(0, fit_height(TAB_LIST_HEIGHT - confirm, TAB_LIST_RESERVED + confirm))
 
 
 func _on_confirm_pressed() -> void:
@@ -325,7 +343,7 @@ func _ask_custom(text: String, on_confirm: Callable) -> void:
 	_pending = Action.CUSTOM
 	_custom = on_confirm
 	_confirm_text.text = text
-	_confirm_box.visible = true
+	_show_confirm(true)
 
 
 # --- Forge -------------------------------------------------------------------------------

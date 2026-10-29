@@ -58,7 +58,7 @@ func test_castle_levels_need_united_clans() -> void:
 	var needed: Array[int] = []
 	for level in state.castle_levels:
 		needed.append(level.required_clans)
-	check_eq(needed, [0, 1, 3, 6, 12, 24] as Array[int], "1 / 3 / 6 / 12 / 24 clans")
+	check_eq(needed, [0, 1, 3, 6, 10, 15] as Array[int], "1 / 3 / 6 / 10 / 15 clans")
 	KingdomState.castle_needs_clans = false
 
 

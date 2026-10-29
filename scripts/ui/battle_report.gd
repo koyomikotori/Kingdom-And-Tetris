@@ -1,6 +1,7 @@
 class_name BattleReport
 extends Control
-## Modal post-battle summary: winner, losses and damage per unit type for both sides,
+## Modal post-battle summary: winner, losses and damage per unit type for both sides (one row
+## per type, not per squad: a big late-game army made the table long and slow),
 ## and what the kingdom gained or lost. Built in code; emits `closed` when dismissed.
 
 signal closed
@@ -119,21 +120,41 @@ func _side_table(side: BattleSide) -> Control:
 		box.add_child(_label("(không có quân)"))
 		return box
 	var grid := GridContainer.new()
-	grid.columns = 6
+	grid.columns = 7
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	grid.add_theme_constant_override("h_separation", 18)
 	box.add_child(grid)
-	for text in ["Đơn vị", "Đầu trận", "Tử trận", "Còn lại", "Hạ được", "Trạng thái"]:
+	for text in ["Loại quân", "Số đội", "Đầu trận", "Tử trận", "Còn lại", "Hạ được", "Đội bị vỡ"]:
 		var cell := _cell(text)
 		cell.add_theme_color_override("font_color", UiPalette.MUTED)
 		grid.add_child(cell)
-	for unit in side.units:
-		var status := "Bị vỡ" if unit.broken else ("Tử trận hết" if unit.alive() == 0 else "Giữ vững")
-		var unit_name := unit.data.display_name + (" · " + unit.ally.display_name if unit.ally != null else "")
-		for text in [unit_name, str(unit.start_soldiers), str(unit.lost()), str(unit.alive()),
-				str(roundi(unit.kills)), status]:
+	for row in unit_type_rows(side):
+		for text in [row.name, str(row.squads), str(row.start), str(row.lost), str(row.alive),
+				str(roundi(row.kills)), str(row.broken)]:
 			grid.add_child(_cell(text))
 	return box
+
+
+## The side's units added up per unit type (allies' lent units apart, per lending clan), in the
+## order they first appear: {name, squads, start, lost, alive, kills, broken}.
+static func unit_type_rows(side: BattleSide) -> Array[Dictionary]:
+	var rows: Dictionary = {}
+	for unit in side.units:
+		var key := "%s/%s" % [unit.data.unit_id, unit.ally.clan_id if unit.ally != null else &""]
+		if not rows.has(key):
+			rows[key] = {"name": unit.data.display_name + (" · " + unit.ally.display_name if unit.ally != null else ""),
+					"squads": 0, "start": 0, "lost": 0, "alive": 0, "kills": 0.0, "broken": 0}
+		var row: Dictionary = rows[key]
+		row.squads += 1
+		row.start += unit.start_soldiers
+		row.lost += unit.lost()
+		row.alive += unit.alive()
+		row.kills += unit.kills
+		if unit.broken:
+			row.broken += 1
+	var result: Array[Dictionary] = []
+	result.assign(rows.values())
+	return result
 
 
 ## Table cell that shares the panel width with the other columns.

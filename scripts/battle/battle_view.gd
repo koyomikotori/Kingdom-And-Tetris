@@ -7,7 +7,9 @@ extends Control
 ## backdrop with the kingdom's walls (defending) or the enemy camp (attacking), stratagem effects.
 ## Read-only: it looks at the BattleSide units the simulator updates and never changes them.
 
-const SOLDIERS_PER_FIGURE := 4
+## One figure on the field stands for this many soldiers (was 4: big late-game armies lagged;
+## a full 20-man squad is now 3 figures).
+const SOLDIERS_PER_FIGURE := 7
 ## Width share of each side zone (18% of the screen out of the 80% this control covers).
 const SIDE_ZONE_SHARE := 18.0 / 80.0
 ## Sprites (16×16, the bodyguard 24×20) are drawn ×3; spacing is in screen pixels.
