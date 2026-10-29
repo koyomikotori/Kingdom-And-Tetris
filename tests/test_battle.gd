@@ -357,7 +357,7 @@ func test_battle_view_closes_lanes_and_steps_figures_forward() -> void:
 	# Figures: the front one falls, the rest step forward.
 	var unit_view: BattleView.UnitView = views[0]
 	var front_slot := unit_view.figures[0].slot
-	defender.units[0].soldiers = 16.0  # one figure (4 soldiers) lost
+	defender.units[0].soldiers = 20.0 - BattleView.SOLDIERS_PER_FIGURE  # one figure lost
 	view.update_view(0.1, [])
 	check_eq(unit_view.figures[0].state, BattleView.Figure.State.FLY, "The front figure is knocked out")
 	check(unit_view.figures[1].slot.is_equal_approx(front_slot), "The next figure takes the front place")
@@ -365,3 +365,23 @@ func test_battle_view_closes_lanes_and_steps_figures_forward() -> void:
 		view.update_view(0.1, [])
 	check(unit_view.figures[1].offset.is_equal_approx(front_slot), "It walks there")
 	view.free()
+
+
+func test_battle_report_adds_up_squads_per_unit_type() -> void:
+	var sword := _unit(&"sword", UnitData.Row.FRONT, UnitData.AttackKind.MELEE)
+	var bow := _unit(&"bow", UnitData.Row.BACK, UnitData.AttackKind.BOW)
+	var friend := ClanData.new()
+	friend.clan_id = &"friend"
+	friend.display_name = "Bạn"
+	var side := _side([[sword, 20], [bow, 15], [sword, 10]])
+	side.add_unit(sword, 8, null, friend)
+	side.units[0].soldiers = 5.0
+	side.units[0].kills = 3.0
+	side.units[2].broken = true
+	side.units[2].kills = 1.5
+	var rows := BattleReport.unit_type_rows(side)
+	check_eq(rows.size(), 3, "Swords, bows, the friend's lent swords")
+	check_eq([rows[0].name, rows[0].squads, rows[0].start, rows[0].alive, rows[0].lost, roundi(rows[0].kills), rows[0].broken],
+			["sword", 2, 30, 15, 15, 5, 1], "Two sword squads added up")
+	check_eq([rows[1].name, rows[1].squads, rows[1].start], ["bow", 1, 15], "One bow squad")
+	check_eq([rows[2].name, rows[2].squads, rows[2].start], ["sword · Bạn", 1, 8], "Lent units stay apart")

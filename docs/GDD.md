@@ -882,7 +882,9 @@ Mục tiêu: biến game thành chơi kiểu **chiến dịch**, mở rộng d�
 
 **Thôn tính và mở đất:** cứ thôn tính **2 gia tộc** thì bản đồ vương quốc thêm 2 hàng / cột đất hoang (mở đất chậm, dễ kiểm soát), lần lượt theo chiều kim đồng hồ **trên → phải → dưới → trái**, không phụ thuộc gia tộc ở hướng nào. Tối đa 8 lần (2 vòng, sau 16 gia tộc): bản đồ từ 12×12 lên 20×20. Chỉ thôn tính mới mở đất: thắng trận phòng thủ, hay đánh thắng mà gia tộc chưa đầu hàng, thì không. Thua một trận bị xâm lược thì mất đất ở cạnh bản đồ hướng về phía gia tộc đó.
 
-**Thành trì bị khóa theo chiến công:** muốn lên cấp thành phải đã thôn tính đủ số gia tộc: cấp 2 cần 1, cấp 3 cần 3, cấp 4 cần 6, cấp 5 cần 12, cấp 6 cần 24 (vẫn trả tài nguyên và mất lượt như trước). **Đồng minh tính như đã thôn tính** cho mốc thành; liên minh bị phá thì không tính nữa (thành đã lên cấp vẫn giữ).
+**Thành trì bị khóa theo chiến công:** muốn lên cấp thành phải đã thôn tính đủ số gia tộc: cấp 2 cần 1, cấp 3 cần 3, cấp 4 cần 6, cấp 5 cần 10, cấp 6 cần 15 (vẫn trả tài nguyên và mất lượt như trước). **Đồng minh tính như đã thôn tính** cho mốc thành; liên minh bị phá thì không tính nữa (thành đã lên cấp vẫn giữ).
+
+**Sau lượt chơi thử đầu tiên:** mốc cấp 5 / 6 giảm từ 12 / 24 xuống 10 / 15 gia tộc. Trên chiến trường mỗi hình lính đại diện 7 lính (trước là 4) để đỡ giật khi quân đông. Bảng kết quả trận gộp theo **loại quân** cho cả hai phe (số đội, đầu trận, tử trận, còn lại, hạ được, số đội bị vỡ; quân đồng minh cho mượn tách riêng theo gia tộc), không liệt kê từng đội.
 
 **Chiến thắng duy nhất: thống nhất** — mọi gia tộc trên bản đồ hoặc đã bị thôn tính, hoặc đang là đồng minh. Bỏ thắng hòa bình thịnh vượng, bỏ nút "Mục tiêu". Thua vẫn như cũ: thành chính thất thủ.
 
