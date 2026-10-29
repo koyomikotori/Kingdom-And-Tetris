@@ -15,7 +15,8 @@ static func limit(building: BuildingData, castle_level: int) -> int:
 		return 0
 	if building.fixed_count:
 		return building.max_count
-	return building.max_count + EXTRA_PER_CASTLE_LEVEL * (castle_level - 1)
+	var most := building.max_count + EXTRA_PER_CASTLE_LEVEL * (castle_level - 1)
+	return mini(most, building.max_limit) if building.max_limit > 0 else most
 
 
 ## Whether another one may be built at all (castle level, limit, builders), wherever it goes.

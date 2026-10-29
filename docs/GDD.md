@@ -110,7 +110,7 @@ Bản đồ ảnh hưởng chiến đấu trực tiếp chứ không chỉ qua t
 - Quân cướp đông dần theo số lượt (cấu hình trong `data/raids/bandits.tres`).
 - **Thua:** mất 30% mỗi loại tài nguyên, và lính còn sống mất thêm 30% mỗi loại (tháo chạy). Lính chết trong trận thì vẫn mất như thường.
 - **Thắng:** nhận một ít tài nguyên theo số cướp bị đánh bại. Sau này: kinh nghiệm cho tướng, mưu sĩ, lính.
-- **Trạm lính canh:** mỗi trạm giảm 4% tỉ lệ cướp, tối đa 3 trạm, tốn phí duy trì mỗi lượt. Nếu không trả đủ phí duy trì thì lượt đó trạm không có tác dụng. Sau này có thể thêm tác dụng khác.
+- **Trạm lính canh:** mỗi trạm giảm 4% tỉ lệ cướp, tối đa 3 trạm (M14d: 1 trạm ở thành cấp 1, +1 mỗi cấp thành, tối đa 4), tốn phí duy trì mỗi lượt. Nếu không trả đủ phí duy trì thì lượt đó trạm không có tác dụng. Sau này có thể thêm tác dụng khác.
 
 ### 7.3 Quân xâm lược & mất đất
 
@@ -176,7 +176,7 @@ Màn hình ngang, chia theo bề ngang:
 **Đơn vị (squad):** mỗi lần tuyển được **một đơn vị gồm nhiều lính** (ví dụ kiếm sĩ: 20 lính). Trên màn hình trận đánh, mỗi đơn vị chỉ vẽ vài hình đại diện (ví dụ 5 hình cho 20 lính) để tránh lag, giống Ninja Village. Mỗi đơn vị là một quân riêng, có số lính và sĩ khí riêng (sau này: kinh nghiệm riêng). Giá tuyển và phí nuôi tính theo đơn vị.
 
 **Quản lý đơn vị:**
-- **Bổ sung quân:** cuối mỗi lượt, đơn vị thiếu quân tự hồi 10% quân số chuẩn (25% trước M13b) (làm tròn lên, không vượt chuẩn), **miễn phí** (đã tốn lương thực nuôi quân). Cần có ít nhất 1 doanh trại.
+- **Bổ sung quân:** cuối mỗi lượt, đơn vị thiếu quân tự hồi 10% quân số chuẩn (25% trước M13b; M14d: + cấp của mỗi doanh trại, tính theo %) (làm tròn lên, không vượt chuẩn), **miễn phí** (đã tốn lương thực nuôi quân). Cần có ít nhất 1 doanh trại.
 - **Giới hạn số đơn vị:** thành chính cho 2, mỗi doanh trại thêm 4; tối đa 3 doanh trại (tổng 14). Sau này: nâng cấp / mở rộng thành để tăng giới hạn và mở rộng ra đất hoang mới.
 - **Giải tán:** người chơi có thể giải tán một đơn vị (ví dụ còn quá ít quân, hoặc muốn thay bằng loại tốt hơn). Không hoàn tài nguyên.
 - Không có gộp đơn vị.
@@ -275,7 +275,7 @@ Sản lượng đã tăng nhẹ sau lần chơi thử đầu (trước là 4 / 6
 
 **Nâng cấp công trình:** bấm vào công trình → tab Nâng cấp. Cấp công trình **không vượt cấp thành chính** (thành cấp 3 mới nâng công trình lên cấp 3). Giá lên cấp N = **N × giá xây**, từ cấp 3 thêm **(N − 2) × 2 Khoáng sản và 2 Gỗ cứng**. Phí duy trì tăng **1 Lương thực mỗi cấp** trên cấp 1. Di chuyển giữ nguyên cấp; phá hủy hoàn lại 50% giá xây.
 
-**Giới hạn số công trình:** mỗi loại **3 cái ở thành cấp 1, +1 mỗi cấp thành** (cấp 6: 8 cái), áp dụng cho **mọi công trình**, kể cả Doanh trại và Trạm lính canh.
+**Giới hạn số công trình:** mỗi loại **3 cái ở thành cấp 1, +1 mỗi cấp thành** (cấp 6: 8 cái), áp dụng cho **mọi công trình**, kể cả Doanh trại (Trạm lính canh: từ M14d là 1, +1 mỗi cấp thành, tối đa 4).
 
 **Thành chính không đổi kích thước** (2×2). Bản đầu cho thành lớn thêm 1 ô mỗi phía ở cấp 2, 4, 6, nhưng **đã bỏ sau khi chơi thử**: phải chờ có đủ ô cỏ quanh thành làm game khó quá.
 
@@ -313,6 +313,20 @@ Sản lượng đã tăng nhẹ sau lần chơi thử đầu (trước là 4 / 6
 - **Đội thợ:** số công trình thi công cùng lúc (kể cả thành) tối đa **1 + cấp thành**.
 - Save cũ: công trình đã có coi như xong.
 - Để sau: trả thêm để xây nhanh (cân bằng ở M14).
+
+### Ruộng đất xung quanh, tháp canh, thành chứa quân (M14d, đã chốt)
+
+Mục tiêu: ô đất trống bớt vô dụng; người chơi muốn đặt nhiều ô cùng loại quanh công trình khai thác, hoặc xây công trình ở chỗ có nhiều ô cùng loại.
+
+- **Ô xung quanh:** Nông trại / Xưởng gỗ / Mỏ nhận thêm **2 tài nguyên cơ bản** (lương thực / gỗ / đá) từ **mỗi ô cùng loại đất kề bên** (8 ô xung quanh: ruộng / rừng / đồi), **ô ◆ cho 4**. Chỉ tính ô trong lãnh thổ và **chưa có công trình** đứng trên. Số này không đổi theo cấp công trình. Một ô nằm giữa hai công trình cùng loại thì **cho cả hai**.
+- **Ô của chính công trình làm ra ít hơn 1** tài nguyên cơ bản ở mọi cấp (nông trại cấp 1: 5 → 4, cấp 6: 18 → 17; trên ô ◆ vẫn nhân đôi sau khi trừ). Tài nguyên phụ (ngựa, gỗ cứng, khoáng sản) giữ nguyên.
+- Đang thi công hoặc thiếu phí duy trì thì cũng không nhận từ ô xung quanh. Mưu sĩ Nội chính cộng % trên cả phần này.
+- Giao diện: bảng công trình ghi "Trong đó từ ô đất xung quanh"; bấm vào một ô đất thấy nó cho công trình bên cạnh bao nhiêu; khi đặt mảnh đất thì dòng sản lượng tính cả phần ô xung quanh thay đổi.
+- **Trạm lính canh:** thành cấp 1 chỉ xây được **1 trạm**, **+1 mỗi cấp thành**, **tối đa 4**.
+- **Thành chính chứa quân:** thành cấp 1 chứa **3** đơn vị, mỗi cấp +1 (cấp 6: **8**); mỗi doanh trại vẫn thêm 4 chỗ.
+- **Ván mới có sẵn 3 đơn vị** đủ quân: Kiếm binh, Thương binh, Cung thủ nông dân.
+- **Doanh trại cấp N tăng tốc hồi quân thêm N%**, cộng thẳng vào mức gốc 10% (6 doanh trại cấp 5: 10% + 30% = **40%** mỗi lượt). Vẫn cần ít nhất 1 doanh trại thì mới hồi quân; doanh trại đang thi công không tính.
+- Tiếp theo: các công trình hành chính (chưa chốt).
 
 ### Tướng (M11d, đã chốt)
 
@@ -796,7 +810,7 @@ Thiết kế bản điện thoại (đã chốt, làm ở M15):
 | M12e | **Trang bị** cho tướng và mưu sĩ: 5 bậc độ hiếm, Xưởng rèn, chiến lợi phẩm, kho 20 món, vũ khí hiện trong trận, khung chân dung theo sao, sửa hình ngựa và vũ khí lính (§8 Trang bị) | Xong |
 | M12f | Phần tiện cho chuột lấy từ M13: kéo chuột trái để cuộn bản đồ, kéo danh sách để cuộn, bấm ô / tài nguyên xem chi tiết, cửa sổ vừa màn hình, icon game (§10.2) | Xong |
 | M13 | **Công trình và lính mới:** Doanh trại 6 cấp với 3 bậc lính, Chuồng ngựa chiến, Trại bắn tên, Võ trường, Học viện quân sự, 21 loại lính (kỵ binh, nỏ xuyên giáp, đao thuẫn, pháo, hỏa mai) (§8); M13b tiện ích, M13c bản đồ sinh động | Xong |
-| M14 | M14a âm thanh (§14, xong); **M14b chiến dịch** (bản đồ 5×5, 24 gia tộc, chỉ thắng bằng thống nhất, bảng thông báo, §15); M14c build Windows, phát hành bản máy tính | Đang làm |
+| M14 | M14a âm thanh (§14, xong); M14b chiến dịch (bản đồ 5×5, 24 gia tộc, chỉ thắng bằng thống nhất, bảng thông báo, §15, xong); **M14d ruộng đất xung quanh, tháp canh, thành chứa quân, doanh trại hồi quân** (§8), rồi công trình hành chính; M14c build Windows, phát hành bản máy tính | Đang làm |
 | M15 | **Bản điện thoại:** cảm ứng (chạm xem trước + thanh Đặt/Hủy, chụm để zoom, nút Back), giao diện cho màn nhỏ, xuất APK, giả lập (nhánh `m13/touch-apk`, §10.2) | Để cuối |
 
 Đồ họa được đưa lên trước cảm ứng (chốt sau M11f) để lần sắp xếp lại bố cục dùng luôn giao diện mới. Bản điện thoại dời xuống cuối (chốt sau khi chơi thử M13 trên điện thoại): hoàn thiện bản máy tính trước.

@@ -9,13 +9,17 @@ signal castle_changed
 ## The player's main color: the kingdom's soldiers wear it in battle. Later the player picks it
 ## (with a commander and a banner) when starting a new game (GDD §13).
 const PLAYER_COLOR := Color(0.27, 0.45, 0.82)
-## Squads allowed without any barracks (the castle garrison).
-const BASE_SQUAD_CAPACITY := 2
+## Squads the castle holds at level 1 without any barracks (each castle level adds its
+## CastleLevelData.squad_capacity: 3 → 8 at level 6, GDD §8 M14d).
+const BASE_SQUAD_CAPACITY := 3
+## A new game's army: one full peasant squad of each (GDD §8 M14d).
+const STARTING_SQUADS: Array[StringName] = [&"swordsman", &"spearman", &"archer"]
 ## What a new game starts with (GDD §8, economy v2): land no longer yields, so the first
 ## buildings are paid from this.
 const STARTING_RESOURCES: Dictionary[StringName, int] = {&"food": 80, &"wood": 80, &"stone": 80, &"ore": 10,
 		&"hardwood": 10, &"horses": 10}
-## Each turn, squads below full strength regain this fraction of their full size (rounded up);
+## Each turn, squads below full strength regain this fraction of their full size (rounded up),
+## plus each finished barracks' level × BuildingData.replenish_per_level (replenish_fraction);
 ## the new soldiers dilute the squad's XP (Army.add_soldiers).
 const REPLENISH_FRACTION := 0.1
 
@@ -83,6 +87,12 @@ func _sync_advisors() -> void:
 ## games only; tests start from an empty stockpile.
 func give_starting_resources() -> void:
 	stockpile.add(STARTING_RESOURCES)
+
+
+## A new game's army (STARTING_SQUADS, full strength). The kingdom scene calls it for new games only.
+func give_starting_army() -> void:
+	for unit_id in STARTING_SQUADS:
+		army.add_squad(unit_id, units[unit_id].squad_size)
 
 
 ## Deals the first hand. Call once after connecting signals.
@@ -477,6 +487,19 @@ func can_replenish() -> bool:
 	return false
 
 
+## The share of a squad's full size it regains each turn: REPLENISH_FRACTION plus every finished
+## building's level × replenish_per_level (6 barracks at level 5: +30%). 0 without a barracks.
+func replenish_fraction() -> float:
+	if not can_replenish():
+		return 0.0
+	var fraction := REPLENISH_FRACTION
+	for cell in board.get_all_cells():
+		if cell.has_building() and cell.coord == cell.building_origin and not cell.is_constructing() \
+				and buildings.has(cell.building_id):
+			fraction += buildings[cell.building_id].replenish_per_level * cell.building_level
+	return fraction
+
+
 ## Land plus production buildings (only while their upkeep was paid last turn), plus the
 ## Nội chính advisor's share of both (advisor_yield_bonus).
 func get_turn_yield() -> Dictionary[StringName, int]:
@@ -598,7 +621,7 @@ func get_income_breakdown() -> Dictionary[StringName, Array]:
 			if cell.has_building() and cell.coord == cell.building_origin and buildings.has(cell.building_id) \
 					and not cell.is_constructing():
 				var amounts: Dictionary[StringName, int] = produced.get_or_add(cell.building_id, {} as Dictionary[StringName, int])
-				Economy.add_into(amounts, Economy.building_yield(buildings[cell.building_id], cell.is_key, cell.building_level))
+				Economy.add_into(amounts, Economy.production(board, buildings[cell.building_id], cell))
 		for building_id in produced:
 			for resource_id in produced[building_id]:
 				add.call(resource_id, {"source": &"production", "id": building_id,
@@ -734,7 +757,7 @@ func _replenish() -> Dictionary[StringName, int]:
 		return added
 	for squad in army.squads.duplicate():
 		var full := units[squad.unit_id].squad_size
-		var gain := mini(ceili(full * REPLENISH_FRACTION), full - squad.soldiers)
+		var gain := mini(ceili(full * replenish_fraction()), full - squad.soldiers)
 		if gain > 0:
 			army.add_soldiers(squad, gain)
 			added[squad.unit_id] = added.get(squad.unit_id, 0) + gain

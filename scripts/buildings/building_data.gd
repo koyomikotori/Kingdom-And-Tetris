@@ -17,6 +17,8 @@ const CATEGORY_NAMES: Array[String] = ["Sản xuất", "Quân sự", "Hành chí
 ## Maximum number the kingdom may have at castle level 1; each castle level above adds
 ## BuildRules.EXTRA_PER_CASTLE_LEVEL (GDD §8, economy v2). 0 = unlimited.
 @export var max_count: int = 0
+## The limit never goes past this, whatever the castle level (the watchtower: 4). 0 = no cap.
+@export var max_limit: int = 0
 ## Placeholder color until pixel-art sprites exist.
 @export var color: Color = Color.WHITE
 ## Paid every turn per building. When it cannot be paid, the building's effects pause that turn.
@@ -27,6 +29,13 @@ const CATEGORY_NAMES: Array[String] = ["Sản xuất", "Quân sự", "Hành chí
 @export var squad_capacity: int = 0
 ## Squads below full strength regain soldiers each turn while the kingdom has this building.
 @export var enables_replenishment: bool = false
+## Added to the replenishment share per level of each finished building (barracks: 0.01, so a
+## level-5 barracks gives +5 percentage points, GDD §8 M14d).
+@export var replenish_per_level: float = 0.0
+## Fields (GDD §8 M14d): the basic resource a production building also takes from every owned,
+## empty neighbor cell of its allowed terrain (Economy.FIELD_YIELD each, doubled on a key cell);
+## its own cell makes Economy.OWN_CELL_PENALTY less of it. Empty = no fields.
+@export var field_resource: StringName = &""
 ## Produced every turn while the building's upkeep is paid, one entry per level (index 0 = level 1);
 ## doubled on a key cell (GDD §8, economy v2). The number of entries is the building's max level.
 ## Each entry maps resource_id -> amount.

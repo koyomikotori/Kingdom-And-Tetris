@@ -44,7 +44,7 @@ func setup(units: Array[UnitData], resource_types: Array[ResourceTypeData]) -> v
 
 func refresh(state: KingdomState) -> void:
 	var upkeep := UiFormat.amounts(state.get_army_upkeep(), _resource_types)
-	var replenish := "Tự bổ sung %d%% quân mỗi lượt." % roundi(KingdomState.REPLENISH_FRACTION * 100) \
+	var replenish := "Tự bổ sung %d%% quân mỗi lượt (doanh trại cấp cao hồi nhanh hơn)." % roundi(state.replenish_fraction() * 100) \
 			if state.can_replenish() else "Cần doanh trại để bổ sung quân."
 	var commander := state.generals.commander
 	var leader := "Tổng tướng: chưa có (tuyển ở thành chính, tab Chiêu hiền)."

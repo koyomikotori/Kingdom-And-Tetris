@@ -169,17 +169,25 @@ func _refresh() -> void:
 		var unlocked := _units_unlocked(1, cell.building_level)
 		if not unlocked.is_empty():
 			lines.append("Mở tuyển: %s." % ", ".join(unlocked))
-		var produced := Economy.building_yield(_building, cell.is_key, cell.building_level)
+		var produced := Economy.production(_state.board, _building, cell)
 		if not produced.is_empty():
 			lines.append("Mỗi lượt: %s%s." % [UiFormat.amounts(produced, _resource_types, true),
 					"" if _state.buildings_supplied else " (đang ngừng vì thiếu phí duy trì)"])
+		if _building.field_resource != &"":
+			var fields := Economy.field_yield(_state.board, _building, _origin)
+			lines.append("Trong đó từ ô đất xung quanh: %s." % (UiFormat.amounts(fields, _resource_types, true)
+					if not fields.is_empty() else "chưa có"))
+		if _building.replenish_per_level > 0.0:
+			lines.append("Tăng tốc hồi quân: +%d%% (cấp %d)." % [roundi(_building.replenish_per_level * cell.building_level * 100),
+					cell.building_level])
 		var upkeep := _building.upkeep_at(cell.building_level)
 		if not upkeep.is_empty():
 			lines.append("Phí duy trì: %s mỗi lượt." % UiFormat.amounts(upkeep, _resource_types))
 		var most := BuildRules.limit(_building, _state.castle_level)
 		if most > 0:
 			lines.append("Đang có %d/%d%s." % [_state.board.count_buildings(_building.building_id), most,
-					"" if _building.fixed_count else " (thêm 1 chỗ mỗi cấp thành)"])
+					"" if _building.fixed_count else " (thêm 1 chỗ mỗi cấp thành%s)" % (
+						", tối đa %d" % _building.max_limit if _building.max_limit > 0 else "")])
 	_info.text = "\n".join(lines)
 	if not _is_castle:
 		_refresh_building_upgrade(cell)
@@ -225,7 +233,11 @@ func _refresh_building_upgrade(cell: CellData) -> void:
 	var text := "Lên cấp %d: %s. Mất %d lượt, công trình ngừng hoạt động trong lúc nâng cấp.\n" % [level + 1,
 			UiFormat.amounts(_state.building_upgrade_cost(_origin), _resource_types), _state.building_upgrade_turns(_origin)]
 	if not _building.level_yields.is_empty():
-		text += "Mỗi lượt: %s. " % UiFormat.amounts(Economy.building_yield(_building, cell.is_key, level + 1), _resource_types, true)
+		var next_yield := Economy.building_yield(_building, cell.is_key, level + 1)
+		Economy.add_into(next_yield, Economy.field_yield(_state.board, _building, _origin))
+		text += "Mỗi lượt: %s. " % UiFormat.amounts(next_yield, _resource_types, true)
+	if _building.replenish_per_level > 0.0:
+		text += "Tăng tốc hồi quân: +%d%%. " % roundi(_building.replenish_per_level * (level + 1) * 100)
 	text += "Phí duy trì: %s mỗi lượt." % UiFormat.amounts(_building.upkeep_at(level + 1), _resource_types)
 	var unlocked := _units_unlocked(level + 1, level + 1)
 	if not unlocked.is_empty():
