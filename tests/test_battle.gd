@@ -203,10 +203,15 @@ func test_raid_chance_and_watchtowers() -> void:
 	check(is_equal_approx(RaidSystem.get_raid_chance(state, raid), 0.15), "15% from turn 6")
 	state.stockpile.add({&"wood": 50, &"stone": 50})
 	state.build(&"watchtower", Vector2i(4, 4))
+	check(is_equal_approx(RaidSystem.get_raid_chance(state, raid), 0.11), "One tower: 15% - 4%")
+	check_eq(state.build(&"watchtower", Vector2i(7, 4)), BuildRules.Result.LIMIT_REACHED, "Only one at castle level 1")
+	var limits: Array[int] = []
+	for level in range(1, 7):
+		limits.append(BuildRules.limit(state.buildings[&"watchtower"], level))
+	check_eq(limits, [1, 2, 3, 4, 4, 4] as Array[int], "+1 per castle level, 4 at most (M14d)")
+	state.castle_level = 3
 	state.build(&"watchtower", Vector2i(7, 4))
-	check(is_equal_approx(RaidSystem.get_raid_chance(state, raid), 0.07), "Two towers: 15% - 8%")
-	check_eq(state.build(&"watchtower", Vector2i(4, 7)), BuildRules.Result.OK, "Third tower allowed")
-	check_eq(state.build(&"watchtower", Vector2i(7, 7)), BuildRules.Result.LIMIT_REACHED, "Fourth tower refused")
+	state.build(&"watchtower", Vector2i(4, 7))
 	check(is_equal_approx(RaidSystem.get_raid_chance(state, raid), 0.03), "Three towers: 3%")
 	state.buildings_supplied = false
 	check(is_equal_approx(RaidSystem.get_raid_chance(state, raid), 0.15), "Unpaid towers do nothing")

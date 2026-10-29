@@ -51,7 +51,7 @@ func test_buildings_add_production_doubled_on_key_cells() -> void:
 	check(state.get_turn_yield().is_empty(), "No buildings, no production")
 	state.build(&"mine", Vector2i(4, 3))
 	state.build(&"mine", Vector2i(5, 3))
-	check_eq(state.get_turn_yield().get(&"stone", 0), 5 + 10, "+5 stone, +10 on the key cell")
+	check_eq(state.get_turn_yield().get(&"stone", 0), 4 + 8, "+4 stone (5 - 1 on its own cell), +8 on the key cell")
 	var net := state.get_net_income()
 	var sum := 0
 	for entry: Dictionary in state.get_income_breakdown()[&"stone"]:
@@ -76,7 +76,7 @@ func test_buildings_level_up_with_the_castle() -> void:
 	check_eq(state.upgrade_building(origin), KingdomState.UpgradeResult.OK, "Level 2")
 	check_eq(stock[&"wood"] - state.stockpile.get_amount(&"wood"), 16, "2 × 8 wood")
 	check_eq(stock[&"ore"], state.stockpile.get_amount(&"ore"), "No ore below level 3")
-	check_eq(state.get_turn_yield(), {&"stone": 8, &"ore": 1} as Dictionary[StringName, int], "Level 2 output")
+	check_eq(state.get_turn_yield(), {&"stone": 7, &"ore": 1} as Dictionary[StringName, int], "Level 2 output (8 - 1 stone)")
 	check_eq(state.get_building_upkeep(), {&"food": 2} as Dictionary[StringName, int], "Upkeep +1 food per level")
 	check_eq(state.upgrade_building(origin), KingdomState.UpgradeResult.CASTLE_TOO_LOW, "Never above the castle")
 	state.upgrade_castle()
@@ -100,7 +100,7 @@ func test_paying_for_an_upgrade_sees_the_new_level() -> void:
 	state.upgrade_building(Vector2i(4, 3))
 	# The lambda holds the state: disconnect it, or the cycle leaks at exit.
 	state.stockpile.changed.disconnect(watch)
-	check_eq(seen, [16] as Array[int], "Income seen while paying is the level 2 income (8 × 2 on the key cell)")
+	check_eq(seen, [14] as Array[int], "Income seen while paying is the level 2 income ((8 - 1) × 2 on the key cell)")
 
 
 func test_upgrades_need_resources() -> void:
@@ -229,3 +229,50 @@ func test_moving_follows_the_building_rules_for_free() -> void:
 	check_eq(state.board.get_building_level(Vector2i(7, 8)), 2, "Keeps its level")
 	check_eq(state.stockpile.get_all(), stock, "Free")
 	check_eq(state.get_turn_yield().get(&"ore", 0), 2, "Level 2 ore, doubled on the key cell")
+
+
+func test_fields_around_a_production_building() -> void:
+	var state := _state()
+	_rich(state)
+	var farm := state.buildings[&"farm"]
+	var origin := Vector2i(2, 2)
+	state.board.set_land(origin, &"farmland", false)
+	state.build(&"farm", origin)
+	check_eq(state.get_turn_yield().get(&"food", 0), 4, "Alone: 5 - 1 on its own cell")
+	state.board.set_land(Vector2i(1, 1), &"farmland", false)
+	state.board.set_land(Vector2i(3, 2), &"farmland", true)
+	state.board.set_land(Vector2i(2, 3), &"forest", false)
+	check_eq(Economy.field_yield(state.board, farm, origin), {&"food": 2 + 4} as Dictionary[StringName, int],
+			"+2 per farmland neighbor, +4 on a key cell, other terrain nothing")
+	check_eq(state.get_turn_yield().get(&"food", 0), 4 + 6, "Fields come on top")
+	check_eq(Economy.cell_field_yield(state.board, state.buildings, Vector2i(3, 2)), {&"food": 4} as Dictionary[StringName, int],
+			"The cell info shows what a field gives")
+	# A second farm two cells away shares the field between them.
+	state.board.set_land(Vector2i(4, 2), &"farmland", false)
+	state.build(&"farm", Vector2i(4, 2))
+	check_eq(Economy.field_yield(state.board, farm, Vector2i(4, 2)), {&"food": 4} as Dictionary[StringName, int],
+			"The key field feeds the other farm too")
+	check_eq(Economy.cell_field_yield(state.board, state.buildings, Vector2i(3, 2)), {&"food": 8} as Dictionary[StringName, int],
+			"…and the cell says so")
+	# A building on a neighbor cell, or land outside the territory, is no field.
+	state.board.set_land(Vector2i(1, 2), &"farmland", false)
+	state.board.place_building(&"watchtower", Vector2i(1, 2), Vector2i.ONE)
+	state.board.get_cell(Vector2i(1, 1)).owned = false
+	check_eq(Economy.field_yield(state.board, farm, origin), {&"food": 4} as Dictionary[StringName, int],
+			"Built-on and unowned cells give nothing")
+	state.board.set_construction(Vector2i(4, 2), 2, true)
+	check_eq(Economy.cell_field_yield(state.board, state.buildings, Vector2i(3, 2)), {&"food": 4} as Dictionary[StringName, int],
+			"A building under construction takes no fields")
+
+
+func test_placement_preview_counts_fields() -> void:
+	var state := _state()
+	_rich(state)
+	var terrains := state.terrains
+	state.board.set_land(Vector2i(4, 3), &"hill", false)
+	state.build(&"mine", Vector2i(4, 3))
+	var piece := LandPiece.new(&"test", [Vector2i(0, 0), Vector2i(1, 0)] as Array[Vector2i],
+			[&"hill", &"forest"] as Array[StringName], 0)
+	var delta := Economy.placement_delta(state.board, piece, Vector2i(5, 3), terrains, state.buildings)
+	check_eq(delta, {&"stone": 4} as Dictionary[StringName, int], "A key hill next to the mine: +4 stone")
+	check(Economy.placement_delta(state.board, piece, Vector2i(5, 3), terrains).is_empty(), "Without buildings: land alone")

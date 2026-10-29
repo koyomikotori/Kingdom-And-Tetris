@@ -92,12 +92,12 @@ func test_upkeep_is_paid_each_turn() -> void:
 	check_eq(state.get_upkeep(), {&"food": 2}, "2 squads eat 2 food")
 	_paint(state.board, &"farmland", [Vector2i(7, 4)])
 	state.build(&"farm", Vector2i(7, 4))
-	check_eq(state.get_net_income().get(&"food"), 3, "Net food = 5 from the farm - 2 upkeep")
+	check_eq(state.get_net_income().get(&"food"), 2, "Net food = 4 from the farm (5 - 1 on its own cell) - 2 upkeep")
 	var food_before := state.stockpile.get_amount(&"food")
 	var report := state.end_turn()
 	check_eq(report.upkeep, {&"food": 2}, "Report shows upkeep")
 	check(report.deserted.is_empty(), "Nobody deserts when fed")
-	check_eq(state.stockpile.get_amount(&"food"), food_before + 5 - 2, "Stock = before + yield - upkeep")
+	check_eq(state.stockpile.get_amount(&"food"), food_before + 4 - 2, "Stock = before + yield - upkeep")
 
 
 func test_squads_desert_when_food_runs_out() -> void:
@@ -126,22 +126,27 @@ func test_army_squads() -> void:
 
 func test_squad_capacity_from_castle_and_barracks() -> void:
 	var state := _rich_state()
-	check_eq(state.get_squad_capacity(), 2, "Castle garrison: 2 squads")
+	check_eq(state.get_squad_capacity(), 3, "Castle garrison: 3 squads")
 	state.build(&"barracks", Vector2i(4, 4))
-	check_eq(state.get_squad_capacity(), 6, "Barracks adds 4")
+	check_eq(state.get_squad_capacity(), 7, "Barracks adds 4")
 	state.build(&"barracks", Vector2i(7, 7))
-	check_eq(state.get_squad_capacity(), 10, "Second barracks adds 4 more")
+	check_eq(state.get_squad_capacity(), 11, "Second barracks adds 4 more")
+	var garrison: Array[int] = []
+	for level in range(1, 7):
+		state.castle_level = level
+		garrison.append(state.get_squad_capacity() - 8)
+	check_eq(garrison, [3, 4, 5, 6, 7, 8] as Array[int], "The castle holds 3 → 8 squads by its level (M14d)")
 
 
 func test_recruit_stops_at_capacity() -> void:
 	var state := _rich_state()
 	state.stockpile.add({&"food": 100, &"stone": 100})
 	state.build(&"barracks", Vector2i(4, 4))
-	for i in 6:
-		check_eq(state.recruit(&"spearman"), RecruitmentRules.Result.OK, "Recruit squad %d of 6" % (i + 1))
+	for i in 7:
+		check_eq(state.recruit(&"spearman"), RecruitmentRules.Result.OK, "Recruit squad %d of 7" % (i + 1))
 	var food := state.stockpile.get_amount(&"food")
-	check_eq(state.recruit(&"spearman"), RecruitmentRules.Result.ARMY_FULL, "Seventh squad refused")
-	check_eq([state.army.count_squads(), state.stockpile.get_amount(&"food")], [6, food], "Refusal adds and charges nothing")
+	check_eq(state.recruit(&"spearman"), RecruitmentRules.Result.ARMY_FULL, "Eighth squad refused")
+	check_eq([state.army.count_squads(), state.stockpile.get_amount(&"food")], [7, food], "Refusal adds and charges nothing")
 	state.disband(state.army.squads[0])
 	check_eq(state.recruit(&"spearman"), RecruitmentRules.Result.OK, "Disbanding frees a slot")
 
@@ -158,8 +163,8 @@ func test_replenish_is_free_and_needs_barracks() -> void:
 	state.build(&"barracks", Vector2i(4, 4))
 	var food_before := state.stockpile.get_amount(&"food")
 	report = state.end_turn()
-	check_eq(report.replenished, {&"swordsman": 2, &"archer": 1}, "10% of 20 = +2; archer only needs 1")
-	check_eq([state.army.squads[0].soldiers, state.army.squads[1].soldiers], [7, 15], "Squads grew, never past full size")
+	check_eq(report.replenished, {&"swordsman": 3, &"archer": 1}, "10% + 1% (level-1 barracks) of 20 = +3; archer only needs 1")
+	check_eq([state.army.squads[0].soldiers, state.army.squads[1].soldiers], [8, 15], "Squads grew, never past full size")
 	check_eq(state.stockpile.get_amount(&"food"), food_before - 2, "Only the usual upkeep was paid")
 	for i in 7:
 		state.stockpile.add({&"food": 2})
@@ -175,3 +180,28 @@ func test_disband_removes_squad_and_its_upkeep() -> void:
 	check_eq(state.army.count_squads(), 1, "One squad left")
 	check_eq(state.army.squads[0].unit_id, &"spearman", "The right squad was removed")
 	check_eq(state.get_army_upkeep(), {&"food": 1}, "Upkeep drops with it")
+
+
+func test_barracks_levels_speed_up_replenishment() -> void:
+	var state := _rich_state()
+	check_eq(state.replenish_fraction(), 0.0, "No barracks: none")
+	state.build(&"barracks", Vector2i(4, 4))
+	check(is_equal_approx(state.replenish_fraction(), 0.11), "10% + 1% for a level-1 barracks")
+	state.board.set_building_level(Vector2i(4, 4), 5)
+	check(is_equal_approx(state.replenish_fraction(), 0.15), "Level 5: +5%")
+	state.build(&"barracks", Vector2i(7, 7))
+	state.board.set_building_level(Vector2i(7, 7), 5)
+	check(is_equal_approx(state.replenish_fraction(), 0.20), "Two level-5 barracks: +10%")
+	state.board.set_construction(Vector2i(7, 7), 3, true)
+	check(is_equal_approx(state.replenish_fraction(), 0.15), "One being upgraded does not count")
+
+
+func test_new_games_start_with_three_peasant_squads() -> void:
+	var state := _state()
+	check_eq(state.army.count_squads(), 0, "Tests start without an army")
+	state.give_starting_army()
+	var ids := state.army.squads.map(func(s: Army.Squad) -> StringName: return s.unit_id)
+	check_eq(ids, [&"swordsman", &"spearman", &"archer"], "A sword, spear and bow squad")
+	check(state.army.squads.all(func(s: Army.Squad) -> bool: return s.soldiers == state.units[s.unit_id].squad_size),
+			"At full strength")
+	check(state.army.count_squads() <= state.get_squad_capacity(), "They fit in the castle")

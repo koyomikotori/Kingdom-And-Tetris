@@ -98,7 +98,7 @@ func test_candidates_mix_generals_and_advisors() -> void:
 func test_admin_post_helps_the_economy() -> void:
 	var state := _state()
 	_rich(state)
-	# A row of 10 farms: 50 food a turn, so +20% is visible.
+	# A row of 10 farms: 40 food a turn (5 - 1 each), so +20% is visible.
 	for x in 10:
 		state.board.set_land(Vector2i(1 + x, 1), &"farmland", false)
 		state.board.place_building(&"farm", Vector2i(1 + x, 1), Vector2i.ONE)
@@ -113,7 +113,7 @@ func test_admin_post_helps_the_economy() -> void:
 	for resource_id in barracks.cost:
 		check_eq(cost[resource_id], barracks.cost[resource_id] - roundi(barracks.cost[resource_id] * 0.2), "−20%% %s" % resource_id)
 	var after_yield := state.get_turn_yield()
-	check_eq(before_yield.get(&"food", 0), 50, "10 farms")
+	check_eq(before_yield.get(&"food", 0), 40, "10 farms")
 	check(after_yield.get(&"food", 0) > before_yield.get(&"food", 0), "+20% production")
 	check_eq(after_yield.get(&"food", 0) - before_yield.get(&"food", 0), roundi(before_yield.get(&"food", 0) * 0.2), "Exactly 20%")
 	# Upkeep: squads (and generals) get cheaper, the advisor adds their own.

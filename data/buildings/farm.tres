@@ -6,9 +6,10 @@
 script = ExtResource("1_building")
 building_id = &"farm"
 display_name = "Nông trại"
-description = "Trồng lương thực; cấp 3 trở lên nuôi thêm ngựa. Xây trên ô ruộng; trên ô ◆ thì sản lượng gấp đôi."
+description = "Trồng lương thực; cấp 3 trở lên nuôi thêm ngựa. Xây trên ô ruộng; trên ô ◆ thì sản lượng gấp đôi. Mỗi ô ruộng của bạn kề bên (8 ô xung quanh, chưa có công trình) cho thêm 2 lương thực, ô ◆ cho 4."
 cost = Dictionary[StringName, int]({&"wood": 8, &"stone": 2})
 allowed_terrains = Array[StringName]([&"farmland"])
 max_count = 3
+field_resource = &"food"
 color = Color(0.7, 0.55, 0.3, 1)
 level_yields = Array[Dictionary]([{&"food": 5}, {&"food": 8}, {&"food": 11, &"horses": 1}, {&"food": 13, &"horses": 2}, {&"food": 15, &"horses": 3}, {&"food": 18, &"horses": 4}])

@@ -133,6 +133,7 @@ func _ready() -> void:
 	game_menu_button.pressed.connect(_open_game_menu)
 	if game.is_empty():
 		state.give_starting_resources()
+		state.give_starting_army()
 		state.start()
 		_autosave()
 	else:
@@ -666,10 +667,11 @@ func _update_ghost() -> void:
 	if placement != PlacementRules.Result.OK:
 		placement_status.text = PlacementRules.describe(placement)
 		return
-	var delta := UiFormat.amounts(Economy.placement_delta(state.board, piece, piece_origin, _terrains), _resource_types, true)
-	# Economy v2: land yields nothing by itself, so the delta is usually empty.
+	var delta := UiFormat.amounts(Economy.placement_delta(state.board, piece, piece_origin, _terrains, _buildings),
+			_resource_types, true)
+	# Economy v2: land yields nothing by itself, only next to a production building of its kind (M14d).
 	if delta.is_empty():
-		placement_status.text = "Có thể đặt. Đất không tự cho tài nguyên: xây công trình khai thác lên đất để có sản lượng."
+		placement_status.text = "Có thể đặt. Đất tự nó không cho tài nguyên: đặt cạnh nông trại / xưởng gỗ / mỏ cùng loại đất để công trình thu thêm."
 	else:
 		placement_status.text = "Có thể đặt. Sản lượng mỗi lượt: %s." % delta
 
@@ -824,11 +826,14 @@ func _describe_cell(cell: CellData) -> String:
 	var production := "Không"
 	if cell.owned:
 		var cell_amounts := Economy.cell_yield(_terrains.get(cell.terrain_id), cell.is_key)
-		# A production building counts once, on its origin cell.
+		# A production building counts once, on its origin cell, with its fields.
 		if cell.has_building() and cell.coord == cell.building_origin and _buildings.has(cell.building_id):
-			Economy.add_into(cell_amounts, Economy.building_yield(_buildings[cell.building_id], cell.is_key, cell.building_level))
+			Economy.add_into(cell_amounts, Economy.production(state.board, _buildings[cell.building_id], cell))
+		var fields := UiFormat.amounts(Economy.cell_field_yield(state.board, _buildings, cell.coord), _resource_types, true)
 		var amounts := UiFormat.amounts(cell_amounts, _resource_types, true)
 		production = amounts if not amounts.is_empty() else "Không"
+		if not fields.is_empty():
+			production = "%s cho công trình bên cạnh" % fields if amounts.is_empty() else "%s; %s cho công trình bên cạnh" % [amounts, fields]
 	var building := "Không"
 	if cell.building_id == BoardData.CASTLE_ID:
 		building = "Thành chính" + (" (đang nâng cấp, còn %d lượt)" % state.castle_turns if state.castle_turns > 0 else "")
