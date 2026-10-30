@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/buildings/building_data.gd" id="1_building"]
+
+[resource]
+script = ExtResource("1_building")
+building_id = &"infirmary"
+display_name = "Y quán"
+description = "Chữa thương: tướng và mưu sĩ bị thương hồi gấp đôi; mỗi cấp tổng tướng gục ngã ít chết hơn 4%, và khi thua trận quân còn sống giữ thêm 4%. Chỉ có 1. Nâng cấp tới cấp thành. Xây trên ô cỏ."
+cost = Dictionary[StringName, int]({&"wood": 8, &"stone": 6, &"food": 10})
+allowed_terrains = Array[StringName]([&"grass"])
+max_count = 1
+fixed_count = true
+color = Color(0.85, 0.85, 0.8, 1)
+upkeep = Dictionary[StringName, int]({&"food": 2})
+required_castle_level = 2
+category = 2
+build_turns = 3
+upgrade_levels = 6
+effects = Dictionary[StringName, float]({&"wound_healing": 1.0})
+level_effects = Dictionary[StringName, float]({&"commander_survival": 0.04, &"retreat_keep": 0.04})

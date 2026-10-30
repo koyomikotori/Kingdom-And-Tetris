@@ -5,6 +5,8 @@ extends VBoxContainer
 ## `officer_selected`; the kingdom scene opens the officer's window. Read-only.
 
 signal officer_selected(officer: Officer)
+## "Đặc vụ" under the lists: the kingdom scene opens the Sở cảnh sát's agents tab (GDD §8 M14e).
+signal agents_requested
 
 const ROW_HEIGHT := 76
 const WARNING_COLOR := UiPalette.WARNING
@@ -28,6 +30,17 @@ func refresh(state: KingdomState) -> void:
 	for advisor in advisors.advisors:
 		var role := Advisors.POST_NAMES[advisor.post] if advisor.post != Advisor.NO_POST else "Chưa giữ chức"
 		add_child(_row(advisor, role))
+	var agents := state.agents.agents
+	var busy := agents.filter(func(a: Agent) -> bool: return a.is_busy()).size()
+	add_child(_header("Đặc vụ (%d/%d)" % [agents.size(), state.agent_slots()]))
+	var button := Button.new()
+	button.text = "Đặc vụ" + (" · %d đang làm nhiệm vụ" % busy if busy > 0 else "")
+	button.custom_minimum_size = Vector2(0, 40)
+	button.disabled = state.police_level() == 0
+	button.pressed.connect(func() -> void: agents_requested.emit())
+	add_child(button)
+	if button.disabled:
+		add_child(_small("Cần Sở cảnh sát (thành cấp 3) để tuyển và cử đặc vụ."))
 
 
 ## A tappable row: battle sprite, "Name ★★", "role · level", wounds and unspent points.

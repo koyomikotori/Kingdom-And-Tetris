@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/buildings/building_data.gd" id="1_building"]
+
+[resource]
+script = ExtResource("1_building")
+building_id = &"magistrate"
+display_name = "Quan phủ"
+description = "Quan lại cai quản: mỗi cấp tăng 4% sản lượng mọi công trình khai thác. Chỉ có 1. Mở ở thành cấp 3, nâng cấp tới cấp thành. Xây trên ô cỏ."
+cost = Dictionary[StringName, int]({&"wood": 14, &"stone": 12, &"ore": 4})
+allowed_terrains = Array[StringName]([&"grass"])
+max_count = 1
+fixed_count = true
+color = Color(0.7, 0.25, 0.25, 1)
+upkeep = Dictionary[StringName, int]({&"food": 2})
+required_castle_level = 3
+category = 2
+build_turns = 3
+upgrade_levels = 6
+level_effects = Dictionary[StringName, float]({&"production_bonus": 0.04})

@@ -33,6 +33,7 @@ const MEMORY_AGGRESSION: StringName = &"aggression"
 const MEMORY_BATTLE: StringName = &"battle"
 const MEMORY_TREATY: StringName = &"treaty"
 const MEMORY_EVENT: StringName = &"event"
+const MEMORY_AGENT: StringName = &"agent"
 const MEMORY_OTHER: StringName = &"other"
 ## Lasting factors in relation_factors(), in display order.
 const LASTING_FACTORS: Array[StringName] = [&"base", &"wariness", &"agreement_bonus", &"alliance_bonus"]
@@ -52,6 +53,7 @@ const FACTOR_NAMES: Dictionary[StringName, String] = {
 	&"battle": "Trận đánh chung",
 	&"treaty": "Bị hủy liên minh",
 	&"event": "Sự kiện",
+	&"agent": "Đặc vụ",
 	&"other": "Khác",
 }
 ## Gift value per relation point before the personality multiplier.
@@ -62,6 +64,8 @@ const TRADE_RELATION_GAIN := 1
 const MAX_TRADE_GAIN_PER_TURN := 3
 ## Total value of goods a clan accepts from the player per turn (stops buy-here-sell-there loops).
 const TRADE_CAPACITY_PER_TURN := 40
+## Markets make prices at most this much better (GDD §8 M14e).
+const MAX_MARKET_PRICE := 0.15
 ## Clans below this tier refuse to trade.
 const MIN_TRADE_TIER := Tier.NEUTRAL
 
@@ -176,6 +180,9 @@ var agreements: Array[Agreement]:
 		return result
 ## Ngoại giao of the kingdom's working diplomacy advisor, 0 without one (set by KingdomState).
 var envoy := 0
+## The kingdom's administrative effects (KingdomState.building_effect: effect id -> amount);
+## unset in tests that build a Diplomacy alone. Markets: trade_capacity, trade_price.
+var admin_effect: Callable
 ## Extra share of relation from gifts (the diplomacy advisor's items, M12e; set by KingdomState).
 var gift_bonus := 0.0
 ## How threatening the kingdom looks (KingdomState.get_threat()); every clan's wariness grows toward
@@ -405,7 +412,7 @@ func price_factor(clan_id: StringName, give_id: StringName, get_id: StringName) 
 		factor *= SURPLUS_BONUS
 	if distance(clan_id) > 1:
 		factor *= DISTANT_PENALTY
-	return factor * (1.0 + envoy * ENVOY_PRICE)
+	return factor * (1.0 + envoy * ENVOY_PRICE) * (1.0 + minf(MAX_MARKET_PRICE, _admin(&"trade_price")))
 
 
 ## Units of `get_id` the player would receive for `give_amount` of `give_id` (rounded down).
@@ -415,7 +422,11 @@ func trade_quote(clan_id: StringName, give_id: StringName, give_amount: int, get
 
 
 func remaining_capacity(clan_id: StringName) -> int:
-	return TRADE_CAPACITY_PER_TURN - clans[clan_id].traded_value_this_turn
+	return TRADE_CAPACITY_PER_TURN + roundi(_admin(&"trade_capacity")) - clans[clan_id].traded_value_this_turn
+
+
+func _admin(effect_id: StringName) -> float:
+	return admin_effect.call(effect_id) if admin_effect.is_valid() else 0.0
 
 
 func check_trade(stockpile: Stockpile, clan_id: StringName, give_id: StringName, give_amount: int,

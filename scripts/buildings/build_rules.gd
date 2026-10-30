@@ -5,7 +5,8 @@ extends RefCounted
 enum Result { OK, OUT_OF_BOUNDS, NOT_OWNED, OCCUPIED, WRONG_TERRAIN, LIMIT_REACHED, CANNOT_AFFORD, CASTLE_TOO_LOW,
 		NO_BUILDERS, UNDER_CONSTRUCTION }
 
-## Each castle level above 1 allows this many more of every building (GDD §8, economy v2).
+## Each castle level above the one a building needs allows this many more of it (GDD §8,
+## economy v2; M14e counts from BuildingData.required_castle_level).
 const EXTRA_PER_CASTLE_LEVEL := 1
 
 
@@ -15,7 +16,7 @@ static func limit(building: BuildingData, castle_level: int) -> int:
 		return 0
 	if building.fixed_count:
 		return building.max_count
-	var most := building.max_count + EXTRA_PER_CASTLE_LEVEL * (castle_level - 1)
+	var most := building.max_count + EXTRA_PER_CASTLE_LEVEL * maxi(0, castle_level - maxi(1, building.required_castle_level))
 	return mini(most, building.max_limit) if building.max_limit > 0 else most
 
 

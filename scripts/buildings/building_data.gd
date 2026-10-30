@@ -32,6 +32,13 @@ const CATEGORY_NAMES: Array[String] = ["Sản xuất", "Quân sự", "Hành chí
 ## Added to the replenishment share per level of each finished building (barracks: 0.01, so a
 ## level-5 barracks gives +5 percentage points, GDD §8 M14d).
 @export var replenish_per_level: float = 0.0
+## Administrative effects (GDD §8 M14e), effect id -> amount, added up over every finished
+## building whose upkeep is paid (KingdomState.building_effect): `effects` once per building,
+## `level_effects` times its level. Ids: trade_capacity, trade_price, plunder_protection,
+## food_upkeep_cut, production_bonus, officer_xp, wound_healing, commander_survival, retreat_keep,
+## agent_slots.
+@export var effects: Dictionary[StringName, float] = {}
+@export var level_effects: Dictionary[StringName, float] = {}
 ## Fields (GDD §8 M14d): the basic resource a production building also takes from every owned,
 ## empty neighbor cell of its allowed terrain (Economy.FIELD_YIELD each, doubled on a key cell);
 ## its own cell makes Economy.OWN_CELL_PENALTY less of it. Empty = no fields.
@@ -53,6 +60,23 @@ const CATEGORY_NAMES: Array[String] = ["Sản xuất", "Quân sự", "Hành chí
 @export var castle_level_gap: int = 0
 
 
+## How each administrative effect reads in the building window (`%d` = the amount, percentages ×100).
+const EFFECT_TEXTS: Dictionary[StringName, String] = {
+	&"trade_capacity": "đổi thêm %d giá trị hàng với mỗi gia tộc mỗi lượt",
+	&"trade_price": "giá mua bán lợi hơn %d%%",
+	&"plunder_protection": "giữ lại %d%% tài nguyên khi bị cướp",
+	&"food_upkeep_cut": "giảm %d%% lương thực nuôi quân và tướng",
+	&"production_bonus": "+%d%% sản lượng công trình khai thác",
+	&"officer_xp": "mọi tướng và mưu sĩ +%d kinh nghiệm mỗi lượt",
+	&"wound_healing": "vết thương hồi nhanh gấp đôi",
+	&"commander_survival": "tổng tướng gục ngã ít chết hơn %d%%",
+	&"retreat_keep": "thua trận quân còn sống giữ thêm %d%%",
+	&"agent_slots": "giữ được %d đặc vụ",
+}
+const PERCENT_EFFECTS: Array[StringName] = [&"trade_price", &"plunder_protection", &"food_upkeep_cut",
+		&"production_bonus", &"commander_survival", &"retreat_keep"]
+
+
 ## Upgrade cost: to level N, N × the build cost; from level 3 also (N − 2) × each UPGRADE_EXTRA.
 const UPGRADE_EXTRA: Dictionary[StringName, int] = {&"ore": 2, &"hardwood": 2}
 ## Upkeep grows by this much for each level above 1.
@@ -63,6 +87,20 @@ static func load_all() -> Dictionary[StringName, BuildingData]:
 	var result: Dictionary[StringName, BuildingData] = {}
 	result.assign(DataLibrary.load_folder("res://data/buildings/", &"building_id"))
 	return result
+
+
+## What this building does at `level`, as one line ("" without effects).
+func describe_effects(level: int) -> String:
+	var parts: Array[String] = []
+	for effect_id in EFFECT_TEXTS:
+		var amount: float = effects.get(effect_id, 0.0) + level_effects.get(effect_id, 0.0) * level
+		if amount == 0.0:
+			continue
+		var text := EFFECT_TEXTS[effect_id]
+		if text.contains("%d"):
+			text = text % roundi(amount * (100.0 if PERCENT_EFFECTS.has(effect_id) else 1.0))
+		parts.append(text)
+	return ", ".join(parts)
 
 
 ## Levels this building has (1 when it cannot be upgraded).

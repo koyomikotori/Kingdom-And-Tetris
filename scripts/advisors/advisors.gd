@@ -189,11 +189,12 @@ func get_upkeep() -> Dictionary[StringName, int]:
 
 ## End of a turn: wounds heal; the admin and diplomacy holders gain POST_TURN_XP. Returns the
 ## advisors that recovered this turn.
-func end_turn() -> Array[Advisor]:
+## `extra_healing` more turns of a wound heal each turn (the Y quán, GDD §8 M14e).
+func end_turn(extra_healing: int = 0) -> Array[Advisor]:
 	var healed: Array[Advisor] = []
 	for advisor in advisors:
 		if advisor.wounded_turns > 0:
-			advisor.wounded_turns -= 1
+			advisor.wounded_turns = maxi(0, advisor.wounded_turns - 1 - extra_healing)
 			if advisor.wounded_turns == 0:
 				healed.append(advisor)
 		if advisor.post == &"admin" or advisor.post == &"diplomacy":

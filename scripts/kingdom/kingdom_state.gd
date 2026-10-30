@@ -9,6 +9,7 @@ signal castle_changed
 ## The player's main color: the kingdom's soldiers wear it in battle. Later the player picks it
 ## (with a commander and a banner) when starting a new game (GDD §13).
 const PLAYER_COLOR := Color(0.27, 0.45, 0.82)
+const POLICE_ID: StringName = &"police"
 ## Squads the castle holds at level 1 without any barracks (each castle level adds its
 ## CastleLevelData.squad_capacity: 3 → 8 at level 6, GDD §8 M14d).
 const BASE_SQUAD_CAPACITY := 3
@@ -22,6 +23,8 @@ const STARTING_RESOURCES: Dictionary[StringName, int] = {&"food": 80, &"wood": 8
 ## plus each finished barracks' level × BuildingData.replenish_per_level (replenish_fraction);
 ## the new soldiers dilute the squad's XP (Army.add_soldiers).
 const REPLENISH_FRACTION := 0.1
+## Granaries keep at most this share of the stockpile from plunder (GDD §8 M14e).
+const MAX_PLUNDER_PROTECTION := 0.5
 
 var board: BoardData
 var hand: PieceHand
@@ -42,6 +45,8 @@ var events := EventSystem.new()
 var generals := Generals.new()
 var advisors := Advisors.new()
 var equipment := Equipment.new()
+## Spies hired at the Sở cảnh sát (GDD §8 M14e).
+var agents := Agents.new()
 ## Counters for the end-of-game screen: {"battles_won", "battles_lost"}.
 var stats := {"battles_won": 0, "battles_lost": 0}
 ## False when building upkeep could not be paid last turn; building effects pause.
@@ -72,6 +77,9 @@ func _init(p_board: BoardData, p_hand: PieceHand, p_terrains: Dictionary[StringN
 	generals.rng.seed = seed_value + 1
 	advisors.rng.seed = seed_value + 2
 	equipment.rng.seed = seed_value + 3
+	agents.rng.seed = seed_value + 4
+	diplomacy.admin_effect = building_effect
+	wars.sabotage = agents.sabotage_on
 	generals.advisors = advisors
 	advisors.changed.connect(_sync_advisors)
 	equipment.changed.connect(_sync_advisors)
@@ -98,6 +106,7 @@ func give_starting_army() -> void:
 ## Deals the first hand. Call once after connecting signals.
 func start() -> void:
 	generals.refresh_candidates(castle_level, turn)
+	agents.refresh_candidates(castle_level, turn)
 	hand.deal_new_hand()
 	turn_started.emit(turn)
 
@@ -122,7 +131,7 @@ func to_save() -> Dictionary:
 			"hand": hand.to_save(), "stockpile": stockpile.to_save(), "army": army.to_save(),
 			"diplomacy": diplomacy.to_save(), "wars": wars.to_save(), "victory": victory.to_save(), "stats": stats.duplicate(),
 			"events": events.to_save(), "generals": generals.to_save(), "advisors": advisors.to_save(),
-			"equipment": equipment.to_save()}
+			"equipment": equipment.to_save(), "agents": agents.to_save()}
 
 
 ## Restores everything but the board from to_save() data. Random rolls are not saved: they come
@@ -154,6 +163,11 @@ func load_save(data: Dictionary) -> void:
 	advisors.load_save(data.get("advisors", []))
 	# Saves from before M12e have no items.
 	equipment.load_save(data.get("equipment", {}))
+	# Saves from before M14e have no agents: a first candidate list.
+	if data.has("agents"):
+		agents.load_save(data.agents)
+	else:
+		agents.refresh_candidates(castle_level, turn)
 
 
 ## What a save slot shows: {"turn", "cells", "soldiers"}.
@@ -487,6 +501,61 @@ func can_replenish() -> bool:
 	return false
 
 
+## An administrative effect (BuildingData.effects / level_effects, GDD §8 M14e) added up over
+## every finished building; nothing while building upkeep is unpaid.
+func building_effect(effect_id: StringName) -> float:
+	if not buildings_supplied:
+		return 0.0
+	var total := 0.0
+	for cell in board.get_all_cells():
+		if cell.has_building() and cell.coord == cell.building_origin and not cell.is_constructing() \
+				and buildings.has(cell.building_id):
+			var building := buildings[cell.building_id]
+			total += building.effects.get(effect_id, 0.0) + building.level_effects.get(effect_id, 0.0) * cell.building_level
+	return total
+
+
+## The finished Sở cảnh sát's level, 0 without one (GDD §8 M14e).
+func police_level() -> int:
+	for cell in board.get_all_cells():
+		if cell.building_id == POLICE_ID and cell.coord == cell.building_origin and not cell.is_constructing():
+			return cell.building_level
+	return 0
+
+
+## Agents the kingdom may keep: 1 per Sở cảnh sát level (0 while its upkeep is unpaid).
+func agent_slots() -> int:
+	return roundi(building_effect(&"agent_slots"))
+
+
+func recruit_agent(index: int) -> Agents.Result:
+	return agents.recruit(stockpile, index, agent_slots())
+
+
+func start_agent_mission(agent: Agent, mission: StringName, clan_id: StringName) -> Agents.Result:
+	return agents.start_mission(agent, mission, clan_id, wars)
+
+
+## The share of the stockpile granaries keep from bandits and invaders.
+func plunder_protection() -> float:
+	return minf(MAX_PLUNDER_PROTECTION, building_effect(&"plunder_protection"))
+
+
+## What granaries save on the squads' and generals' food.
+func granary_discount() -> Dictionary[StringName, int]:
+	var base := army.get_upkeep(units)
+	Economy.add_into(base, generals.get_upkeep())
+	var food: Dictionary[StringName, int] = {&"food": base.get(&"food", 0)}
+	return Advisors.share_of(food, building_effect(&"food_upkeep_cut"))
+
+
+## The Quan phủ's share of what production buildings make.
+func magistrate_bonus() -> Dictionary[StringName, int]:
+	if not buildings_supplied:
+		return {}
+	return Advisors.share_of(Economy.buildings_yield(board, buildings), building_effect(&"production_bonus"))
+
+
 ## The share of a squad's full size it regains each turn: REPLENISH_FRACTION plus every finished
 ## building's level × replenish_per_level (6 barracks at level 5: +30%). 0 without a barracks.
 func replenish_fraction() -> float:
@@ -507,6 +576,7 @@ func get_turn_yield() -> Dictionary[StringName, int]:
 	if buildings_supplied:
 		Economy.add_into(total, Economy.buildings_yield(board, buildings))
 	Economy.add_into(total, advisor_yield_bonus())
+	Economy.add_into(total, magistrate_bonus())
 	return total
 
 
@@ -525,6 +595,7 @@ func get_army_upkeep() -> Dictionary[StringName, int]:
 	var total := army.get_upkeep(units)
 	Economy.add_into(total, generals.get_upkeep())
 	var saved := upkeep_discount()
+	Economy.add_into(saved, granary_discount())
 	for resource_id in saved:
 		total[resource_id] -= saved[resource_id]
 	Economy.add_into(total, advisors.get_upkeep())
@@ -614,6 +685,12 @@ func get_income_breakdown() -> Dictionary[StringName, Array]:
 	var extra := advisor_yield_bonus()
 	for resource_id in extra:
 		add.call(resource_id, {"source": &"admin_yield", "id": &"", "amount": extra[resource_id], "count": 1})
+	var granary := granary_discount()
+	for resource_id in granary:
+		add.call(resource_id, {"source": &"granary", "id": &"", "amount": granary[resource_id], "count": 1})
+	var magistrate := magistrate_bonus()
+	for resource_id in magistrate:
+		add.call(resource_id, {"source": &"magistrate", "id": &"", "amount": magistrate[resource_id], "count": 1})
 	# Production buildings, per building type (paused while their upkeep is unpaid).
 	if buildings_supplied:
 		var produced := {}  # building_id -> amounts
@@ -697,9 +774,12 @@ func end_turn() -> Dictionary:
 	diplomacy.end_turn()
 	var treaties := alliances.end_turn()
 	var declared := wars.end_turn(rng, turn)
+	var agent_events := agents.end_turn(diplomacy, police_level(), castle_level, turn + 1)
 	turn += 1
-	var healed := generals.end_turn(castle_level, turn)
-	var advisors_healed := advisors.end_turn()
+	var healing := roundi(building_effect(&"wound_healing"))
+	var healed := generals.end_turn(castle_level, turn, healing)
+	var advisors_healed := advisors.end_turn(healing)
+	_teach_officers()
 	hand.deal_new_hand()
 	var report := {"collected": collected, "upkeep": upkeep, "deserted": deserted,
 			"buildings_supplied": buildings_supplied, "replenished": replenished, "agreements": agreements}
@@ -708,6 +788,7 @@ func end_turn() -> Dictionary:
 	report["treaties"] = treaties
 	report["war_declared"] = declared
 	report["generals_healed"] = healed
+	report["agents"] = agent_events
 	report["advisors_healed"] = advisors_healed
 	report["victory"] = victory.end_turn(self)
 	report["castle_in_danger"] = victory.castle_in_danger(self)
@@ -741,6 +822,7 @@ func create_kingdom_side(enemy_clan: StringName, defending: bool = true) -> Batt
 func finish_raid(record: BattleRecord) -> Dictionary:
 	var result := RaidSystem.apply_outcome(self, raid, record)
 	_record_battle(result.won)
+	generals.survival = building_effect(&"commander_survival")
 	result["general"] = generals.after_battle(record, BattleRecord.DEFENDER)
 	result["advisor"] = advisors.after_battle(record, BattleRecord.DEFENDER)
 	if result.won:
@@ -749,6 +831,18 @@ func finish_raid(record: BattleRecord) -> Dictionary:
 	result["item"] = equipment.roll_loot(false, stockpile) if result.won else {}
 	return result
 
+
+## The Học quán: every general and advisor learns each turn (GDD §8 M14e).
+func _teach_officers() -> void:
+	var xp := roundi(building_effect(&"officer_xp"))
+	if xp <= 0:
+		return
+	for general in generals.generals:
+		general.gain_xp(xp)
+	for advisor in advisors.advisors:
+		advisor.gain_xp(xp)
+	generals.changed.emit()
+	advisors.changed.emit()
 
 ## Returns unit_id -> soldiers added.
 func _replenish() -> Dictionary[StringName, int]:
@@ -793,12 +887,13 @@ func get_threat() -> int:
 func finish_invasion(clan_id: StringName, record: BattleRecord) -> Dictionary:
 	var won := record.winner == BattleRecord.DEFENDER
 	_record_battle(won)
+	generals.survival = building_effect(&"commander_survival")
 	var general := generals.after_battle(record, BattleRecord.DEFENDER)
 	var advisor := advisors.after_battle(record, BattleRecord.DEFENDER)
 	var castle_fallen := not won and board.count_land_outside_castle() == 0
 	if castle_fallen:
 		victory.lost = true
-	var result := BattleOutcome.apply_to_army(army, record, BattleRecord.DEFENDER)
+	var result := BattleOutcome.apply_to_army(army, record, BattleRecord.DEFENDER, false, building_effect(&"retreat_keep"))
 	result.merge(alliances.apply_battle(record, BattleRecord.DEFENDER))
 	var enemy_lost := BattleOutcome.soldiers_lost(record, BattleRecord.ATTACKER)
 	wars.lose_soldiers(clan_id, enemy_lost)
@@ -808,7 +903,7 @@ func finish_invasion(clan_id: StringName, record: BattleRecord) -> Dictionary:
 		var edge := ClanData.direction_vector(diplomacy.direction_to(clan_id))
 		lost_cells = board.lose_edge_cells(edge, Wars.LAND_LOST_PER_DEFEAT)
 		for resource_id in stockpile.get_all():
-			var amount := floori(stockpile.get_amount(resource_id) * Wars.INVASION_RESOURCE_LOSS)
+			var amount := floori(stockpile.get_amount(resource_id) * Wars.INVASION_RESOURCE_LOSS * (1.0 - plunder_protection()))
 			if amount > 0:
 				resources_lost[resource_id] = amount
 		stockpile.spend(resources_lost)
@@ -839,9 +934,10 @@ func start_attack(clan_id: StringName) -> BattleSimulator:
 func finish_attack(clan_id: StringName, record: BattleRecord) -> Dictionary:
 	var won := record.winner == BattleRecord.ATTACKER
 	_record_battle(won)
+	generals.survival = building_effect(&"commander_survival")
 	var general := generals.after_battle(record, BattleRecord.ATTACKER)
 	var advisor := advisors.after_battle(record, BattleRecord.ATTACKER)
-	var result := BattleOutcome.apply_to_army(army, record, BattleRecord.ATTACKER, true)
+	var result := BattleOutcome.apply_to_army(army, record, BattleRecord.ATTACKER, true, building_effect(&"retreat_keep"))
 	result.merge(alliances.apply_battle(record, BattleRecord.ATTACKER))
 	var enemy_lost := BattleOutcome.soldiers_lost(record, BattleRecord.DEFENDER)
 	wars.lose_soldiers(clan_id, enemy_lost)

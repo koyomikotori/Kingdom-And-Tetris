@@ -21,6 +21,8 @@ var _alliances: Alliances
 var _resource_types: Array[ResourceTypeData] = []
 var _clan_id: StringName = &""
 var _dialog: DiplomacyDialog
+## The agent "Cử đặc vụ" picks first (GDD §8 M14e; set when the map opens for one agent).
+var preferred_agent: Agent
 
 var _hint: Label
 var _details: VBoxContainer
@@ -67,6 +69,8 @@ func open_dialog(dialog: DiplomacyDialog) -> void:
 		_dialog.close()
 	_dialog = dialog
 	dialog_host.add_child(dialog)
+	if dialog is AgentDialog:
+		dialog.preferred = preferred_agent
 	dialog.open(_state, _resource_types, _clan_id)
 	dialog.closed.connect(func() -> void: _dialog = null)
 	if dialog is AttackDialog:
@@ -243,6 +247,14 @@ func _update_peace(button: Button, reason: Label) -> void:
 		reason.text = Wars.describe_peace(Wars.PeaceResult.ASKED_THIS_TURN)
 
 
+func _update_agent(button: Button, reason: Label) -> void:
+	var idle := _state.agents.agents.any(func(a: Agent) -> bool: return not a.is_busy())
+	button.disabled = not idle or _wars.fronts[_clan_id].annexed
+	if button.disabled:
+		reason.text = "Đã thuộc vương quốc." if _wars.fronts[_clan_id].annexed else (
+				"Không có đặc vụ rảnh (tuyển ở Sở cảnh sát)." if _state.agents.agents.is_empty() else "Mọi đặc vụ đều đang làm nhiệm vụ.")
+
+
 # --- Building -----------------------------------------------------------------------------
 
 func _build_details() -> void:
@@ -282,6 +294,7 @@ func _build_details() -> void:
 	_add_command("Hợp đồng giao thương", AgreementDialog, _update_agreement)
 	_add_command("Liên minh", AllianceDialog, _update_alliance)
 	_add_command("Tuyên chiến", DeclareWarDialog, _update_declare, true)
+	_add_command("Cử đặc vụ", AgentDialog, _update_agent)
 
 
 func _add_command(text: String, dialog_script: GDScript, update: Callable, danger: bool = false) -> void:
