@@ -67,6 +67,10 @@ var officers_panel: OfficersPanel
 var _notices: NoticePanel
 ## The last end_turn() report, for the notice column (empty after loading a game).
 var _last_report: Dictionary = {}
+## The result of this turn's raid or invasion (ImportantNews), and whether the important report
+## still has to be shown this turn (M14g).
+var _turn_battle: Dictionary = {}
+var _news_pending := false
 
 
 func _ready() -> void:
@@ -336,6 +340,8 @@ func _on_end_turn_pressed() -> void:
 	if not report.completed.is_empty():
 		Sfx.play(&"complete")
 	_last_report = report
+	_turn_battle = {}
+	_news_pending = true
 	_refresh_notices()
 	var lines: Array[String] = ["Lượt %d bắt đầu. Xem bảng thông báo bên trái." % state.turn]
 	_pending_victory = report.victory
@@ -373,6 +379,7 @@ func _play_battle(simulator: BattleSimulator, player_side: int, title: String, o
 func _play_raid(simulator: BattleSimulator) -> void:
 	_play_battle(simulator, BattleRecord.DEFENDER, "Quân cướp tấn công vương quốc!", func(record: BattleRecord) -> void:
 		var result := state.finish_raid(record)
+		_turn_battle = result
 		_autosave()
 		placement_status.text += " %s" % ("Đã đánh lui." if result.won else "Thất thủ.")
 		_show_battle_report(result, _ally_lines(result)))
@@ -382,6 +389,7 @@ func _play_invasion(clan_id: StringName, simulator: BattleSimulator) -> void:
 	var title := "%s xâm lược vương quốc!" % _clan_name(clan_id)
 	_play_battle(simulator, BattleRecord.DEFENDER, title, func(record: BattleRecord) -> void:
 		var result := state.finish_invasion(clan_id, record)
+		_turn_battle = result
 		# A lost game is not autosaved: Continue goes back to the turn before.
 		if not result.castle_fallen:
 			_autosave()
@@ -533,9 +541,20 @@ func _on_battle_report_closed() -> void:
 	_continue_turn_start()
 
 
-## After the turn's battle: answer the pending events one by one (autosaving after each, so a
-## reload cannot reroll an answer), then the end screen if the game was won or lost.
+## After the turn's battle: the important report (once a turn, when there is news), then answer
+## the pending events one by one (autosaving after each, so a reload cannot reroll an answer),
+## then the end screen if the game was won or lost.
 func _continue_turn_start() -> void:
+	if _news_pending:
+		_news_pending = false
+		var news := ImportantNews.build(state, _last_report, _turn_battle)
+		if not news.is_empty() and not state.victory.lost:
+			_clear_selection()
+			var report_window := ImportantReportWindow.new()
+			$UI.add_child(report_window)
+			report_window.open(news)
+			report_window.closed.connect(_continue_turn_start)
+			return
 	if state.events.current_event() == null:
 		_show_end_game_if_any()
 		return
