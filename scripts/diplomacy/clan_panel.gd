@@ -249,10 +249,15 @@ func _update_peace(button: Button, reason: Label) -> void:
 
 func _update_agent(button: Button, reason: Label) -> void:
 	var idle := _state.agents.agents.any(func(a: Agent) -> bool: return not a.is_busy())
-	button.disabled = not idle or _wars.fronts[_clan_id].annexed
-	if button.disabled:
-		reason.text = "Đã thuộc vương quốc." if _wars.fronts[_clan_id].annexed else (
-				"Không có đặc vụ rảnh (tuyển ở Sở cảnh sát)." if _state.agents.agents.is_empty() else "Mọi đặc vụ đều đang làm nhiệm vụ.")
+	var present := _state.agents.agent_on(_clan_id)
+	button.disabled = not idle or _wars.fronts[_clan_id].annexed or present != null
+	if _wars.fronts[_clan_id].annexed:
+		reason.text = "Đã thuộc vương quốc."
+	elif present != null:
+		reason.text = "Đã có đặc vụ ở đây: %s (%s, còn %d lượt)." % [present.name,
+				Agent.MISSION_NAMES[present.mission].to_lower(), present.turns_left]
+	elif not idle:
+		reason.text = "Không có đặc vụ rảnh (tuyển ở Sở cảnh sát)." if _state.agents.agents.is_empty() else "Mọi đặc vụ đều đang làm nhiệm vụ."
 
 
 # --- Building -----------------------------------------------------------------------------

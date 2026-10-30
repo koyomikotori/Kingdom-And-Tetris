@@ -68,12 +68,17 @@ func _refresh() -> void:
 	else:
 		_info.text = "Quân của họ hồi chậm hơn: −%s%% mỗi lượt (mức hồi thường là %d%%)." % [
 				String.num(_agent.sabotage_share() * 100, 1), roundi(Wars.STRENGTH_REGEN_SHARE * 100)]
-	_info.text += "\nMỗi lượt có %s%% bị lộ; bị lộ thì %d%% bị giết, quan hệ −%d." % [
-			String.num(Agents.detect_chance(state.police_level()) * 100, 1), roundi(Agents.kill_chance(_agent.stars) * 100),
-			-Agents.CAUGHT_RELATION]
+	_info.text += "\nTỉ lệ bị lộ: %s%% lượt đầu, +%d%% mỗi lượt sau (%s%% ở lượt %d); bị lộ thì %d%% bị giết, quan hệ −%d." % [
+			_percent(Agents.detect_chance(state.police_level())), roundi(Agents.DETECT_PER_TURN * 100),
+			_percent(Agents.detect_chance(state.police_level(), Agents.MISSION_TURNS - 1)), Agents.MISSION_TURNS,
+			roundi(Agents.kill_chance(_agent.stars) * 100), -Agents.CAUGHT_RELATION]
 	var result := state.agents.check_mission(_agent, clan_id, state.wars)
 	_send_button.disabled = result != Agents.Result.OK
 	set_preview(_preview, "Sẵn sàng." if result == Agents.Result.OK else Agents.describe(result), result == Agents.Result.OK)
+
+
+func _percent(chance: float) -> String:
+	return String.num(chance * 100, 1)
 
 
 func _choice(text: String, chosen: bool, on_pressed: Callable) -> Button:

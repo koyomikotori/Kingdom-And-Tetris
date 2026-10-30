@@ -347,10 +347,10 @@ Giới hạn số lượng tính từ cấp thành mở khóa công trình: +1 m
 - Bấm vào Sở cảnh sát: tab **Thông tin**, **Nâng cấp**, **Chiêu mộ đặc vụ**, **Đặc vụ**. Tab Tướng sĩ có nút **Đặc vụ** dưới danh sách tướng / mưu sĩ, mở thẳng tab Đặc vụ của Sở cảnh sát (chưa xây thì nút bị khóa và ghi lý do).
 - Sở cảnh sát cấp N giữ được **N đặc vụ**. Ứng viên: 3 người, sao tới **cấp thành** (tỉ lệ như Chiêu hiền), đổi mới sau 5 lượt hoặc trả 20 lương thực để đổi ngay. Tuyển **trả một lần** 30 + 20 × sao lương thực và 10 × sao gỗ, **không có phí nuôi**. Đặc vụ không có trang bị, chỉ có tên, sao, cấp và kinh nghiệm. Có thể sa thải.
 - **Cấp đặc vụ 1–10:** mỗi lượt làm nhiệm vụ +10 kinh nghiệm, lên cấp N cần 100 × N; cấp tối đa = 4 + số sao (1★ tới cấp 5, 6★ tới cấp 10).
-- **Giao nhiệm vụ:** chọn đặc vụ đang rảnh → bản đồ chiến dịch mở ra → chọn một gia tộc bất kỳ chưa bị thôn tính (cả bản đồ, không cần gần) → bảng chọn nhiệm vụ. Trên bản đồ, bảng gia tộc cũng có nút **Cử đặc vụ**. Mỗi nhiệm vụ kéo dài **10 lượt**:
+- **Giao nhiệm vụ:** chọn đặc vụ đang rảnh → bản đồ chiến dịch mở ra → chọn một gia tộc bất kỳ chưa bị thôn tính (cả bản đồ, không cần gần) → bảng chọn nhiệm vụ. **Mỗi gia tộc chỉ nhận 1 đặc vụ** cùng lúc (nút Cử đặc vụ khóa với lý do "Đã có đặc vụ ở đây"). Trên bản đồ, bảng gia tộc cũng có nút **Cử đặc vụ**. Mỗi nhiệm vụ kéo dài **10 lượt**:
   - **Tăng quan hệ:** +cấp đặc vụ quan hệ mỗi lượt với gia tộc đó (cấp 1: +1 … cấp 10: +10), như quà tặng (mờ dần theo thời gian).
   - **Phá hoại:** quân gia tộc đó hồi chậm hơn: trừ thẳng vào mức hồi 10% của họ 1 / 1.5 / 2 / 2.5 / 3 / 3.5 / 4 / 4.5 / 5 / 6% theo cấp 1–10.
-- **Bị lộ:** mỗi lượt làm nhiệm vụ có **3%** bị lộ (Sở cảnh sát mỗi cấp trên 1 giảm 1%, thấp nhất 0.5%). Bị lộ thì bị giết với tỉ lệ **40% − 5% × sao** (mất hẳn), không thì trốn về; nhiệm vụ dừng và quan hệ với gia tộc đó **−10**. Xong nhiệm vụ thì đặc vụ về, rảnh để giao việc mới.
+- **Bị lộ:** lượt đầu nhiệm vụ có **3%** bị lộ (Sở cảnh sát mỗi cấp trên 1 giảm 1%, thấp nhất 0.5%), **mỗi lượt ở lại thêm +1%** (lượt 10: 12%; sở cấp 4: 0.5% → 9.5%). Sống sót trọn 10 lượt: ~46% với sở cấp 1, ~60% với sở cấp 4. Không rút về sớm được. Bị lộ thì bị giết với tỉ lệ **40% − 5% × sao** (mất hẳn), không thì trốn về; nhiệm vụ dừng và quan hệ với gia tộc đó **−10**. Xong nhiệm vụ thì đặc vụ về, rảnh để giao việc mới.
 
 ### Tướng (M11d, đã chốt)
 

@@ -3,23 +3,25 @@ extends RefCounted
 ## The kingdom's spies (GDD §8 M14e), owned by KingdomState. Hired once at the Sở cảnh sát
 ## (no upkeep), as many as its level (`slots`, KingdomState.agent_slots), from 3 candidates that
 ## change every CANDIDATE_TURNS turns. Each mission lasts MISSION_TURNS turns on one clan anywhere
-## on the map: relations (+level a turn) or sabotage (slower regrowth, read by Wars through
-## sabotage_on). Every mission turn the agent may be caught (detect_chance): killed
-## (kill_chance) or back home, the mission over and the clan angry.
+## on the map, one agent per clan: relations (+level a turn) or sabotage (slower regrowth, read
+## by Wars through sabotage_on). Every mission turn the agent may be caught (detect_chance, higher
+## the longer they stay): killed (kill_chance) or back home, the mission over and the clan angry.
 
 signal changed
 
-enum Result { OK, NO_ROOM, CANNOT_AFFORD, BUSY, ANNEXED, UNKNOWN_CLAN }
+enum Result { OK, NO_ROOM, CANNOT_AFFORD, BUSY, ANNEXED, UNKNOWN_CLAN, TARGET_TAKEN }
 
 const CANDIDATES := 3
 const CANDIDATE_TURNS := 5
 const REFRESH_COST: Dictionary[StringName, int] = {&"food": 20}
 const MISSION_TURNS := 10
 const XP_PER_TURN := 10
-## Chance a turn to be caught with a level-1 Sở cảnh sát; each level above takes DETECT_PER_LEVEL off.
+## Chance to be caught on a mission's first turn with a level-1 Sở cảnh sát; each level above takes
+## DETECT_PER_LEVEL off (MIN_DETECT_CHANCE at least), each turn already spent there adds DETECT_PER_TURN.
 const DETECT_CHANCE := 0.03
 const DETECT_PER_LEVEL := 0.01
 const MIN_DETECT_CHANCE := 0.005
+const DETECT_PER_TURN := 0.01
 ## Chance a caught agent is killed: KILL_CHANCE − KILL_PER_STAR × stars.
 const KILL_CHANCE := 0.4
 const KILL_PER_STAR := 0.05
@@ -41,8 +43,14 @@ static func cost_of(stars: int) -> Dictionary[StringName, int]:
 	return cost
 
 
-static func detect_chance(police_level: int) -> float:
-	return maxf(MIN_DETECT_CHANCE, DETECT_CHANCE - DETECT_PER_LEVEL * maxi(0, police_level - 1))
+## `turns_done` = mission turns already spent with the clan (0 on the first).
+static func detect_chance(police_level: int, turns_done: int = 0) -> float:
+	return maxf(MIN_DETECT_CHANCE, DETECT_CHANCE - DETECT_PER_LEVEL * maxi(0, police_level - 1)) + DETECT_PER_TURN * turns_done
+
+
+## This turn's chance for `agent` on its mission.
+static func current_detect_chance(agent: Agent, police_level: int) -> float:
+	return detect_chance(police_level, MISSION_TURNS - agent.turns_left)
 
 
 static func kill_chance(stars: int) -> float:
@@ -109,7 +117,17 @@ func check_mission(agent: Agent, clan_id: StringName, wars: Wars) -> Result:
 		return Result.BUSY
 	if wars.fronts[clan_id].annexed:
 		return Result.ANNEXED
+	if agent_on(clan_id) != null:
+		return Result.TARGET_TAKEN
 	return Result.OK
+
+
+## The agent on a mission with `clan_id` (null when none).
+func agent_on(clan_id: StringName) -> Agent:
+	for agent in agents:
+		if agent.is_busy() and agent.target == clan_id:
+			return agent
+	return null
 
 
 func start_mission(agent: Agent, mission: StringName, clan_id: StringName, wars: Wars) -> Result:
@@ -142,7 +160,7 @@ func end_turn(diplomacy: Diplomacy, police_level: int, max_stars: int, turn: int
 			continue
 		var entry := {"name": agent.name, "clan_id": agent.target, "mission": agent.mission,
 				"levels": agent.gain_xp(XP_PER_TURN)}
-		if rng.randf() < detect_chance(police_level):
+		if rng.randf() < current_detect_chance(agent, police_level):
 			diplomacy.change_relation(agent.target, CAUGHT_RELATION, Diplomacy.MEMORY_AGENT)
 			entry["event"] = &"killed" if rng.randf() < kill_chance(agent.stars) else &"caught"
 			if entry.event == &"killed":
@@ -184,6 +202,8 @@ static func describe(result: Result) -> String:
 			return "Gia tộc này đã thuộc vương quốc."
 		Result.UNKNOWN_CLAN:
 			return "Không có gia tộc này."
+		Result.TARGET_TAKEN:
+			return "Đã có đặc vụ ở đây."
 	return ""
 
 

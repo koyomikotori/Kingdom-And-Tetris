@@ -494,17 +494,19 @@ func _refresh_agents() -> void:
 	refresh.disabled = not _state.stockpile.can_afford(Agents.REFRESH_COST)
 	_agent_hire_box.add_child(refresh)
 
-	_agent_box.add_child(_muted(("Mỗi nhiệm vụ %d lượt, sang bất kỳ gia tộc nào. Mỗi lượt có %s%% bị lộ: bị lộ thì có thể bị giết "
-			+ "(40%% − 5%% × sao), không thì trốn về; quan hệ với gia tộc đó −%d.") % [Agents.MISSION_TURNS,
-			String.num(Agents.detect_chance(_state.police_level()) * 100, 1), -Agents.CAUGHT_RELATION]))
+	_agent_box.add_child(_muted(("Mỗi nhiệm vụ %d lượt, sang bất kỳ gia tộc nào, mỗi gia tộc một đặc vụ. Lượt đầu có %s%% bị lộ, "
+			+ "mỗi lượt sau +%d%%: bị lộ thì có thể bị giết (40%% − 5%% × sao), không thì trốn về; quan hệ với gia tộc đó −%d.") % [
+			Agents.MISSION_TURNS, String.num(Agents.detect_chance(_state.police_level()) * 100, 1),
+			roundi(Agents.DETECT_PER_TURN * 100), -Agents.CAUGHT_RELATION]))
 	if agents.agents.is_empty():
 		_agent_box.add_child(_muted("Chưa có đặc vụ nào: tuyển ở tab %s." % AGENT_HIRE_TAB))
 	for agent in agents.agents:
 		var status := "Đang rảnh."
 		var buttons: Array = []
 		if agent.is_busy():
-			status = "%s ở %s, còn %d lượt." % [Agent.MISSION_NAMES[agent.mission],
-					_state.diplomacy.clans[agent.target].data.display_name, agent.turns_left]
+			status = "%s ở %s, còn %d lượt · lượt này %s%% bị lộ." % [Agent.MISSION_NAMES[agent.mission],
+					_state.diplomacy.clans[agent.target].data.display_name, agent.turns_left,
+					String.num(Agents.current_detect_chance(agent, _state.police_level()) * 100, 1)]
 		else:
 			var send := _button("Giao nhiệm vụ", func() -> void:
 				agent_mission_requested.emit(agent)

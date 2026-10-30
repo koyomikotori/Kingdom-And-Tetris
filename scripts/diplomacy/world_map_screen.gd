@@ -70,7 +70,7 @@ func open(state: KingdomState, resource_types: Array[ResourceTypeData], agent: A
 	if agent != null:
 		_panel.preferred_agent = agent
 		_map.clan_selected.connect(func(clan_id: StringName) -> void:
-			if not state.wars.fronts[clan_id].annexed and not agent.is_busy():
+			if not state.wars.fronts[clan_id].annexed and not agent.is_busy() and state.agents.agent_on(clan_id) == null:
 				_panel.open_dialog(AgentDialog.new()))
 	_panel.attack_requested.connect(func(clan_id: StringName) -> void: attack_requested.emit(clan_id))
 	_map.setup_wars(state.wars)
