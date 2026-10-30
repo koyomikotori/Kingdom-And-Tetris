@@ -4,8 +4,8 @@ Danh sách người chơi (chủ dự án) đưa ra sau M14e (2026-10-30). Làm 
 
 | Mốc | Nội dung | Trạng thái |
 |---|---|---|
-| M14f | Đặc vụ: mỗi gia tộc 1 đặc vụ, tỉ lệ lộ +1%/lượt | Xong, chờ commit |
-| M14g | Bảng báo cáo quan trọng + nút mũi tên xem tướng/mưu sĩ | Chưa làm |
+| M14f | Đặc vụ: mỗi gia tộc 1 đặc vụ, tỉ lệ lộ +1%/lượt | Xong (nhánh `m14f/agent-rules`) |
+| M14g | Bảng báo cáo quan trọng + nút mũi tên xem tướng/mưu sĩ | Xong, chờ chơi thử |
 | M14h | Chọn độ khó ván mới + tướng/mưu sĩ của gia tộc địch | Chưa làm |
 | M14i | Thảo phạt đạo tặc (vùng đỏ, chuyến thảo phạt, màn phát lại kiểu Dungeon Village) | Chưa làm |
 | M14j | Cutscene mờ sau menu chính (kiểu Kairosoft) + nhạc nền mới | Chưa làm |
@@ -23,9 +23,7 @@ Danh sách người chơi (chủ dự án) đưa ra sau M14e (2026-10-30). Làm 
 
 **Xem tướng/mưu sĩ qua lại:** ngoài phím ← / → trên bàn phím, thêm **nút mũi tên** bấm được trên bảng chi tiết tướng/mưu sĩ.
 
-Câu hỏi cần chốt:
-- Bảng báo cáo hiện trước hay sau bảng kết quả trận và sự kiện ngẫu nhiên?
-- Mưu sĩ bị thương có tính là quan trọng không?
+Đã chốt: hiện sau trận đầu lượt và bảng kết quả trận, trước sự kiện ngẫu nhiên. Thêm cả mưu sĩ bị thương, đồng minh rời bỏ, thành chính nguy hiểm và (ở M14i) vùng đạo tặc xuất hiện. Luật ghi ở GDD §15.
 
 ---
 
@@ -89,6 +87,7 @@ Tham khảo mini game thảo phạt trong Dungeon Village (Kairosoft).
 
 **Kết thúc:**
 - Đánh hết các ải thì cả đội về, vùng đỏ biến mất.
+- Vùng đỏ xuất hiện thì báo trong **bảng báo cáo quan trọng** (`ImportantNews`, M14g).
 - Nhận **kinh nghiệm theo số trận thắng**, cùng **trang bị và tài nguyên** từ thường tới xịn, số lượng kha khá.
 
 **Trong khi đi thảo phạt:**

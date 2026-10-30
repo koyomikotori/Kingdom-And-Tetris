@@ -507,7 +507,7 @@ Save cũ: đơn vị Kiếm sĩ / Thương binh / Cung thủ trở thành bậc 
 
 **Đã làm (M13):** Doanh trại đang nâng cấp không tính khi tuyển (như mọi công trình đang thi công). Bốn công trình mới xây mất 3 lượt, phí duy trì 1 Lương (+1 mỗi cấp). Nỏ nạp 7 giây (cung 5, thiện xạ 4,5). Pháo: mỗi khẩu đánh như 5 (nhẹ) / 7 (nặng) người. Thương binh đánh kỵ binh mạnh hơn đúng bằng tỉ lệ chống xung kích. Quân các lang tộc vẫn chỉ dùng bậc nông dân (để cân bằng ở M14).
 
-**Tiện lợi (M13b, đã chốt):** bảng Tuyển lính chia theo loại (Tất cả / Kiếm / Thương / Đao thuẫn / Kỵ binh / Cung / Nỏ / Hỏa khí, nút xuống 2 hàng); tên lính tô màu theo bậc (nông dân nâu, tinh nhuệ bạc, hoàng gia vàng) ở bảng tuyển và tab Quân đội; loại chưa đủ công trình hiện mờ. Tên tướng và mưu sĩ tô màu theo sao như độ hiếm trang bị (1–2★ xám, 3★ xanh lá, 4★ xanh lam, 5★ tím, 6★ vàng); trong bảng thông tin tướng sĩ, phím ← → chuyển sang người trước / sau. Tự bổ sung quân giảm từ 25% xuống 10% mỗi lượt; quân lang tộc vẫn hồi +2 lính mỗi lượt.
+**Tiện lợi (M13b, đã chốt):** bảng Tuyển lính chia theo loại (Tất cả / Kiếm / Thương / Đao thuẫn / Kỵ binh / Cung / Nỏ / Hỏa khí, nút xuống 2 hàng); tên lính tô màu theo bậc (nông dân nâu, tinh nhuệ bạc, hoàng gia vàng) ở bảng tuyển và tab Quân đội; loại chưa đủ công trình hiện mờ. Tên tướng và mưu sĩ tô màu theo sao như độ hiếm trang bị (1–2★ xám, 3★ xanh lá, 4★ xanh lam, 5★ tím, 6★ vàng); trong bảng thông tin tướng sĩ, phím ← → (hoặc hai nút ← → dưới chân dung, kèm số thứ tự, M14g) chuyển sang người trước / sau. Tự bổ sung quân giảm từ 25% xuống 10% mỗi lượt; quân lang tộc vẫn hồi +2 lính mỗi lượt.
 
 **Bản đồ sinh động (M13c, đã chốt):** ô bản đồ 48 px (ô đất vẽ 24×24), công trình giữ cỡ 32 px đứng giữa ô nên quanh nó có lối đi. Trên các mép ô (khe giữa các công trình) có dân làng đi giữa thành chính và ruộng / xưởng gỗ / mỏ rồi vác lúa, gỗ, đá về; xe bò chở hàng từ mỏ và xưởng gỗ; lính tuần tra (1 tốp cho 3 đơn vị) từ doanh trại và công trình quân sự ra biên giới, mặc màu của bạn; ngựa quanh chuồng ngựa chiến và trang trại cấp 3; hươu ở rừng ngoài lãnh thổ; chim bay ngang. Mỗi công trình có một vòng animation nhỏ 4 khung (khói, cờ bay, lưỡi cưa, quặng lấp lánh, đầu ngựa, mũi tên bay vào bia, lửa lò rèn…), công trình đang xây có thợ gõ búa. Menu có nút "Hiệu ứng bản đồ: Bật/Tắt", lưu theo máy.
 
@@ -935,6 +935,8 @@ Mục tiêu: biến game thành chơi kiểu **chiến dịch**, mở rộng d�
 - **Ngoại giao:** đang chiến tranh với…, vừa tuyên chiến, đình chiến, hợp đồng giao thương (đưa / nhận gì, còn mấy lượt), đang liên minh với… (còn mấy lượt), liên minh hết hạn / tan vỡ.
 - **Quân đội & tướng sĩ:** bổ sung quân, lính bỏ trốn vì thiếu lương, tướng sĩ bị thương / vừa lành, ứng viên mới, thành chính nguy hiểm.
 Bảng thông tin ô đất chuyển xuống đáy cột này.
+
+**Bảng báo cáo quan trọng (M14g, đã chốt):** đầu lượt, sau trận cướp / xâm lược (và bảng kết quả trận), trước các sự kiện ngẫu nhiên, nếu có tin quan trọng thì hiện một bảng giữa màn hình, chỉ tắt bằng nút **OK** hoặc **Enter** (Esc cũng được). Gồm: bị tuyên chiến, đặc vụ bị lộ (trốn về / bị giết), tổng tướng bị thương / tử trận và mưu sĩ bị thương trong trận đầu lượt, lính đào ngũ vì thiếu lương, đồng minh rời bỏ, thành chính nguy hiểm; sau này thêm vùng đạo tặc xuất hiện (M14i). Không có tin nào thì không hiện. Trận người chơi tự đi đánh đã có bảng kết quả riêng nên không lặp lại.
 
 **Bản lưu cũ** (bản đồ 6 gia tộc) không tải được nữa: báo phiên bản cũ, bắt đầu ván mới.
 

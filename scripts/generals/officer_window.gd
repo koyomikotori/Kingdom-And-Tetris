@@ -4,8 +4,8 @@ extends ModalWindow
 ## bars and level points — item bonuses in brackets —, level and XP, trait or stratagems, post and
 ## what it gives, upkeep) and a "Trang bị" tab (M12e: the three slots, the chosen slot's item, the
 ## storage items that fit it, wear / take off / dismantle), with Làm tổng tướng / Sa thải below.
-## The title is colored by stars; ← / → switch to the previous / next general or advisor in the
-## Tướng sĩ tab's order (M13b).
+## The title is colored by stars; ← / → (keys or the buttons under the portrait) switch to the
+## previous / next general or advisor in the Tướng sĩ tab's order (M13b, buttons M14g).
 
 const STAT_BAR_WIDTH := 160
 ## The tab pages keep this height whatever they show (their content scrolls).
@@ -44,11 +44,20 @@ func open(state: KingdomState, officer: Officer) -> void:
 	_role.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_role.custom_minimum_size = Vector2(PortraitView.SIZE * 2, 0)
 	left.add_child(_role)
-	if _all_officers().size() > 1:
-		var hint := _label("← → xem người khác", 12)
-		hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		hint.add_theme_color_override("font_color", MUTED_COLOR)
-		left.add_child(hint)
+	var officers := _all_officers()
+	if officers.size() > 1:
+		var previous := _button("←", _switch.bind(-1))
+		var next := _button("→", _switch.bind(1))
+		for button in [previous, next]:
+			button.custom_minimum_size = Vector2(56, 40)
+			button.tooltip_text = "Xem người khác (phím ← →)"
+		var place := _label("%d/%d" % [officers.find(officer) + 1, officers.size()], 14, false)
+		place.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		place.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		place.add_theme_color_override("font_color", MUTED_COLOR)
+		var switcher := _row([previous, place, next])
+		switcher.custom_minimum_size = Vector2(PortraitView.SIZE * 2, 0)
+		left.add_child(switcher)
 	var tabs := TabContainer.new()
 	_tabs = tabs
 	tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
