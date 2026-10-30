@@ -179,15 +179,55 @@ func test_sabotage_slows_regrowth_and_missions_end() -> void:
 	wars.end_turn(RandomNumberGenerator.new(), 1)
 	check_eq(front.strength, ceili(front.max_strength * (Wars.STRENGTH_REGEN_SHARE - 0.06)), "Regrows 4% instead of 10%")
 	check(is_equal_approx(Agents.detect_chance(1), 0.03) and is_equal_approx(Agents.detect_chance(4), 0.005),
-			"3% caught a turn, less with a better police")
+			"3% caught on the first turn, less with a better police")
+	check(is_equal_approx(Agents.detect_chance(1, 9), 0.12) and is_equal_approx(Agents.detect_chance(4, 9), 0.095),
+			"+1% a turn spent there: 12% on the 10th turn")
+	check(is_equal_approx(Agents.current_detect_chance(agent, 1), 0.03), "First turn of the mission")
 	check(is_equal_approx(Agents.kill_chance(1), 0.35) and is_equal_approx(Agents.kill_chance(6), 0.1), "40% − 5% × stars")
-	# Never caught (a police far past its levels): the mission runs its 10 turns.
-	var done: Array[Dictionary] = []
-	for i in Agents.MISSION_TURNS:
-		done.append_array(agents.end_turn(diplomacy, 99, 1, 1).filter(func(e: Dictionary) -> bool: return e.event == &"done"))
-	check_eq(done.size(), 1, "Done after 10 turns")
+	# A mission that is never caught runs its 10 turns; the chance rises turn by turn.
+	agents.end_turn(diplomacy, 99, 1, 1)
+	if agent.is_busy():
+		check(is_equal_approx(Agents.current_detect_chance(agent, 99), 0.015), "Second turn: +1%")
+	var finished := false
+	for attempt in 50:
+		if not agent.is_busy():
+			if agents.agents.has(agent):
+				agents.start_mission(agent, Agent.SABOTAGE, clan, wars)
+			else:
+				agent = agents.generate(6)
+				agents.agents.append(agent)
+				agents.start_mission(agent, Agent.SABOTAGE, clan, wars)
+		var turns := Agents.MISSION_TURNS - agent.turns_left
+		var last := {}
+		while agent.is_busy():
+			turns += 1
+			var events := agents.end_turn(diplomacy, 99, 1, 1)
+			if not events.is_empty():
+				last = events[-1]
+		if last.get("event") == &"done":
+			check_eq(turns, Agents.MISSION_TURNS, "Done after 10 turns")
+			finished = true
+			break
+	check(finished, "Some mission ran to the end")
 	check(not agent.is_busy(), "Back home, free again")
 
+
+
+func test_one_agent_per_clan() -> void:
+	var diplomacy := Diplomacy.new(ClanData.load_all(), ResourceTypeData.load_all())
+	var wars := Wars.new(diplomacy)
+	var agents := Agents.new()
+	var first := agents.generate(1)
+	var second := agents.generate(1)
+	agents.agents.append_array([first, second])
+	var clan: StringName = wars.fronts.keys()[0]
+	var other: StringName = wars.fronts.keys()[1]
+	check_eq(agents.start_mission(first, Agent.RELATIONS, clan, wars), Agents.Result.OK, "First agent goes")
+	check(agents.agent_on(clan) == first, "Found on the clan")
+	check_eq(agents.check_mission(second, clan, wars), Agents.Result.TARGET_TAKEN, "No second agent there")
+	check_eq(agents.start_mission(second, Agent.SABOTAGE, clan, wars), Agents.Result.TARGET_TAKEN, "Not sent")
+	check(not second.is_busy(), "Still idle")
+	check_eq(agents.start_mission(second, Agent.SABOTAGE, other, wars), Agents.Result.OK, "Another clan is fine")
 
 func test_caught_agents_anger_the_clan_and_may_die() -> void:
 	var diplomacy := Diplomacy.new(ClanData.load_all(), ResourceTypeData.load_all())
@@ -199,7 +239,9 @@ func test_caught_agents_anger_the_clan_and_may_die() -> void:
 	for i in 400:
 		var agent := agents.generate(1)
 		agents.agents.append(agent)
-		agents.start_mission(agent, Agent.SABOTAGE, clan, wars)
+		agent.mission = Agent.SABOTAGE  # past the one-per-clan rule, to count the odds
+		agent.target = clan
+		agent.turns_left = Agents.MISSION_TURNS
 	var relation: int = diplomacy.clans[clan].memories.get(Diplomacy.MEMORY_AGENT, 0)
 	agents.rng.seed = 3
 	for event in agents.end_turn(diplomacy, 1, 1, 1):
@@ -207,7 +249,7 @@ func test_caught_agents_anger_the_clan_and_may_die() -> void:
 			caught += 1
 		elif event.event == &"killed":
 			killed += 1
-	check(caught + killed > 2 and caught + killed < 30, "About 3% of 400 caught (%d)" % (caught + killed))
+	check(caught + killed > 2 and caught + killed < 30, "About 3%% of 400 caught (%d)" % (caught + killed))
 	check_eq(agents.agents.size(), 400 - killed, "The killed ones are gone")
 	check(diplomacy.clans[clan].memories.get(Diplomacy.MEMORY_AGENT, 0) < relation, "The clan is angry")
 
