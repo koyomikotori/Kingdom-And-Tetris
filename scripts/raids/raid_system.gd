@@ -71,7 +71,9 @@ static func resolve(state: KingdomState, raid: RaidData, bandits: BattleSide, se
 ##          "resources_lost", "reward"}.
 static func apply_outcome(state: KingdomState, raid: RaidData, record: BattleRecord) -> Dictionary:
 	var won := record.winner == BattleRecord.DEFENDER
-	var losses := BattleOutcome.apply_to_army(state.army, record, BattleRecord.DEFENDER)
+	state.generals.survival = state.building_effect(&"commander_survival")
+	var losses := BattleOutcome.apply_to_army(state.army, record, BattleRecord.DEFENDER, false,
+			state.building_effect(&"retreat_keep"))
 	var resources_lost: Dictionary[StringName, int] = {}
 	var reward: Dictionary[StringName, int] = {}
 	if won:
@@ -80,7 +82,8 @@ static func apply_outcome(state: KingdomState, raid: RaidData, record: BattleRec
 		state.stockpile.add(reward)
 	else:
 		for resource_id in state.stockpile.get_all():
-			var amount := floori(state.stockpile.get_amount(resource_id) * raid.resource_loss_on_defeat)
+			var amount := floori(state.stockpile.get_amount(resource_id) * raid.resource_loss_on_defeat
+					* (1.0 - state.plunder_protection()))
 			if amount > 0:
 				resources_lost[resource_id] = amount
 		state.stockpile.spend(resources_lost)

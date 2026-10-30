@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/buildings/building_data.gd" id="1_building"]
+
+[resource]
+script = ExtResource("1_building")
+building_id = &"market"
+display_name = "Chợ"
+description = "Buôn bán với các gia tộc: mỗi chợ cho đổi thêm 10 giá trị hàng với mỗi gia tộc mỗi lượt và giá lợi hơn 3% (tối đa 15%). Mở ở thành cấp 2: 1 chợ, +1 mỗi cấp thành. Xây trên ô cỏ."
+cost = Dictionary[StringName, int]({&"wood": 10, &"stone": 6})
+allowed_terrains = Array[StringName]([&"grass"])
+max_count = 1
+color = Color(0.85, 0.6, 0.3, 1)
+upkeep = Dictionary[StringName, int]({&"food": 1})
+required_castle_level = 2
+category = 2
+build_turns = 2
+effects = Dictionary[StringName, float]({&"trade_capacity": 10.0, &"trade_price": 0.03})

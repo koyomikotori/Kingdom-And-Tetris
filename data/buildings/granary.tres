@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/buildings/building_data.gd" id="1_building"]
+
+[resource]
+script = ExtResource("1_building")
+building_id = &"granary"
+display_name = "Kho lương"
+description = "Cất giữ lương thảo: mỗi kho giữ lại 10% tài nguyên khi bị quân cướp hay quân xâm lược cướp phá (tối đa 50%) và giảm 2% lương thực nuôi quân và tướng. Mở ở thành cấp 2: 1 kho, +1 mỗi cấp thành. Xây trên ô cỏ."
+cost = Dictionary[StringName, int]({&"wood": 12, &"stone": 4})
+allowed_terrains = Array[StringName]([&"grass"])
+max_count = 1
+color = Color(0.75, 0.65, 0.35, 1)
+upkeep = Dictionary[StringName, int]({&"food": 1})
+required_castle_level = 2
+category = 2
+build_turns = 2
+effects = Dictionary[StringName, float]({&"plunder_protection": 0.1, &"food_upkeep_cut": 0.02})

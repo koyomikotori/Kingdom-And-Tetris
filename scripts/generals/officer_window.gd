@@ -143,7 +143,7 @@ func _fill_general(general: General) -> void:
 	var armor := general.item_bonus(&"guard_armor")
 	if armor > 0:
 		_stats.add_child(_muted("Giáp cận vệ +%d: phòng thủ cận vệ +%d%%, khả năng tử trận %d%%." % [armor,
-				roundi(armor * Generals.ARMOR_DEFENSE * 100), roundi(Generals.death_chance(general) * 100)]))
+				roundi(armor * Generals.ARMOR_DEFENSE * 100), roundi(Generals.death_chance(general, _state.building_effect(&"commander_survival")) * 100)]))
 	var trait_data: GeneralTraitData = generals.traits.get(general.trait_id)
 	if trait_data != null:
 		var active := trait_data.is_active(_state.board, trait_data.defending_only)

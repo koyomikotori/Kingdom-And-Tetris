@@ -10,12 +10,14 @@ extends RefCounted
 const RETREAT_KEEP_FRACTION := 0.5
 
 
-static func soldiers_kept(unit: BattleSide.Unit, won: bool, retreated: bool, lose_everything: bool = false) -> int:
+## `keep_bonus` is added to RETREAT_KEEP_FRACTION (the kingdom's Y quán, GDD §8 M14e).
+static func soldiers_kept(unit: BattleSide.Unit, won: bool, retreated: bool, lose_everything: bool = false,
+		keep_bonus: float = 0.0) -> int:
 	if won:
 		return unit.alive()
 	if unit.broken or (lose_everything and not retreated):
 		return 0
-	return roundi(unit.alive() * RETREAT_KEEP_FRACTION)
+	return roundi(unit.alive() * minf(1.0, RETREAT_KEEP_FRACTION + keep_bonus))
 
 
 ## Soldiers of `side`'s own army (units lent by other clans excluded) that it ends the battle
@@ -51,7 +53,8 @@ static func ally_losses(record: BattleRecord, side: int) -> Dictionary[StringNam
 ## gain battle XP, Experience.squad_battle_xp) and returns what was lost,
 ## each as unit_id -> soldiers: {"casualties" (died in battle), "scattered" (broken units, or the
 ## whole army after a failed attack), "retreat_losses" (half of the units that pulled back)}.
-static func apply_to_army(army: Army, record: BattleRecord, side: int, lose_everything: bool = false) -> Dictionary:
+static func apply_to_army(army: Army, record: BattleRecord, side: int, lose_everything: bool = false,
+		keep_bonus: float = 0.0) -> Dictionary:
 	var won := record.winner == side
 	var retreated := record.retreated_side == side
 	var casualties: Dictionary[StringName, int] = {}
@@ -63,7 +66,7 @@ static func apply_to_army(army: Army, record: BattleRecord, side: int, lose_ever
 		var unit_id := unit.data.unit_id
 		if unit.lost() > 0:
 			casualties[unit_id] = casualties.get(unit_id, 0) + unit.lost()
-		var keep := soldiers_kept(unit, won, retreated, lose_everything)
+		var keep := soldiers_kept(unit, won, retreated, lose_everything, keep_bonus)
 		var gone := unit.alive() - keep
 		if gone > 0:
 			var bucket := retreat_losses if keep > 0 else scattered

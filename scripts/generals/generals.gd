@@ -82,6 +82,10 @@ func generate(stars: int) -> General:
 	return general
 
 
+## Taken off a fallen commander's death chance (set by KingdomState before battle results: the
+## Y quán, GDD §8 M14e).
+var survival := 0.0
+
 ## New candidates, each of up to `max_stars` stars (lower stars more likely), each an advisor
 ## with `advisor_share` chance.
 func refresh_candidates(max_stars: int, turn: int) -> void:
@@ -204,11 +208,12 @@ func get_upkeep() -> Dictionary[StringName, int]:
 
 ## End of a turn: wounds heal; a new candidate list every CANDIDATE_TURNS turns. Returns the
 ## generals that recovered this turn.
-func end_turn(max_stars: int, turn: int) -> Array[General]:
+## `extra_healing` more turns of a wound heal each turn (the Y quán, GDD §8 M14e).
+func end_turn(max_stars: int, turn: int, extra_healing: int = 0) -> Array[General]:
 	var healed: Array[General] = []
 	for general in generals:
 		if general.wounded_turns > 0:
-			general.wounded_turns -= 1
+			general.wounded_turns = maxi(0, general.wounded_turns - 1 - extra_healing)
 			if general.wounded_turns == 0:
 				healed.append(general)
 	if turn - candidates_turn >= CANDIDATE_TURNS:
@@ -286,7 +291,7 @@ func after_battle(record: BattleRecord, side: int) -> Dictionary:
 		return {"name": "", "fate": &"none", "xp": 0, "levels": 0}
 	var fate := &"none"
 	if battle_side.general_fallen:
-		if rng.randf() < death_chance(general):
+		if rng.randf() < death_chance(general, survival):
 			dismiss(general)
 			return {"name": general.name, "fate": &"dead", "xp": 0, "levels": 0}
 		general.wounded_turns = WOUND_TURNS
@@ -301,10 +306,11 @@ func after_battle(record: BattleRecord, side: int) -> Dictionary:
 	return {"name": general.name, "fate": fate, "xp": xp, "levels": levels}
 
 
-## The chance a fallen commander dies: less with armor and survival items.
-static func death_chance(general: General) -> float:
+## The chance a fallen commander dies: less with armor and survival items, and `extra` less
+## (the kingdom's Y quán, KingdomState.building_effect(&"commander_survival")).
+static func death_chance(general: General, extra: float = 0.0) -> float:
 	return maxf(MIN_DEATH_CHANCE, DEATH_CHANCE - general.item_bonus(&"guard_armor") * ARMOR_SURVIVAL
-			- general.item_effect(&"survival"))
+			- general.item_effect(&"survival") - extra)
 
 
 # --- Save (GDD §10.1) ---------------------------------------------------------------------

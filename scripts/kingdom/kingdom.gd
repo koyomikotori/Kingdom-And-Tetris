@@ -238,11 +238,12 @@ func _hide_resource_popup() -> void:
 
 
 ## Tapping a building opens its window: information, upgrade, move, demolish.
-func _open_building(origin: Vector2i) -> void:
+func _open_building(origin: Vector2i, start_tab: String = "") -> void:
 	_clear_selection()
 	var window := BuildingWindow.new()
 	$UI.add_child(window)
-	window.open(state, origin)
+	window.open(state, origin, start_tab)
+	window.agent_mission_requested.connect(_open_world_map)
 	window.move_requested.connect(func(from: Vector2i) -> void:
 		_moving_from = from
 		placement_status.text = "Chọn ô mới cho %s. Esc: hủy." % _moving_building().display_name)
@@ -507,13 +508,22 @@ func _amount_text(resource_id: StringName, amount: int) -> String:
 	return UiFormat.amounts(amounts, _resource_types)
 
 
-func _open_world_map() -> void:
+## The Sở cảnh sát's agents tab ("Đặc vụ" in the Tướng sĩ tab).
+func _open_agents() -> void:
+	for cell in state.board.get_all_cells():
+		if cell.building_id == KingdomState.POLICE_ID and cell.coord == cell.building_origin:
+			_open_building(cell.coord, BuildingWindow.AGENTS_TAB)
+			return
+
+
+## With `agent`, the map opens to send that agent on a mission (GDD §8 M14e).
+func _open_world_map(agent: Agent = null) -> void:
 	if _world_map != null:
 		return
 	_clear_selection()
 	_world_map = WorldMapScreen.new()
 	$UI.add_child(_world_map)
-	_world_map.open(state, _resource_types)
+	_world_map.open(state, _resource_types, agent)
 	_world_map.closed.connect(func() -> void: _world_map = null)
 	_world_map.attack_requested.connect(_attack_clan)
 
@@ -731,6 +741,7 @@ func _build_officers_tab() -> void:
 	officers_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	officers_panel.add_theme_constant_override("separation", 6)
 	officers_panel.officer_selected.connect(_open_officer)
+	officers_panel.agents_requested.connect(_open_agents)
 	scroll.add_child(officers_panel)
 
 
@@ -807,6 +818,10 @@ func _income_source_text(entry: Dictionary) -> String:
 			return "Mưu sĩ Nội chính (giảm phí nuôi)"
 		&"admin_yield":
 			return "Mưu sĩ Nội chính (thêm sản lượng)"
+		&"granary":
+			return "Kho lương (giảm lương thực nuôi quân)"
+		&"magistrate":
+			return "Quan phủ (thêm sản lượng)"
 		&"production":
 			return "%s ×%d (khai thác)" % [_buildings[entry.id].display_name, entry.count]
 		&"building":

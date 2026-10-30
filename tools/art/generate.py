@@ -489,6 +489,146 @@ def military_academy(frame: int = 0) -> Canvas:
     return c
 
 
+# --- Administrative buildings (GDD §8, M14e) -----------------------------------------------------
+
+def market(frame: int = 0) -> Canvas:
+    """A market stall under a red and white striped awning, crates and a basket of fruit, a lantern."""
+    c = Canvas(16, 16)
+    c.vline(2, 6, 13, P["wood_dark"])  # stall posts
+    c.vline(13, 6, 13, P["wood_dark"])
+    for x in range(1, 15):  # striped awning
+        color = P["red"] if (x // 2) % 2 == 0 else P["white"]
+        c.vline(x, 4, 6, color)
+    c.hline(1, 14, 7, P["red_dark"])
+    c.rect(3, 10, 10, 3, P["wood"])  # counter
+    c.hline(3, 12, 10, P["wood_light"])
+    c.hline(3, 12, 12, P["wood_dark"])
+    c.ellipse(5.5, 9.2, 1.4, 1.0, P["red_light"])  # fruit
+    c.ellipse(8.5, 9.2, 1.4, 1.0, P["gold"])
+    c.px(11, 9, P["leaf"])
+    c.rect(1, 13, 3, 2, P["wood_dark"])  # crate
+    c.ellipse(13.5, 13.5, 1.6, 1.3, P["thatch"])  # basket
+    c.outline()
+    lantern = (7, 8, 7, 6)[frame]  # the lantern sways under the awning
+    c.px(lantern, 8, P["gold_light"])
+    c.px(lantern, 7, P["red"])
+    return c
+
+
+def granary(frame: int = 0) -> Canvas:
+    """A raised storehouse on stilts with a thick thatched roof, a ladder and rice sacks."""
+    c = Canvas(16, 16)
+    for x in (3, 6, 9, 12):
+        c.vline(x, 11, 14, P["wood_dark"])  # stilts
+    c.rect(2, 7, 12, 4, P["wood"])
+    c.hline(2, 13, 10, P["wood_dark"])
+    for x in (5, 9):
+        c.vline(x, 7, 10, P["wood_dark"])
+    for row in range(5):
+        inset = 4 - row
+        c.hline(1 + inset, 14 - inset, 2 + row, P["thatch"] if row % 2 == 0 else P["thatch_dark"])
+    c.rect(7, 8, 2, 2, P["door"])
+    c.vline(10, 11, 14, P["wood_light"])  # ladder
+    c.px(11, 12, P["wood_light"])
+    c.px(11, 14, P["wood_light"])
+    c.ellipse(2.5, 13.5, 1.6, 1.4, P["rice"])  # sacks
+    c.ellipse(14, 13.5, 1.4, 1.4, P["rice"])
+    c.outline()
+    # A sparrow hops along the roof ridge.
+    c.px((5, 7, 9, 7)[frame], 1 if frame % 2 else 2, P["trunk"])
+    return c
+
+
+def academy(frame: int = 0) -> Canvas:
+    """A scholar's hall with a curved roof, a signboard over the door and a stand of scrolls."""
+    c = Canvas(16, 16)
+    c.rect(2, 8, 12, 5, P["wall"])
+    c.hline(2, 13, 12, P["wall_shade"])
+    curved_roof(c, 1, 4, 14, 4)
+    c.rect(6, 8, 4, 1, P["wood_dark"])  # signboard
+    c.px(7, 8, P["gold"])
+    c.px(8, 8, P["gold"])
+    c.rect(7, 10, 2, 3, P["door"])
+    c.px(4, 10, P["door"])
+    c.px(11, 10, P["door"])
+    c.rect(12, 13, 3, 2, P["wood_dark"])  # scroll stand
+    c.px(12, 12, P["paper"])
+    c.px(14, 12, P["paper"])
+    c.hline(1, 3, 14, P["stone"])  # stone steps
+    c.outline()
+    # A scroll unrolls and rolls back on the stand.
+    if frame in (1, 2):
+        c.hline(12, 12 + frame, 11, P["paper"])
+    return c
+
+
+def infirmary(frame: int = 0) -> Canvas:
+    """A white-walled clinic with a green roof, herbs drying on a rack and a steaming medicine pot."""
+    c = Canvas(16, 16)
+    c.rect(1, 8, 10, 6, P["white"])
+    c.hline(1, 10, 13, P["wall_shade"])
+    for row in range(4):
+        inset = 3 - row
+        c.hline(inset, 11 - inset, 4 + row, P["leaf"] if row < 3 else P["leaf_dark"])
+    c.rect(4, 10, 3, 4, P["door"])
+    c.vline(12, 8, 13, P["wood_dark"])  # herb rack
+    c.vline(15, 8, 13, P["wood_dark"])
+    c.hline(12, 15, 8, P["wood"])
+    c.px(13, 9, P["leaf_light"])
+    c.px(14, 9, P["leaf"])
+    c.px(13, 10, P["leaf"])
+    c.ellipse(13.5, 13.5, 1.6, 1.2, P["rock_dark"])  # medicine pot
+    c.px(13, 12, P["red"])
+    c.outline()
+    smoke_puffs(c, 13, 11, frame)
+    return c
+
+
+def magistrate(frame: int = 0) -> Canvas:
+    """The magistrate's hall: a wide red-roofed hall on a stone base, a gold plaque and the court drum."""
+    c = Canvas(16, 16)
+    c.rect(1, 13, 14, 2, P["stone"])
+    c.hline(1, 14, 14, P["stone_dark"])
+    c.rect(2, 8, 12, 5, P["red"])
+    c.hline(2, 13, 12, P["red_dark"])
+    for x in (3, 12):
+        c.vline(x, 8, 12, P["red_dark"])
+    curved_roof(c, 1, 4, 14, 4)
+    c.rect(6, 7, 4, 1, P["gold"])  # plaque
+    c.rect(7, 9, 2, 4, P["door"])
+    c.ellipse(13.5, 10.5, 1.5, 1.6, P["wood"])  # court drum on its stand
+    c.px(13, 10, P["red_light"])
+    c.vline(14, 12, 13, P["wood_dark"])
+    c.outline()
+    if frame == 1:  # someone strikes the drum
+        c.px(15, 9, P["gold_light"])
+        c.px(15, 11, P["gold_light"])
+    c.px(8, 7, (P["gold"], P["gold_light"], P["gold"], P["gold"])[frame])
+    return c
+
+
+def police(frame: int = 0) -> Canvas:
+    """A dark watch office with a gray tiled roof, two red lanterns and a board of wanted posters."""
+    c = Canvas(16, 16)
+    c.rect(2, 8, 10, 6, P["wood_dark"])
+    c.hline(2, 11, 13, P["wood_deep"])
+    for row in range(4):
+        inset = 3 - row
+        c.hline(1 + inset, 12 - inset, 4 + row, P["stone_dark"] if row < 3 else P["rock_dark"])
+    c.hline(4, 9, 4, P["stone"])
+    c.rect(5, 10, 3, 4, P["door"])
+    c.vline(13, 8, 14, P["wood"])  # notice board
+    c.rect(12, 8, 4, 3, P["wood_dark"])
+    c.px(12, 9, P["paper"])
+    c.px(14, 9, P["paper"])
+    c.px(13, 9, P["paper_shade"])
+    c.outline()
+    glow = (P["red_light"], P["red"], P["red_light"], P["gold_light"])
+    c.px(3, 9, glow[frame])  # lanterns by the door flicker
+    c.px(10, 9, glow[(frame + 2) % 4])
+    return c
+
+
 DIGITS = {
     1: ["010", "110", "010", "010", "111"], 2: ["110", "001", "010", "100", "111"],
     3: ["110", "001", "010", "001", "110"], 4: ["101", "101", "111", "001", "001"],
@@ -765,7 +905,8 @@ def main() -> None:
     for name, draw in (("barracks", barracks), ("watchtower", watchtower), ("farm", farm),
                        ("lumber_mill", lumber_mill), ("mine", mine), ("war_stable", war_stable),
                        ("archery_range", archery_range), ("martial_hall", martial_hall),
-                       ("military_academy", military_academy)):
+                       ("military_academy", military_academy), ("market", market), ("granary", granary),
+                       ("academy", academy), ("infirmary", infirmary), ("magistrate", magistrate), ("police", police)):
         anim_strip(draw).save(f"buildings/{name}_anim.png")
     barracks().save("buildings/barracks.png")
     watchtower().save("buildings/watchtower.png")
@@ -773,7 +914,8 @@ def main() -> None:
     lumber_mill().save("buildings/lumber_mill.png")
     mine().save("buildings/mine.png")
     for name, draw in (("war_stable", war_stable), ("archery_range", archery_range), ("martial_hall", martial_hall),
-                       ("military_academy", military_academy)):
+                       ("military_academy", military_academy), ("market", market), ("granary", granary),
+                       ("academy", academy), ("infirmary", infirmary), ("magistrate", magistrate), ("police", police)):
         draw().save(f"buildings/{name}.png")
     for name, draw in (("food", icon_food), ("wood", icon_wood), ("stone", icon_stone), ("ore", icon_ore),
                        ("hardwood", icon_hardwood), ("horses", icon_horses)):

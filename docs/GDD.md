@@ -326,7 +326,31 @@ Mục tiêu: ô đất trống bớt vô dụng; người chơi muốn đặt nh
 - **Thành chính chứa quân:** thành cấp 1 chứa **3** đơn vị, mỗi cấp +1 (cấp 6: **8**); mỗi doanh trại vẫn thêm 4 chỗ.
 - **Ván mới có sẵn 3 đơn vị** đủ quân: Kiếm binh, Thương binh, Cung thủ nông dân.
 - **Doanh trại cấp N tăng tốc hồi quân thêm N%**, cộng thẳng vào mức gốc 10% (6 doanh trại cấp 5: 10% + 30% = **40%** mỗi lượt). Vẫn cần ít nhất 1 doanh trại thì mới hồi quân; doanh trại đang thi công không tính.
-- Tiếp theo: các công trình hành chính (chưa chốt).
+- Tiếp theo: các công trình hành chính (M14e, bên dưới).
+
+### Công trình hành chính (M14e, đã chốt)
+
+Tất cả xây trên **ô cỏ**, mục **Hành chính** trong bảng Xây dựng. Như mọi công trình: thiếu phí duy trì hoặc đang thi công thì không có tác dụng.
+
+| Công trình | Mở ở thành | Số lượng | Cấp | Tác dụng |
+|---|---|---|---|---|
+| **Chợ** | 2 | 1 ở thành cấp 2, +1 mỗi cấp thành (cấp 6: 5) | không | Mỗi chợ: +10 giá trị hàng đổi được với mỗi gia tộc mỗi lượt (40 → 90), giá lợi hơn 3% (tối đa 15%) |
+| **Kho lương** | 2 | như Chợ | không | Mỗi kho: giữ lại 10% tài nguyên khỏi bị cướp (quân cướp và quân xâm lược; tối đa 50%), giảm 2% lương thực nuôi quân và tướng |
+| **Học quán** | 2 | 1 | 6 (≤ cấp thành) | Mỗi lượt mọi tướng và mưu sĩ +5 × cấp kinh nghiệm |
+| **Y quán** | 2 | 1 | 6 (≤ cấp thành) | Tướng / mưu sĩ bị thương hồi gấp đôi (−2 lượt mỗi lượt); tổng tướng gục ngã ít chết hơn 4% × cấp; thua trận thì quân còn sống giữ 50% + 4% × cấp |
+| **Quan phủ** | 3 | 1 | 6 (≤ cấp thành) | +4% × cấp sản lượng công trình khai thác (tối đa 24%) |
+| **Sở cảnh sát** | 3 | 1 | 4 (≤ cấp thành − 2) | Chiêu mộ và cử đặc vụ (bên dưới); duy trì 2 lương thực, 2 gỗ, 2 đá |
+
+Giới hạn số lượng tính từ cấp thành mở khóa công trình: +1 mỗi cấp thành **trên** cấp đó.
+
+**Đặc vụ (Sở cảnh sát):**
+- Bấm vào Sở cảnh sát: tab **Thông tin**, **Nâng cấp**, **Chiêu mộ đặc vụ**, **Đặc vụ**. Tab Tướng sĩ có nút **Đặc vụ** dưới danh sách tướng / mưu sĩ, mở thẳng tab Đặc vụ của Sở cảnh sát (chưa xây thì nút bị khóa và ghi lý do).
+- Sở cảnh sát cấp N giữ được **N đặc vụ**. Ứng viên: 3 người, sao tới **cấp thành** (tỉ lệ như Chiêu hiền), đổi mới sau 5 lượt hoặc trả 20 lương thực để đổi ngay. Tuyển **trả một lần** 30 + 20 × sao lương thực và 10 × sao gỗ, **không có phí nuôi**. Đặc vụ không có trang bị, chỉ có tên, sao, cấp và kinh nghiệm. Có thể sa thải.
+- **Cấp đặc vụ 1–10:** mỗi lượt làm nhiệm vụ +10 kinh nghiệm, lên cấp N cần 100 × N; cấp tối đa = 4 + số sao (1★ tới cấp 5, 6★ tới cấp 10).
+- **Giao nhiệm vụ:** chọn đặc vụ đang rảnh → bản đồ chiến dịch mở ra → chọn một gia tộc bất kỳ chưa bị thôn tính (cả bản đồ, không cần gần) → bảng chọn nhiệm vụ. Trên bản đồ, bảng gia tộc cũng có nút **Cử đặc vụ**. Mỗi nhiệm vụ kéo dài **10 lượt**:
+  - **Tăng quan hệ:** +cấp đặc vụ quan hệ mỗi lượt với gia tộc đó (cấp 1: +1 … cấp 10: +10), như quà tặng (mờ dần theo thời gian).
+  - **Phá hoại:** quân gia tộc đó hồi chậm hơn: trừ thẳng vào mức hồi 10% của họ 1 / 1.5 / 2 / 2.5 / 3 / 3.5 / 4 / 4.5 / 5 / 6% theo cấp 1–10.
+- **Bị lộ:** mỗi lượt làm nhiệm vụ có **3%** bị lộ (Sở cảnh sát mỗi cấp trên 1 giảm 1%, thấp nhất 0.5%). Bị lộ thì bị giết với tỉ lệ **40% − 5% × sao** (mất hẳn), không thì trốn về; nhiệm vụ dừng và quan hệ với gia tộc đó **−10**. Xong nhiệm vụ thì đặc vụ về, rảnh để giao việc mới.
 
 ### Tướng (M11d, đã chốt)
 
@@ -810,7 +834,7 @@ Thiết kế bản điện thoại (đã chốt, làm ở M15):
 | M12e | **Trang bị** cho tướng và mưu sĩ: 5 bậc độ hiếm, Xưởng rèn, chiến lợi phẩm, kho 20 món, vũ khí hiện trong trận, khung chân dung theo sao, sửa hình ngựa và vũ khí lính (§8 Trang bị) | Xong |
 | M12f | Phần tiện cho chuột lấy từ M13: kéo chuột trái để cuộn bản đồ, kéo danh sách để cuộn, bấm ô / tài nguyên xem chi tiết, cửa sổ vừa màn hình, icon game (§10.2) | Xong |
 | M13 | **Công trình và lính mới:** Doanh trại 6 cấp với 3 bậc lính, Chuồng ngựa chiến, Trại bắn tên, Võ trường, Học viện quân sự, 21 loại lính (kỵ binh, nỏ xuyên giáp, đao thuẫn, pháo, hỏa mai) (§8); M13b tiện ích, M13c bản đồ sinh động | Xong |
-| M14 | M14a âm thanh (§14, xong); M14b chiến dịch (bản đồ 5×5, 24 gia tộc, chỉ thắng bằng thống nhất, bảng thông báo, §15, xong); **M14d ruộng đất xung quanh, tháp canh, thành chứa quân, doanh trại hồi quân** (§8), rồi công trình hành chính; M14c build Windows, phát hành bản máy tính | Đang làm |
+| M14 | M14a âm thanh (§14, xong); M14b chiến dịch (bản đồ 5×5, 24 gia tộc, chỉ thắng bằng thống nhất, bảng thông báo, §15, xong); M14d ruộng đất xung quanh, tháp canh, thành chứa quân, doanh trại hồi quân (§8, xong); **M14e công trình hành chính**: Chợ, Kho lương, Học quán, Y quán, Quan phủ, Sở cảnh sát với đặc vụ (§8); M14c build Windows, phát hành bản máy tính | Đang làm |
 | M15 | **Bản điện thoại:** cảm ứng (chạm xem trước + thanh Đặt/Hủy, chụm để zoom, nút Back), giao diện cho màn nhỏ, xuất APK, giả lập (nhánh `m13/touch-apk`, §10.2) | Để cuối |
 
 Đồ họa được đưa lên trước cảm ứng (chốt sau M11f) để lần sắp xếp lại bố cục dùng luôn giao diện mới. Bản điện thoại dời xuống cuối (chốt sau khi chơi thử M13 trên điện thoại): hoàn thiện bản máy tính trước.

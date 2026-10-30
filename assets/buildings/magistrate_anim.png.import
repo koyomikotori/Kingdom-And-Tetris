@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://fpmo14tpewcf"
-path="res://.godot/imported/general_m_04.png-99b4fde0a80051b804f298760f65a2aa.ctex"
+uid="uid://dmlqi05u7cvhs"
+path="res://.godot/imported/magistrate_anim.png-19d496c8a22fdc3fede5e19ef738f903.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/portraits/pool/general_m_04.png"
-dest_files=["res://.godot/imported/general_m_04.png-99b4fde0a80051b804f298760f65a2aa.ctex"]
+source_file="res://assets/buildings/magistrate_anim.png"
+dest_files=["res://.godot/imported/magistrate_anim.png-19d496c8a22fdc3fede5e19ef738f903.ctex"]
 
 [params]
 

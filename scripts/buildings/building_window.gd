@@ -12,6 +12,8 @@ signal move_requested(origin: Vector2i)
 signal demolished(building_name: String, refund: Dictionary)
 ## An upgrade was paid and started (the window closes); `text` says when it will be finished.
 signal construction_started(text: String)
+## "Giao nhiệm vụ" on an idle agent (Sở cảnh sát, GDD §8 M14e): the kingdom scene opens the map.
+signal agent_mission_requested(agent: Agent)
 
 const ACCENT := UiPalette.ACCENT
 ## Height of the scrolling list in the castle's Chiêu hiền tab, on a tall enough screen.
@@ -24,6 +26,9 @@ const CONFIRM_HEIGHT := 100
 const CANDIDATE_PORTRAIT_SCALE := 1
 
 enum Action { NONE, UPGRADE, MOVE, DEMOLISH, CUSTOM, CANCEL_UPGRADE }
+
+const AGENT_HIRE_TAB := "Chiêu mộ đặc vụ"
+const AGENTS_TAB := "Đặc vụ"
 
 var _state: KingdomState
 var _origin: Vector2i
@@ -45,10 +50,14 @@ var _tab_scrolls: Array[ScrollContainer] = []
 ## The forge's "Rèn" tab (GDD §8 "Trang bị", M12e) and what it is set to make.
 var _forge_box: VBoxContainer
 var _forge_kind: StringName = &"general"
+## The Sở cảnh sát's tabs (GDD §8 M14e).
+var _agent_hire_box: VBoxContainer
+var _agent_box: VBoxContainer
 var _forge_slot: StringName = &"weapon"
 
 
-func open(state: KingdomState, origin: Vector2i) -> void:
+## `start_tab` names the tab to show first ("" = the first one).
+func open(state: KingdomState, origin: Vector2i, start_tab: String = "") -> void:
 	_state = state
 	_origin = origin
 	var cell := state.board.get_cell(origin)
@@ -81,6 +90,13 @@ func open(state: KingdomState, origin: Vector2i) -> void:
 		_recruit_box = _tab_box("Chiêu hiền")
 		state.generals.changed.connect(_refresh)
 		state.advisors.changed.connect(_refresh)
+	if cell.building_id == KingdomState.POLICE_ID:
+		_agent_hire_box = _tab_box(AGENT_HIRE_TAB)
+		_agent_box = _tab_box(AGENTS_TAB)
+		state.agents.changed.connect(_refresh)
+	for i in _tabs.get_tab_count():
+		if _tabs.get_tab_title(i) == start_tab:
+			_tabs.current_tab = i
 	body.add_child(_confirm_box)
 	if _is_castle or (_building != null and _building.is_upgradable()):
 		_upgrade_button = add_action("Nâng cấp", _ask.bind(Action.UPGRADE))
@@ -180,6 +196,10 @@ func _refresh() -> void:
 		if _building.replenish_per_level > 0.0:
 			lines.append("Tăng tốc hồi quân: +%d%% (cấp %d)." % [roundi(_building.replenish_per_level * cell.building_level * 100),
 					cell.building_level])
+		var effects := _building.describe_effects(cell.building_level)
+		if not effects.is_empty():
+			lines.append("Tác dụng hiện tại: %s%s." % [effects,
+					"" if _state.buildings_supplied else " (đang ngừng vì thiếu phí duy trì)"])
 		var upkeep := _building.upkeep_at(cell.building_level)
 		if not upkeep.is_empty():
 			lines.append("Phí duy trì: %s mỗi lượt." % UiFormat.amounts(upkeep, _resource_types))
@@ -193,6 +213,8 @@ func _refresh() -> void:
 		_refresh_building_upgrade(cell)
 		if _forge_box != null:
 			_refresh_forge()
+		if _agent_box != null:
+			_refresh_agents()
 		return
 	_refresh_generals()
 	var next := _state.next_castle_level()
@@ -238,6 +260,9 @@ func _refresh_building_upgrade(cell: CellData) -> void:
 		text += "Mỗi lượt: %s. " % UiFormat.amounts(next_yield, _resource_types, true)
 	if _building.replenish_per_level > 0.0:
 		text += "Tăng tốc hồi quân: +%d%%. " % roundi(_building.replenish_per_level * (level + 1) * 100)
+	var next_effects := _building.describe_effects(level + 1)
+	if not next_effects.is_empty():
+		text += "Tác dụng: %s. " % next_effects
 	text += "Phí duy trì: %s mỗi lượt." % UiFormat.amounts(_building.upkeep_at(level + 1), _resource_types)
 	var unlocked := _units_unlocked(level + 1, level + 1)
 	if not unlocked.is_empty():
@@ -439,6 +464,70 @@ func _choice_button(text: String, chosen: bool, on_pressed: Callable) -> Button:
 	button.custom_minimum_size = Vector2(110, 36)
 	return button
 
+
+# --- Agents (Sở cảnh sát, GDD §8 M14e) ---------------------------------------------------
+
+func _refresh_agents() -> void:
+	var agents := _state.agents
+	var slots := _state.agent_slots()
+	for box: VBoxContainer in [_agent_hire_box, _agent_box]:
+		for child in box.get_children():
+			box.remove_child(child)
+			child.queue_free()
+	_agent_hire_box.add_child(_muted(("Đặc vụ trả một lần khi tuyển, không tốn phí nuôi. Đang có %d/%d đặc vụ (mỗi cấp sở giữ thêm 1). "
+			+ "Ứng viên tới %d sao (cấp thành), danh sách mới sau %d lượt.") % [agents.agents.size(), slots, _state.castle_level,
+			maxi(0, Agents.CANDIDATE_TURNS - (_state.turn - agents.candidates_turn))]))
+	for i in agents.candidates.size():
+		var candidate := agents.candidates[i]
+		var cost := Agents.cost_of(candidate.stars)
+		var result := agents.check_recruit(_state.stockpile, i, slots)
+		var button := _button("Tuyển", _ask_custom.bind("Tuyển đặc vụ %s %s? Trả %s (một lần)." % [candidate.name,
+				candidate.star_text(), UiFormat.amounts(cost, _resource_types)], _recruit_agent.bind(i)))
+		button.disabled = result != Agents.Result.OK
+		button.custom_minimum_size = Vector2(110, 44)
+		var reason := "" if result == Agents.Result.OK else " " + Agents.describe(result)
+		_agent_hire_box.add_child(_candidate_row(candidate, _agent_text(candidate),
+				"Giá: %s.%s" % [UiFormat.amounts(cost, _resource_types), reason], [button]))
+	var refresh := _button("Làm mới ngay (%s)" % UiFormat.amounts(Agents.REFRESH_COST, _resource_types),
+			_ask_custom.bind("Đổi danh sách đặc vụ ngay? Trả %s." % UiFormat.amounts(Agents.REFRESH_COST, _resource_types),
+			func() -> void: agents.buy_refresh(_state.stockpile, _state.castle_level, _state.turn)))
+	refresh.disabled = not _state.stockpile.can_afford(Agents.REFRESH_COST)
+	_agent_hire_box.add_child(refresh)
+
+	_agent_box.add_child(_muted(("Mỗi nhiệm vụ %d lượt, sang bất kỳ gia tộc nào. Mỗi lượt có %s%% bị lộ: bị lộ thì có thể bị giết "
+			+ "(40%% − 5%% × sao), không thì trốn về; quan hệ với gia tộc đó −%d.") % [Agents.MISSION_TURNS,
+			String.num(Agents.detect_chance(_state.police_level()) * 100, 1), -Agents.CAUGHT_RELATION]))
+	if agents.agents.is_empty():
+		_agent_box.add_child(_muted("Chưa có đặc vụ nào: tuyển ở tab %s." % AGENT_HIRE_TAB))
+	for agent in agents.agents:
+		var status := "Đang rảnh."
+		var buttons: Array = []
+		if agent.is_busy():
+			status = "%s ở %s, còn %d lượt." % [Agent.MISSION_NAMES[agent.mission],
+					_state.diplomacy.clans[agent.target].data.display_name, agent.turns_left]
+		else:
+			var send := _button("Giao nhiệm vụ", func() -> void:
+				agent_mission_requested.emit(agent)
+				close())
+			send.custom_minimum_size = Vector2(150, 44)
+			buttons.append(send)
+		var dismiss := _button("Sa thải", _ask_custom.bind("Sa thải đặc vụ %s? Không hoàn lại tiền tuyển." % agent.name,
+				func() -> void: agents.dismiss(agent)))
+		dismiss.custom_minimum_size = Vector2(110, 44)
+		buttons.append(dismiss)
+		_agent_box.add_child(_candidate_row(agent, _agent_text(agent), status, buttons))
+
+
+func _agent_text(agent: Agent) -> String:
+	return "Đặc vụ %s %s · %s\nTăng quan hệ +%d/lượt · Phá hoại −%s%% hồi quân" % [agent.name, agent.star_text(),
+			agent.level_text(), agent.relation_gain(), String.num(agent.sabotage_share() * 100, 1)]
+
+
+func _recruit_agent(index: int) -> void:
+	var name := _state.agents.candidates[index].name
+	if _state.recruit_agent(index) == Agents.Result.OK:
+		set_status("Đặc vụ %s đã nhận việc!" % name)
+		Sfx.play(&"level_up")
 
 # --- Generals (castle only) ---------------------------------------------------------------
 
