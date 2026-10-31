@@ -150,13 +150,31 @@ func sabotage_on(clan_id: StringName) -> float:
 	return minf(Wars.STRENGTH_REGEN_SHARE, total)
 
 
+## The clan was annexed: its agent's mission ends and they come home safe. Returns the
+## "recalled" events (see end_turn).
+func recall_from(clan_id: StringName) -> Array[Dictionary]:
+	var events: Array[Dictionary] = []
+	for agent in agents:
+		if agent.is_busy() and agent.target == clan_id:
+			events.append({"name": agent.name, "clan_id": clan_id, "mission": agent.mission, "event": &"recalled",
+					"levels": 0})
+			_end_mission(agent)
+	if not events.is_empty():
+		changed.emit()
+	return events
+
+
 ## End of a turn: every agent on a mission learns, may be caught, and does its work; missions
-## end after MISSION_TURNS turns; new candidates every CANDIDATE_TURNS turns. Returns what
-## happened: [{"name", "clan_id", "mission", "event": &"done" | &"caught" | &"killed", "levels"}].
+## end after MISSION_TURNS turns; agents in a clan annexed meanwhile come home (recall_from); new
+## candidates every CANDIDATE_TURNS turns. Returns what happened:
+## [{"name", "clan_id", "mission", "event": &"done" | &"caught" | &"killed" | &"level" | &"recalled", "levels"}].
 func end_turn(diplomacy: Diplomacy, police_level: int, max_stars: int, turn: int) -> Array[Dictionary]:
 	var events: Array[Dictionary] = []
 	for agent in agents.duplicate():
 		if not agent.is_busy():
+			continue
+		if diplomacy.clans[agent.target].annexed:
+			events.append_array(recall_from(agent.target))
 			continue
 		var entry := {"name": agent.name, "clan_id": agent.target, "mission": agent.mission,
 				"levels": agent.gain_xp(XP_PER_TURN)}

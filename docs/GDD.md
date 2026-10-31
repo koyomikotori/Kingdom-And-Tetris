@@ -350,7 +350,7 @@ Giới hạn số lượng tính từ cấp thành mở khóa công trình: +1 m
 - **Giao nhiệm vụ:** chọn đặc vụ đang rảnh → bản đồ chiến dịch mở ra → chọn một gia tộc bất kỳ chưa bị thôn tính (cả bản đồ, không cần gần) → bảng chọn nhiệm vụ. **Mỗi gia tộc chỉ nhận 1 đặc vụ** cùng lúc (nút Cử đặc vụ khóa với lý do "Đã có đặc vụ ở đây"). Trên bản đồ, bảng gia tộc cũng có nút **Cử đặc vụ**. Mỗi nhiệm vụ kéo dài **10 lượt**:
   - **Tăng quan hệ:** +cấp đặc vụ quan hệ mỗi lượt với gia tộc đó (cấp 1: +1 … cấp 10: +10), như quà tặng (mờ dần theo thời gian).
   - **Phá hoại:** quân gia tộc đó hồi chậm hơn: trừ thẳng vào mức hồi 10% của họ 1 / 1.5 / 2 / 2.5 / 3 / 3.5 / 4 / 4.5 / 5 / 6% theo cấp 1–10.
-- **Bị lộ:** lượt đầu nhiệm vụ có **3%** bị lộ (Sở cảnh sát mỗi cấp trên 1 giảm 1%, thấp nhất 0.5%), **mỗi lượt ở lại thêm +1%** (lượt 10: 12%; sở cấp 4: 0.5% → 9.5%). Sống sót trọn 10 lượt: ~46% với sở cấp 1, ~60% với sở cấp 4. Không rút về sớm được. Bị lộ thì bị giết với tỉ lệ **40% − 5% × sao** (mất hẳn), không thì trốn về; nhiệm vụ dừng và quan hệ với gia tộc đó **−10**. Xong nhiệm vụ thì đặc vụ về, rảnh để giao việc mới.
+- **Bị lộ:** lượt đầu nhiệm vụ có **3%** bị lộ (Sở cảnh sát mỗi cấp trên 1 giảm 1%, thấp nhất 0.5%), **mỗi lượt ở lại thêm +1%** (lượt 10: 12%; sở cấp 4: 0.5% → 9.5%). Sống sót trọn 10 lượt: ~46% với sở cấp 1, ~60% với sở cấp 4. Không rút về sớm được. Bị lộ thì bị giết với tỉ lệ **40% − 5% × sao** (mất hẳn), không thì trốn về; nhiệm vụ dừng và quan hệ với gia tộc đó **−10**. Xong nhiệm vụ thì đặc vụ về, rảnh để giao việc mới. Gia tộc đặc vụ đang ở bị sáp nhập thì nhiệm vụ dừng ngay và đặc vụ về an toàn (không còn bị lộ, M14h).
 
 ### Tướng (M11d, đã chốt)
 
@@ -543,7 +543,7 @@ Trong trận chỉ cận vệ nhận phần thêm theo loại vũ khí; Võ lự
 - **Chiến lợi phẩm:** đi đánh thắng 35% rơi đồ (Thường 30, Tốt 30, Hiếm 22, Sử thi 13, Huyền thoại 5), phòng thủ thắng 12% (50/30/15/5/0); Huyền thoại chỉ có ở đây, ở sự kiện và sau này ở mini game Thảo phạt đạo tặc, tỉ lệ thấp.
 - **Sự kiện:** vài sự kiện mới tặng đồ.
 
-**Kho đồ:** chung, tối đa **20 món** (xem ở tab Trang bị). Món đang ở trên người khác cùng loại (tướng / mưu sĩ) cũng hiện trong danh sách, kèm mặt và tóm tắt người đó, nút **Đổi** (món người hiện tại đang đeo ở ô đó chuyển sang người kia). Bảng tướng sĩ giữ một kích thước cố định; nội dung dài thì cuộn. Mỗi lượt mới bảng bên phải quay về tab Đất. Sa thải thì đồ đang đeo về kho; **tử trận thì mất luôn đồ đang đeo**. Phân rã món không cần để lấy lại một ít Khoáng sản / Gỗ cứng.
+**Kho đồ:** chung, tối đa **20 món** (xem ở tab Trang bị). Món đang ở trên người khác cùng loại (tướng / mưu sĩ) cũng hiện trong danh sách, kèm mặt và tóm tắt người đó, nút **Đổi** (món người hiện tại đang đeo ở ô đó chuyển sang người kia). Bảng tướng sĩ giữ một kích thước cố định; nội dung dài thì cuộn. Mỗi lượt mới bảng bên phải quay về tab Đất. Sa thải thì đồ đang đeo về kho; **tử trận thì mất luôn đồ đang đeo**. Phân rã món không cần để lấy lại một ít Khoáng sản / Gỗ cứng. Tab Trang bị có nút **Đến xưởng rèn** (M14h): mở ngay tab Rèn của Xưởng rèn, chọn sẵn loại (tướng / mưu sĩ) và ô đang xem; chưa có xưởng thì nút khóa kèm lý do.
 
 **Khung chân dung theo sao** (vẽ lại, hào nhoáng hơn; ô trang bị dùng cùng kiểu theo độ hiếm): 1–2★ đồng · 3★ xanh lá · 4★ xanh dương, họa tiết nhỏ · 5★ tím, họa tiết vừa · 6★ vàng, họa tiết nhiều.
 
@@ -937,6 +937,13 @@ Mục tiêu: biến game thành chơi kiểu **chiến dịch**, mở rộng d�
 Bảng thông tin ô đất chuyển xuống đáy cột này.
 
 **Bảng báo cáo quan trọng (M14g, đã chốt):** đầu lượt, sau trận cướp / xâm lược (và bảng kết quả trận), trước các sự kiện ngẫu nhiên, nếu có tin quan trọng thì hiện một bảng giữa màn hình, chỉ tắt bằng nút **OK** hoặc **Enter** (Esc cũng được). Gồm: bị tuyên chiến, đặc vụ bị lộ (trốn về / bị giết), tổng tướng bị thương / tử trận và mưu sĩ bị thương trong trận đầu lượt, lính đào ngũ vì thiếu lương, đồng minh rời bỏ, thành chính nguy hiểm; sau này thêm vùng đạo tặc xuất hiện (M14i). Không có tin nào thì không hiện. Trận người chơi tự đi đánh đã có bảng kết quả riêng nên không lặp lại.
+
+**Ván mới, độ khó và tướng địch (M14h, đã chốt):**
+- Bấm **Ván mới** mở bảng chọn: trên cùng là hình **thành trì cấp 6, tổng tướng và lính** của người chơi, đổi màu ngay theo màu đang chọn (mái và cờ thành trì cũng đổi màu trên bản đồ); rồi **tên gia tộc / vương quốc** (để trống = "Vương quốc của bạn"; hiện trên bản đồ thế giới và tên phe trong trận), **màu chủ đạo** (8 màu: áo quân, cờ, người đi tuần trên bản đồ, vương quốc trên bản đồ thế giới) và gần cuối bảng là **độ khó**; hai nút **Bắt đầu chơi** và **Về màn hình chính**. Cả ba lựa chọn lưu trong bản lưu; bản lưu cũ là Bình thường, tên và màu mặc định.
+- **Độ khó** quyết định số lính mỗi đơn vị địch so với đơn vị tiêu chuẩn của người chơi: **Dễ 75%, Bình thường 100%, Khó 150%, Huyền thoại 200%**. Số đơn vị giữ nguyên, mỗi đơn vị to/nhỏ hơn; quân lực gia tộc trên bản đồ cũng nhân theo. Áp dụng cho quân gia tộc (đánh, xâm lược, gửi quân giúp nhau) và cướp (sau này cả thảo phạt). Bảng lưu game và màn kết thúc ghi độ khó.
+- **Huyền thoại** mở cho các ván sau khi thắng (thống nhất) một ván Bình thường, Khó hoặc Huyền thoại (nhớ theo máy).
+- **Tướng và mưu sĩ của gia tộc**, theo quân lực hiện tại của gia tộc (không tính hệ số độ khó): **yếu** (dưới 150 lính) không có ai ra trận; **trung bình** (150–399) có **một tướng hoặc một mưu sĩ** 1–2 sao (mỗi gia tộc luôn cùng một loại); **mạnh** (từ 400) có **cả tướng lẫn mưu sĩ 3 sao**. Huyền thoại: trung bình +1 sao, mạnh +2 sao. Không có trang bị, không có đặc tính. Gia tộc lớn lên thì được người mới sao cao hơn; bị đánh yếu đi thì tạm không cho họ ra trận.
+- Họ ra trận như của ta: tướng có đội cận vệ và cộng chỉ số cho quân gia tộc (không cho quân được gửi sang giúp), đội cận vệ tan thì cả quân mất nhuệ khí; mưu sĩ dùng mưu kế đầu trận. Tướng địch ngã ngựa: **30% tử trận** (gia tộc có tướng mới sau 5 lượt), không thì bị thương 3 lượt; mưu sĩ địch thua trận có 50% bị thương 3 lượt. Người bị thương ở nhà. Bảng kết quả trận ghi số phận của họ; bảng gia tộc trên bản đồ ghi tên và sao của họ.
 
 **Bản lưu cũ** (bản đồ 6 gia tộc) không tải được nữa: báo phiên bản cũ, bắt đầu ván mới.
 

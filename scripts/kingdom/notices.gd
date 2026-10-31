@@ -120,6 +120,8 @@ static func _diplomacy_items(state: KingdomState, report: Dictionary) -> Array[D
 			&"done":
 				agents.append("%s đã xong nhiệm vụ %s ở %s, trở về" % [entry.name,
 						Agent.MISSION_NAMES[entry.mission].to_lower(), clan_name])
+			&"recalled":
+				agents.append("%s trở về vì %s đã sáp nhập vào vương quốc" % [entry.name, clan_name])
 			&"caught":
 				caught.append("%s bị %s phát hiện và đã trốn về (quan hệ −%d)" % [entry.name, clan_name, -Agents.CAUGHT_RELATION])
 			&"killed":

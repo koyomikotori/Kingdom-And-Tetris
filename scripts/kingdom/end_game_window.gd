@@ -24,6 +24,13 @@ func open(state: KingdomState, path: int, system: SaveSystem, host: Node) -> voi
 	var body := build_frame(title, VICTORY_COLOR if won else DEFEAT_COLOR, 0.42, false)
 	var story := _label(_story(path), 16)
 	body.add_child(story)
+	if won and Difficulty.unlocks_legendary(state.difficulty):
+		var opened := not GameSettings.legendary_unlocked()
+		GameSettings.unlock_legendary()
+		if opened:
+			var unlocked := _label("Đã mở độ khó Huyền thoại cho ván sau!", 16)
+			unlocked.add_theme_color_override("font_color", VICTORY_COLOR)
+			body.add_child(unlocked)
 	body.add_child(HSeparator.new())
 	body.add_child(_label(_statistics(), 15))
 	if won:
@@ -47,6 +54,7 @@ func _statistics() -> String:
 		annexed += 1 if clan.annexed else 0
 		allies += 1 if clan.is_allied() else 0
 	return "\n".join([
+		"Độ khó: %s" % Difficulty.NAMES[_state.difficulty],
 		"Số lượt: %d" % _state.turn,
 		"Lãnh thổ: %d ô" % _state.board.count_owned_cells(),
 		"Quân: %d lính (%d đơn vị)" % [_state.army.count_soldiers(), _state.army.count_squads()],

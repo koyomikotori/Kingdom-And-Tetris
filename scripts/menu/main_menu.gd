@@ -94,7 +94,11 @@ func _on_new_game_pressed() -> void:
 		_new_game_button.text = "Bản tự động sẽ bị ghi đè. Bấm lần nữa để bắt đầu"
 		_new_game_button.add_theme_color_override("font_color", UiPalette.WARNING_ON_WOOD)
 		return
-	GameLaunch.new_game(get_tree())
+	# The choices first (GDD §15 M14h): name, color, difficulty.
+	var window := NewGameWindow.new()
+	add_child(window)
+	window.open()
+	window.start_requested.connect(func(settings: Dictionary) -> void: GameLaunch.new_game(get_tree(), settings))
 
 
 func _on_load_pressed() -> void:
@@ -129,4 +133,3 @@ func _spacer(height: float) -> Control:
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(0, height)
 	return spacer
-

@@ -49,6 +49,8 @@ func open(state: KingdomState, resource_types: Array[ResourceTypeData], agent: A
 	_map = WorldMapView.new()
 	_map.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_map.size_flags_stretch_ratio = 7.0
+	_map.kingdom_name = state.kingdom_name
+	_map.kingdom_color = state.player_color
 	_map.setup(state.diplomacy)
 	row.add_child(_map)
 	# The clan panel sits on paper (project theme, GDD §13).

@@ -7,10 +7,13 @@ const MENU_SCENE := "res://scenes/menu/main_menu.tscn"
 
 ## Game data (SaveSystem.load_slot().game) for the next kingdom scene; empty = a new game.
 static var _pending_game: Dictionary = {}
+## A new game's choices (NewGameWindow, M14h) for the next kingdom scene.
+static var _new_game_settings: Dictionary = {}
 
 
-static func new_game(tree: SceneTree) -> void:
+static func new_game(tree: SceneTree, settings: Dictionary = {}) -> void:
 	_pending_game = {}
+	_new_game_settings = settings
 	tree.change_scene_to_file(KINGDOM_SCENE)
 
 
@@ -34,3 +37,10 @@ static func take_pending_game() -> Dictionary:
 	var game := _pending_game
 	_pending_game = {}
 	return game
+
+
+## The new game's choices (once), or {} for the defaults.
+static func take_new_game_settings() -> Dictionary:
+	var settings := _new_game_settings
+	_new_game_settings = {}
+	return settings

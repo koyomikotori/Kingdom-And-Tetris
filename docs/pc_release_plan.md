@@ -4,9 +4,9 @@ Danh sách người chơi (chủ dự án) đưa ra sau M14e (2026-10-30). Làm 
 
 | Mốc | Nội dung | Trạng thái |
 |---|---|---|
-| M14f | Đặc vụ: mỗi gia tộc 1 đặc vụ, tỉ lệ lộ +1%/lượt | Xong (nhánh `m14f/agent-rules`) |
-| M14g | Bảng báo cáo quan trọng + nút mũi tên xem tướng/mưu sĩ | Xong, chờ chơi thử |
-| M14h | Chọn độ khó ván mới + tướng/mưu sĩ của gia tộc địch | Chưa làm |
+| M14f | Đặc vụ: mỗi gia tộc 1 đặc vụ, tỉ lệ lộ +1%/lượt | Xong (đã merge) |
+| M14g | Bảng báo cáo quan trọng + nút mũi tên xem tướng/mưu sĩ | Xong (đã merge) |
+| M14h | Chọn độ khó ván mới + tướng/mưu sĩ của gia tộc địch | Xong, chờ chơi thử |
 | M14i | Thảo phạt đạo tặc (vùng đỏ, chuyến thảo phạt, màn phát lại kiểu Dungeon Village) | Chưa làm |
 | M14j | Cutscene mờ sau menu chính (kiểu Kairosoft) + nhạc nền mới | Chưa làm |
 | M14c | Build Windows, phát hành bản máy tính | Cuối cùng |
@@ -45,12 +45,7 @@ Danh sách người chơi (chủ dự án) đưa ra sau M14e (2026-10-30). Làm 
 - Gia tộc trung bình: có tướng **hoặc** mưu sĩ 1–2 sao, không trang bị.
 - Gia tộc mạnh: có **cả** tướng lẫn mưu sĩ 3 sao.
 
-Câu hỏi cần chốt:
-- "Yếu / trung bình / mạnh" tính theo vòng trên bản đồ 5×5 (vòng 1–2–3–4) hay theo quân lực hiện tại?
-- Tướng địch có chết / bị bắt khi thua không, hay chỉ là hình trong trận?
-- Mưu sĩ địch có dùng mưu kế không?
-- Độ khó có đổi được giữa ván không? Hiện độ khó ở đâu (bản lưu, menu)?
-- Cờ "đã mở Huyền thoại" lưu ở `settings.cfg` hay một file hồ sơ riêng?
+Đã chốt (luật ở GDD §15): hạng theo quân lực hiện tại (dưới 150 / 150–399 / từ 400), tướng địch như của ta và có thể tử trận, độ khó nhân số lính mỗi đơn vị, màn ván mới có thêm tên và màu vương quốc. Độ khó không đổi giữa ván; Huyền thoại nhớ trong `settings.cfg`.
 
 ---
 
@@ -126,3 +121,4 @@ Các ý này đang nằm ở mục "Để sau" trong `GDD.md`, chưa bắt buộ
 - Sự kiện mưu sĩ xin đầu quân (§8 Mưu sĩ).
 - Ngoại giao: kết thông gia, yêu sách / cống nạp, mượn đường quân sự, sự kiện ngoại giao ngẫu nhiên (§9.8).
 - Font pixel (§13).
+- **NPC trợ lý / cánh tay phải của chúa công** (người chơi đề xuất sau M14h, để sau): hướng dẫn tutorial khi vừa tạo ván mới; chân dung nhiều biểu cảm hiện cạnh bảng thông báo với lời thoại báo cáo tình hình chiến sự; xuất hiện cả ở màn chiến thắng / thất bại.

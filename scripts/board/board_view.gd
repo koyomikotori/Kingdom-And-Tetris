@@ -61,6 +61,11 @@ var show_coords := false:
 	set(value):
 		show_coords = value
 		queue_redraw()
+## The kingdom's color on the castle's roofs and banners (GameArt.team_tinted, M14h). Set by the kingdom scene.
+var team_color := Color(0, 0, 0, 0):
+	set(value):
+		team_color = value
+		queue_redraw()
 ## Picks the castle picture (GameArt.castle). Set by the kingdom scene.
 var castle_level := 1:
 	set(value):
@@ -340,7 +345,7 @@ func _draw_buildings() -> void:
 		for covered in _board.get_building_cells(cell.building_origin):
 			bounds = bounds.merge(_cell_rect(covered.coord))
 		var is_castle := cell.building_id == BoardData.CASTLE_ID
-		var texture := GameArt.castle(castle_level) if is_castle else GameArt.building(cell.building_id)
+		var texture := GameArt.castle(castle_level, team_color) if is_castle else GameArt.building(cell.building_id)
 		var building: BuildingData = _buildings.get(cell.building_id)
 		var turns := castle_turns if is_castle else cell.building_turns
 		var new_building := turns > 0 and not is_castle and not cell.building_upgrading
@@ -352,7 +357,7 @@ func _draw_buildings() -> void:
 			var tint := Color(1, 1, 1, UPGRADING_ALPHA) if turns > 0 else Color.WHITE
 			var anim: Texture2D = null
 			if animate and turns == 0:
-				anim = GameArt.castle_anim(castle_level) if is_castle else GameArt.building_anim(cell.building_id)
+				anim = GameArt.castle_anim(castle_level, team_color) if is_castle else GameArt.building_anim(cell.building_id)
 			if anim != null:
 				_draw_frame(anim, rect, _anim_frame, tint)
 			else:

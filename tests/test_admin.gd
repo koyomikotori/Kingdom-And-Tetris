@@ -229,6 +229,29 @@ func test_one_agent_per_clan() -> void:
 	check(not second.is_busy(), "Still idle")
 	check_eq(agents.start_mission(second, Agent.SABOTAGE, other, wars), Agents.Result.OK, "Another clan is fine")
 
+
+func test_agents_come_home_when_their_clan_is_annexed() -> void:
+	var diplomacy := Diplomacy.new(ClanData.load_all(), ResourceTypeData.load_all())
+	var wars := Wars.new(diplomacy)
+	var agents := Agents.new()
+	var agent := agents.generate(1)
+	agents.agents.append(agent)
+	var clan: StringName = wars.fronts.keys()[0]
+	agents.start_mission(agent, Agent.SABOTAGE, clan, wars)
+	wars.annex(clan)
+	var events := agents.recall_from(clan)
+	check_eq(events.size(), 1, "Recalled at the annexation")
+	check_eq(events[0].event, &"recalled", "As a recall")
+	check(not agent.is_busy() and agents.agents.has(agent), "Home, alive and idle")
+	# Annexed some other way (no recall_from): the next turn brings them home, never caught.
+	var other: StringName = wars.fronts.keys()[1]
+	agents.start_mission(agent, Agent.SABOTAGE, other, wars)
+	wars.annex(other)
+	agents.rng.seed = 1
+	var turn := agents.end_turn(diplomacy, 1, 1, 1)
+	check_eq(turn.map(func(e: Dictionary) -> StringName: return e.event), [&"recalled"], "Recalled, not caught")
+	check(agents.agents.has(agent) and not agent.is_busy(), "Still alive")
+
 func test_caught_agents_anger_the_clan_and_may_die() -> void:
 	var diplomacy := Diplomacy.new(ClanData.load_all(), ResourceTypeData.load_all())
 	var wars := Wars.new(diplomacy)

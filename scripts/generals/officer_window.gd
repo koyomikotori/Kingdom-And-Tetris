@@ -13,6 +13,10 @@ const TABS_HEIGHT := 480
 ## Screen height the rest of the window needs (ModalWindow.fit_height).
 const TABS_RESERVED := 260
 
+## "Đến xưởng rèn" in the Trang bị tab: the kingdom scene opens the forge's Rèn tab for this
+## officer's kind and the slot shown (M14h).
+signal forge_requested(kind: StringName, slot: StringName)
+
 var _state: KingdomState
 var _officer: Officer
 var _resource_types: Array[ResourceTypeData] = ResourceTypeData.load_all()
@@ -254,6 +258,16 @@ func _fill_equipment() -> void:
 		_equip_box.add_child(take_off)
 	else:
 		_equip_box.add_child(_muted("%s: trống." % Item.SLOT_NAMES[_slot]))
+	var has_forge := _state.forge_origin() != KingdomState.NO_FORGE
+	var forge := _button("Đến xưởng rèn: rèn %s" % Item.SLOT_NAMES[_slot].to_lower(), func() -> void:
+		forge_requested.emit(&"advisor" if _officer is Advisor else &"general", _slot))
+	forge.custom_minimum_size = Vector2(0, 36)
+	forge.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	forge.disabled = not has_forge
+	forge.tooltip_text = "" if has_forge else "Chưa có Xưởng rèn khí giới (thành cấp 3)."
+	_equip_box.add_child(forge)
+	if not has_forge:
+		_equip_box.add_child(_muted("Chưa có Xưởng rèn khí giới (thành cấp 3)."))
 	_equip_box.add_child(HSeparator.new())
 	_equip_box.add_child(_label("Kho đồ %d/%d — hợp với ô %s:" % [equipment.items.size(), Equipment.MAX_STORAGE,
 			Item.SLOT_NAMES[_slot].to_lower()], 13))

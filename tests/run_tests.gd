@@ -28,6 +28,7 @@ const TEST_FILES := [
 	"res://tests/test_map_life.gd",
 	"res://tests/test_audio.gd",
 	"res://tests/test_campaign.gd",
+	"res://tests/test_difficulty.gd",
 ]
 
 

@@ -69,7 +69,8 @@ func _slot_row(slot: String) -> Control:
 ## "Lượt 12 · 34 ô đất · 80 lính · 25/10 14:03" from SaveSystem.slot_info().
 static func describe(info: Dictionary) -> String:
 	var time := Time.get_datetime_dict_from_unix_time(info.saved_at + _utc_offset_seconds())
-	return "Lượt %d · %d ô đất · %d lính · %02d/%02d %02d:%02d" % [info.turn, info.cells, info.soldiers,
+	return "Lượt %d · %d ô đất · %d lính · %s · %02d/%02d %02d:%02d" % [info.turn, info.cells, info.soldiers,
+			Difficulty.NAMES[clampi(info.get("difficulty", Difficulty.Level.NORMAL), 0, Difficulty.NAMES.size() - 1)],
 			time.day, time.month, time.hour, time.minute]
 
 

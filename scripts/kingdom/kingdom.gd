@@ -108,6 +108,10 @@ func _ready() -> void:
 	state = KingdomState.new(board, hand, _terrains, _buildings, units, seed_value)
 	if not game.is_empty():
 		state.load_save(game)
+	else:
+		state.setup_new_game(GameLaunch.take_new_game_settings())
+	KingdomState.shown_color = state.player_color
+	board_view.team_color = state.player_color
 	state.hand.changed.connect(_rebuild_piece_cards)
 	state.stockpile.changed.connect(_refresh_economy)
 	state.army.changed.connect(_refresh_economy)
@@ -242,7 +246,7 @@ func _hide_resource_popup() -> void:
 
 
 ## Tapping a building opens its window: information, upgrade, move, demolish.
-func _open_building(origin: Vector2i, start_tab: String = "") -> void:
+func _open_building(origin: Vector2i, start_tab: String = "") -> BuildingWindow:
 	_clear_selection()
 	var window := BuildingWindow.new()
 	$UI.add_child(window)
@@ -260,6 +264,7 @@ func _open_building(origin: Vector2i, start_tab: String = "") -> void:
 	window.construction_started.connect(func(text: String) -> void:
 		placement_status.text = text
 		_refresh_economy())
+	return window
 
 
 func _moving_building() -> BuildingData:
@@ -397,6 +402,7 @@ func _play_invasion(clan_id: StringName, simulator: BattleSimulator) -> void:
 		$UI.add_child(report)
 		var lines := report.army_loss_lines(result, state.units)
 		lines.append("Quân %s mất %d lính." % [_clan_name(clan_id), result.enemy_lost])
+		lines.append_array(_enemy_officer_lines(result))
 		lines.append_array(_ally_lines(result))
 		if not result.lost_cells.is_empty():
 			lines.append("Mất %d ô đất %s." % [result.lost_cells.size(),
@@ -431,6 +437,7 @@ func _attack_clan(clan_id: StringName) -> void:
 		var lines := report.army_loss_lines(result, state.units)
 		lines.append("Quân %s mất %d lính, còn %d." % [_clan_name(clan_id), result.enemy_lost,
 				state.wars.fronts[clan_id].strength])
+		lines.append_array(_enemy_officer_lines(result))
 		lines.append_array(_ally_lines(result))
 		var loot := UiFormat.amounts(result.loot, _resource_types)
 		if not loot.is_empty():
@@ -440,6 +447,8 @@ func _attack_clan(clan_id: StringName) -> void:
 			lines.append("Bồi thường chiến phí: %s." % compensation)
 		if result.annexed:
 			lines.append(_annex_line(clan_id, result.get("expanded", Vector2i.ZERO)))
+			for entry: Dictionary in result.get("agents_recalled", []):
+				lines.append("Đặc vụ %s ở %s đã an toàn trở về." % [entry.name, _clan_name(clan_id)])
 		var title_text := "Chiến thắng!" if result.won else "Thất bại!"
 		if result.annexed:
 			title_text = "%s đã bị sáp nhập!" % _clan_name(clan_id)
@@ -476,6 +485,22 @@ func _ally_lines(result: Dictionary) -> Array[String]:
 	for clan_id: StringName in result.helpers:
 		var entry: Dictionary = result.helpers[clan_id]
 		lines.append("%s gửi %d lính sang giúp đối phương, mất %d." % [_clan_name(clan_id), entry.sent, entry.lost])
+	return lines
+
+
+## Report lines for the clan's general and advisor (ClanOfficers.after_battle, M14h).
+func _enemy_officer_lines(result: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	var officers: Dictionary = result.get("enemy_officers", {})
+	var general: Dictionary = officers.get("general", {})
+	match general.get("fate", &"none"):
+		&"dead":
+			lines.append("Tướng địch %s đã tử trận!" % general.name)
+		&"wounded":
+			lines.append("Tướng địch %s ngã ngựa, bị thương %d lượt." % [general.name, Generals.WOUND_TURNS])
+	var advisor: Dictionary = officers.get("advisor", {})
+	if advisor.get("fate", &"none") == &"wounded":
+		lines.append("Mưu sĩ địch %s bị thương %d lượt." % [advisor.name, Advisors.WOUND_TURNS])
 	return lines
 
 
@@ -768,6 +793,16 @@ func _open_officer(officer: Officer) -> void:
 	var window := OfficerWindow.new()
 	$UI.add_child(window)
 	window.open(state, officer)
+	window.forge_requested.connect(_open_forge)
+
+
+## The forge's Rèn tab over the officer window, set to `kind`'s `slot` (M14h).
+func _open_forge(kind: StringName, slot: StringName) -> void:
+	var origin := state.forge_origin()
+	if origin == KingdomState.NO_FORGE:
+		return
+	var window := _open_building(origin, BuildingWindow.FORGE_TAB)
+	window.preset_forge(kind, slot)
 
 
 ## One icon + amount per resource on the wooden top bar; the name is in the tooltip.

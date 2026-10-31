@@ -77,7 +77,7 @@ func _draw() -> void:
 				if walker.is_moving() and not walker.path.is_empty():
 					back = (walker.pos - walker.path[0]).normalized() * PATROL_SPACING
 				for i in range(walker.count - 1, -1, -1):
-					_sprite(&"soldier", feet + back * i, frame, walker.facing, true, KingdomState.PLAYER_COLOR)
+					_sprite(&"soldier", feet + back * i, frame, walker.facing, true, _state.player_color)
 			MapLife.Kind.BIRD:
 				_sprite(&"bird", feet - Vector2(0, BIRD_HEIGHT), frame, walker.facing)
 			_:

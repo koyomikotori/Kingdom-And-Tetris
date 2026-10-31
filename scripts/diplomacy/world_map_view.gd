@@ -67,6 +67,11 @@ var _lake := Rect2()
 var _decorations: Array = []
 
 
+## The player's kingdom on the map (KingdomState.kingdom_name / player_color, M14h).
+var kingdom_name := KingdomState.DEFAULT_KINGDOM_NAME
+var kingdom_color := KingdomState.PLAYER_COLOR
+
+
 func setup(diplomacy: Diplomacy) -> void:
 	_diplomacy = diplomacy
 	_diplomacy.changed.connect(queue_redraw)
@@ -257,13 +262,13 @@ func _draw() -> void:
 		_draw_road(line)
 	for decoration: Array in _decorations:
 		_draw_piece(decoration[0], decoration[1])
-	_draw_node(_position_of(KINGDOM_ID), KingdomState.PLAYER_COLOR, KINGDOM_COLOR, "Vương quốc của bạn", false)
+	_draw_node(_position_of(KINGDOM_ID), kingdom_color, KINGDOM_COLOR, kingdom_name, false)
 	for clan_id in _diplomacy.clans:
 		var clan := _diplomacy.clans[clan_id]
 		var center := _position_of(clan_id)
 		var front: Wars.Front = _wars.fronts[clan_id] if _wars != null else null
 		if clan.annexed:
-			_draw_node(center, KingdomState.PLAYER_COLOR, KINGDOM_COLOR, clan.data.display_name, clan_id == _selected)
+			_draw_node(center, kingdom_color, KINGDOM_COLOR, clan.data.display_name, clan_id == _selected)
 			continue
 		var tier_color := TIER_COLORS[Diplomacy.tier_for(clan.relation)]
 		var far := not _diplomacy.in_reach(clan_id)

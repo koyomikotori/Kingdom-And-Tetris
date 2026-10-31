@@ -12,7 +12,7 @@ var _tints: Dictionary = {}
 var _frame := 0
 
 
-func setup(officer: Officer, scale: int = 2, team: Color = KingdomState.PLAYER_COLOR) -> void:
+func setup(officer: Officer, scale: int = 2, team: Color = KingdomState.shown_color) -> void:
 	art_scale = scale
 	var kind := BattleView.ADVISOR_KIND if officer is Advisor else BattleView.GENERAL_KIND
 	_sprite_id = GameArt.officer_sprite(kind, officer.look, (officer as General).weapon_type() if officer is General else &"")
@@ -21,7 +21,7 @@ func setup(officer: Officer, scale: int = 2, team: Color = KingdomState.PLAYER_C
 
 
 ## A soldier of this unit type instead (the recruit window, GDD §8 M12d).
-func setup_unit(unit: UnitData, scale: int = 2, team: Color = KingdomState.PLAYER_COLOR) -> void:
+func setup_unit(unit: UnitData, scale: int = 2, team: Color = KingdomState.shown_color) -> void:
 	art_scale = scale
 	_sprite_id = unit.get_sprite_id()
 	_tints = GameArt.unit_tints(team)

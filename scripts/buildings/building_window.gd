@@ -28,6 +28,7 @@ const CANDIDATE_PORTRAIT_SCALE := 1
 enum Action { NONE, UPGRADE, MOVE, DEMOLISH, CUSTOM, CANCEL_UPGRADE }
 
 const AGENT_HIRE_TAB := "Chiêu mộ đặc vụ"
+const FORGE_TAB := "Rèn"
 const AGENTS_TAB := "Đặc vụ"
 
 var _state: KingdomState
@@ -83,7 +84,7 @@ func open(state: KingdomState, origin: Vector2i, start_tab: String = "") -> void
 	_info = _tab_label("Thông tin")
 	_upgrade = _tab_label("Nâng cấp")
 	if cell.building_id == KingdomState.FORGE_ID:
-		_forge_box = _tab_box("Rèn")
+		_forge_box = _tab_box(FORGE_TAB)
 		_tabs.current_tab = 2
 		state.equipment.changed.connect(_refresh)
 	if _is_castle:
@@ -386,6 +387,13 @@ func _ask_custom(text: String, on_confirm: Callable) -> void:
 # --- Forge -------------------------------------------------------------------------------
 
 ## Who and which slot to forge for, the cost and odds at this forge level, the job in progress.
+## Opens the Rèn tab set to make `kind`'s `slot` (from an officer's Trang bị tab, M14h).
+func preset_forge(kind: StringName, slot: StringName) -> void:
+	_forge_kind = kind
+	_forge_slot = slot
+	_refresh()
+
+
 func _refresh_forge() -> void:
 	for child in _forge_box.get_children():
 		_forge_box.remove_child(child)

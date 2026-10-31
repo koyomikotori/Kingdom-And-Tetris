@@ -81,6 +81,7 @@ func slot_info(slot: String) -> Dictionary:
 	var info := {}
 	for key in ["turn", "cells", "soldiers"]:
 		info[key] = int(data.summary.get(key, 0))
+	info["difficulty"] = int(data.summary.get("difficulty", Difficulty.Level.NORMAL))
 	info["saved_at"] = int(data.get("saved_at", 0))
 	return info
 
