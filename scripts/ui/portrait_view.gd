@@ -13,11 +13,11 @@ const FRAME_TIER_BY_STARS: Array[int] = [0, 0, 0, 1, 2, 3, 4]
 ## Display scale (0.5 shows the 96×96 portrait at 48×48, e.g. next to an item, M12e).
 var art_scale := 2.0
 var _officer: Officer
-var _team := KingdomState.PLAYER_COLOR
+var _team := KingdomState.shown_color
 
 
 ## `team`: the armor cloth / robe color (the player's color for the kingdom's officers).
-func setup(officer: Officer, scale: float = 2.0, team: Color = KingdomState.PLAYER_COLOR) -> void:
+func setup(officer: Officer, scale: float = 2.0, team: Color = KingdomState.shown_color) -> void:
 	_officer = officer
 	art_scale = scale
 	_team = team

@@ -234,11 +234,15 @@ func assist(side: BattleSide) -> void:
 	var advisor := active(&"military")
 	if advisor == null:
 		return
+	assist_officer(side, advisor, advisor.stat_for(&"military"), post_effect(&"military", &"stratagem"))
+
+
+## `advisor` follows `side` with `strategy` points (the kingdom's military advisor, or a clan's, M14h).
+func assist_officer(side: BattleSide, advisor: Advisor, strategy: int, stratagem_bonus: float) -> void:
 	side.advisor_name = advisor.name
 	side.advisor_look = advisor.look
-	var strategy := advisor.stat_for(&"military")
 	side.strategy = strategy
-	side.stratagem_bonus = post_effect(&"military", &"stratagem")
+	side.stratagem_bonus = stratagem_bonus
 	for id in advisor.stratagems:
 		if stratagems.has(id):
 			side.stratagems.append(stratagems[id])

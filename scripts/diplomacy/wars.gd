@@ -77,6 +77,14 @@ class Front:
 
 
 var fronts: Dictionary[StringName, Front] = {}
+## Soldiers per clan unit and in each clan's army against the standard squad (Difficulty, M14h).
+var enemy_scale := 1.0
+
+## How strong a clan is now (GDD §15 M14h), from its strength without the difficulty's scale:
+## weak below MEDIUM_FROM, strong from STRONG_FROM. Clan officers follow it (ClanOfficers).
+enum Tier { WEAK, MEDIUM, STRONG }
+const MEDIUM_FROM := 150
+const STRONG_FROM := 400
 var _diplomacy: Diplomacy
 
 
@@ -102,8 +110,28 @@ func is_neighbor(clan_id: StringName) -> bool:
 
 ## The clan's maximum strength on `turn`: its starting strength, GROWTH_PER_TURN more every turn.
 func max_strength_at(clan_id: StringName, turn: int) -> int:
-	var base := _diplomacy.clans[clan_id].data.military_strength
+	var base := _diplomacy.clans[clan_id].data.military_strength * enemy_scale
 	return roundi(base * (1.0 + minf(MAX_GROWTH, GROWTH_PER_TURN * maxi(0, turn - 1))))
+
+
+## A new game's difficulty: every clan starts at its scaled strength.
+func set_enemy_scale(scale: float, turn: int = 1) -> void:
+	enemy_scale = scale
+	for clan_id in fronts:
+		fronts[clan_id].max_strength = max_strength_at(clan_id, turn)
+		fronts[clan_id].strength = fronts[clan_id].max_strength
+
+
+func tier(clan_id: StringName) -> Tier:
+	var strength := fronts[clan_id].strength / maxf(0.01, enemy_scale)
+	if strength >= STRONG_FROM:
+		return Tier.STRONG
+	return Tier.MEDIUM if strength >= MEDIUM_FROM else Tier.WEAK
+
+
+## Soldiers in one full clan or bandit unit of `unit` at this difficulty.
+func squad_size(unit: UnitData) -> int:
+	return maxi(1, roundi(unit.squad_size * enemy_scale))
 
 
 func count_annexed() -> int:
@@ -260,7 +288,7 @@ func add_clan_units(side: BattleSide, clan_id: StringName, soldiers: int, units:
 		share = mini(share, remaining)
 		remaining -= share
 		while share > 0:
-			var squad := mini(share, unit.squad_size)
+			var squad := mini(share, squad_size(unit))
 			side.add_unit(unit, squad, null, data if lent else null)
 			share -= squad
 

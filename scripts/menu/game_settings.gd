@@ -18,6 +18,7 @@ static var _sound_volume := DEFAULT_SOUND_VOLUME
 static var _fullscreen := false
 static var _folded_notices: Array[String] = []
 static var _notices_open := true
+static var _legendary_unlocked := false
 ## Emitted after any setting changed (a static signal: listeners connect to `GameSettings.notifier.changed`).
 static var notifier := Notifier.new()
 
@@ -75,6 +76,20 @@ static func set_notices_open(open: bool) -> void:
 	_store("notices", "open", open)
 
 
+## Legendary difficulty opens after a game won on Normal or Hard (GDD §15 M14h).
+static func legendary_unlocked() -> bool:
+	_load()
+	return _legendary_unlocked
+
+
+static func unlock_legendary() -> void:
+	_load()
+	if _legendary_unlocked:
+		return
+	_legendary_unlocked = true
+	_store("progress", "legendary_unlocked", true)
+
+
 static func set_map_effects(on: bool) -> void:
 	_load()
 	_map_effects = on
@@ -127,3 +142,4 @@ static func _load() -> void:
 	_sound_volume = clampf(float(file.get_value("audio", "sound_volume", DEFAULT_SOUND_VOLUME)), 0.0, 1.0)
 	_folded_notices.assign(file.get_value("notices", "folded", []))
 	_notices_open = bool(file.get_value("notices", "open", true))
+	_legendary_unlocked = bool(file.get_value("progress", "legendary_unlocked", false))

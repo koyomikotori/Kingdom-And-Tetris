@@ -90,6 +90,9 @@ func refresh() -> void:
 	var front := _wars.fronts[_clan_id]
 	_info.text = "%s · %s · Quân: %d/%d lính" % [_distance_text(), ClanData.PERSONALITY_NAMES[data.personality],
 			front.strength, front.max_strength]
+	var officers := _state.clan_officers.describe(_clan_id, _wars, _state.difficulty)
+	if not officers.is_empty():
+		_info.text += "\n" + officers
 	var tier := Diplomacy.tier_for(clan.relation)
 	_relation_bar.value = clan.relation
 	var fill := StyleBoxFlat.new()

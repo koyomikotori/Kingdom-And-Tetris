@@ -46,6 +46,7 @@ static func _load(path: String) -> Texture2D:
 static func clear_cache() -> void:
 	_cache.clear()
 	_pool_cache.clear()
+	_tinted_cache.clear()
 
 
 ## Tile for a terrain id; &"" (no terrain) is the wild land outside the kingdom.
@@ -63,8 +64,9 @@ static func key_frame() -> Texture2D:
 
 
 ## The castle changes with the castle level (1–6).
-static func castle(level: int) -> Texture2D:
-	return _load(BUILDING_DIR + "castle_%d.png" % clampi(level, 1, 6))
+## With `team` (alpha > 0), the roofs and banners are in that color (the kingdom's, M14h).
+static func castle(level: int, team := Color(0, 0, 0, 0)) -> Texture2D:
+	return team_tinted(_load(BUILDING_DIR + "castle_%d.png" % clampi(level, 1, 6)), team)
 
 
 static func building(building_id: StringName) -> Texture2D:
@@ -76,8 +78,40 @@ static func building_anim(building_id: StringName) -> Texture2D:
 	return _load(BUILDING_DIR + String(building_id) + "_anim.png")
 
 
-static func castle_anim(level: int) -> Texture2D:
-	return _load(BUILDING_DIR + "castle_%d_anim.png" % clampi(level, 1, 6))
+static func castle_anim(level: int, team := Color(0, 0, 0, 0)) -> Texture2D:
+	return team_tinted(_load(BUILDING_DIR + "castle_%d_anim.png" % clampi(level, 1, 6)), team)
+
+
+## The castle's blue roof shades and red banner shades (tools/art/pixel.py "roof*" / "red*"),
+## dark to light, swapped for shades of the kingdom's color by team_tinted.
+const ROOF_SHADES: Array[Color] = [Color("2a4166"), Color("3e5c8a"), Color("5d7fb0")]
+const BANNER_SHADES: Array[Color] = [Color("8e2a1e"), Color("c8412e"), Color("e8664c")]
+static var _tinted_cache: Dictionary = {}
+
+
+## `texture` with its roof and banner pixels in shades of `team`; unchanged without a team or
+## for the default color.
+static func team_tinted(texture: Texture2D, team: Color) -> Texture2D:
+	if texture == null or team.a <= 0.0 or team.to_html(false) == KingdomState.PLAYER_COLOR.to_html(false):
+		return texture
+	var key := "%s|%s" % [texture.resource_path, team.to_html(false)]
+	if not _tinted_cache.has(key):
+		var swap := {}
+		var shades: Array[Color] = [team.darkened(0.35), team, team.lightened(0.25)]
+		for i in 3:
+			swap[ROOF_SHADES[i].to_rgba32()] = shades[i]
+			swap[BANNER_SHADES[i].to_rgba32()] = shades[i].lightened(0.15)
+		var image := texture.get_image()
+		image.decompress()
+		for y in image.get_height():
+			for x in image.get_width():
+				var pixel := image.get_pixel(x, y)
+				var opaque := Color(pixel.r, pixel.g, pixel.b, 1.0).to_rgba32()
+				if pixel.a > 0.0 and swap.has(opaque):
+					var shade: Color = swap[opaque]
+					image.set_pixel(x, y, Color(shade.r, shade.g, shade.b, pixel.a))
+		_tinted_cache[key] = ImageTexture.create_from_image(image)
+	return _tinted_cache[key]
 
 
 ## A map walker strip (tools/art/map_art.py): &"villager_a", &"soldier" (+ "_team"), &"horse",

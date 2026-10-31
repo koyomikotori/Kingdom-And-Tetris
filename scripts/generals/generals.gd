@@ -236,7 +236,11 @@ func lead(side: BattleSide, board: BoardData, defending: bool) -> void:
 	var general := active_commander()
 	if general == null:
 		return
-	var trait_data := active_trait(general, board, defending)
+	lead_officer(side, general, active_trait(general, board, defending))
+
+
+## Puts `general` at the head of `side` (the kingdom's commander, or a clan's general, M14h).
+func lead_officer(side: BattleSide, general: General, trait_data: GeneralTraitData = null) -> void:
 	side.add_unit(guard_unit, ranks[general.stars].guards)
 	var guard: BattleSide.Unit = side.units.back()
 	guard.is_general_guard = true

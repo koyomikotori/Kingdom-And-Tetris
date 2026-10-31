@@ -6,9 +6,16 @@ extends RefCounted
 signal turn_started(turn: int)
 signal castle_changed
 
-## The player's main color: the kingdom's soldiers wear it in battle. Later the player picks it
-## (with a commander and a banner) when starting a new game (GDD §13).
+## The player's default main color: the kingdom's soldiers wear it in battle, the world map and
+## the walkers show it. A new game may pick another from PLAYER_COLORS (M14h).
 const PLAYER_COLOR := Color(0.27, 0.45, 0.82)
+const PLAYER_COLORS: Array[Color] = [PLAYER_COLOR, Color(0.78, 0.2, 0.18), Color(0.2, 0.6, 0.28),
+		Color(0.55, 0.3, 0.72), Color(0.9, 0.52, 0.12), Color(0.15, 0.62, 0.62), Color(0.85, 0.7, 0.15),
+		Color(0.3, 0.3, 0.34)]
+const DEFAULT_KINGDOM_NAME := "Vương quốc của bạn"
+const MAX_NAME_LENGTH := 24
+## The color of the game being played, for views that have no state at hand (portraits, figures).
+static var shown_color := PLAYER_COLOR
 const POLICE_ID: StringName = &"police"
 ## Squads the castle holds at level 1 without any barracks (each castle level adds its
 ## CastleLevelData.squad_capacity: 3 → 8 at level 6, GDD §8 M14d).
@@ -47,6 +54,12 @@ var advisors := Advisors.new()
 var equipment := Equipment.new()
 ## Spies hired at the Sở cảnh sát (GDD §8 M14e).
 var agents := Agents.new()
+## The clans' generals and advisors (GDD §15 M14h).
+var clan_officers := ClanOfficers.new()
+## Picked when the game starts (GDD §15 M14h): Difficulty.Level, the kingdom's name and color.
+var difficulty: int = Difficulty.Level.NORMAL
+var kingdom_name := DEFAULT_KINGDOM_NAME
+var player_color := PLAYER_COLOR
 ## Counters for the end-of-game screen: {"battles_won", "battles_lost"}.
 var stats := {"battles_won": 0, "battles_lost": 0}
 ## False when building upkeep could not be paid last turn; building effects pause.
@@ -78,6 +91,7 @@ func _init(p_board: BoardData, p_hand: PieceHand, p_terrains: Dictionary[StringN
 	advisors.rng.seed = seed_value + 2
 	equipment.rng.seed = seed_value + 3
 	agents.rng.seed = seed_value + 4
+	clan_officers.rng.seed = seed_value + 5
 	diplomacy.admin_effect = building_effect
 	wars.sabotage = agents.sabotage_on
 	generals.advisors = advisors
@@ -123,6 +137,17 @@ func _record_battle(won: bool) -> void:
 	stats["battles_won" if won else "battles_lost"] += 1
 
 
+## A new game's choices: {"difficulty": Difficulty.Level, "name": String, "color": Color}; missing
+## keys keep the defaults.
+func setup_new_game(settings: Dictionary) -> void:
+	difficulty = clampi(int(settings.get("difficulty", Difficulty.Level.NORMAL)), 0, Difficulty.NAMES.size() - 1)
+	var chosen_name := String(settings.get("name", "")).strip_edges().left(MAX_NAME_LENGTH)
+	kingdom_name = chosen_name if not chosen_name.is_empty() else DEFAULT_KINGDOM_NAME
+	# Rounded as the save writes it, so a loaded game looks the same.
+	player_color = Color.html(Color(settings.get("color", PLAYER_COLOR)).to_html(false))
+	wars.set_enemy_scale(Difficulty.enemy_scale(difficulty), turn)
+
+
 ## The whole game as JSON-safe data. The board is restored separately (BoardData.from_save),
 ## because the state is built around it.
 func to_save() -> Dictionary:
@@ -131,7 +156,8 @@ func to_save() -> Dictionary:
 			"hand": hand.to_save(), "stockpile": stockpile.to_save(), "army": army.to_save(),
 			"diplomacy": diplomacy.to_save(), "wars": wars.to_save(), "victory": victory.to_save(), "stats": stats.duplicate(),
 			"events": events.to_save(), "generals": generals.to_save(), "advisors": advisors.to_save(),
-			"equipment": equipment.to_save(), "agents": agents.to_save()}
+			"equipment": equipment.to_save(), "agents": agents.to_save(), "clan_officers": clan_officers.to_save(),
+			"difficulty": difficulty, "kingdom_name": kingdom_name, "player_color": player_color.to_html(false)}
 
 
 ## Restores everything but the board from to_save() data. Random rolls are not saved: they come
@@ -139,6 +165,11 @@ func to_save() -> Dictionary:
 func load_save(data: Dictionary) -> void:
 	turn = int(data.turn)
 	buildings_supplied = bool(data.buildings_supplied)
+	# Saves from before M14h: Normal, the default name and color.
+	difficulty = clampi(int(data.get("difficulty", Difficulty.Level.NORMAL)), 0, Difficulty.NAMES.size() - 1)
+	kingdom_name = String(data.get("kingdom_name", DEFAULT_KINGDOM_NAME))
+	player_color = Color.html(data.get("player_color", PLAYER_COLOR.to_html(false)))
+	wars.enemy_scale = Difficulty.enemy_scale(difficulty)
 	# Saves from before M11c have no castle level.
 	castle_level = clampi(int(data.get("castle_level", 1)), 1, castle_levels.size())
 	castle_turns = int(data.get("castle_turns", 0)) if castle_level < castle_levels.size() else 0
@@ -168,11 +199,13 @@ func load_save(data: Dictionary) -> void:
 		agents.load_save(data.agents)
 	else:
 		agents.refresh_candidates(castle_level, turn)
+	clan_officers.load_save(data.get("clan_officers", {}))
 
 
 ## What a save slot shows: {"turn", "cells", "soldiers"}.
 func save_summary() -> Dictionary:
-	return {"turn": turn, "cells": board.count_owned_cells(), "soldiers": army.count_soldiers()}
+	return {"turn": turn, "cells": board.count_owned_cells(), "soldiers": army.count_soldiers(), "difficulty": difficulty,
+			"kingdom_name": kingdom_name}
 
 
 ## Places the hand piece at `index`. The piece is used up only when placement succeeds.
@@ -196,6 +229,17 @@ func build(building_id: StringName, origin: Vector2i) -> BuildRules.Result:
 # --- Equipment (GDD §8 "Trang bị", M12e) --------------------------------------------------
 
 const FORGE_ID: StringName = &"forge"
+
+
+## The forge's top-left cell (finished or not), or NO_FORGE without one.
+const NO_FORGE := Vector2i(-1, -1)
+
+
+func forge_origin() -> Vector2i:
+	for cell in board.get_all_cells():
+		if cell.building_id == FORGE_ID and cell.coord == cell.building_origin:
+			return cell.coord
+	return NO_FORGE
 
 
 ## The working forge's level (finished, not being upgraded), 0 without one.
@@ -775,6 +819,7 @@ func end_turn() -> Dictionary:
 	var treaties := alliances.end_turn()
 	var declared := wars.end_turn(rng, turn)
 	var agent_events := agents.end_turn(diplomacy, police_level(), castle_level, turn + 1)
+	clan_officers.end_turn(wars)
 	turn += 1
 	var healing := roundi(building_effect(&"wound_healing"))
 	var healed := generals.end_turn(castle_level, turn, healing)
@@ -795,10 +840,11 @@ func end_turn() -> Dictionary:
 	var invader := wars.pick_invader(rng)
 	if invader != &"":
 		var invaders := wars.create_clan_side(invader, wars.invasion_size(invader), units)
+		clan_officers.lead(invaders, invader, wars, difficulty)
 		report["pending_invasion"] = {"clan_id": invader,
 				"simulator": BattleSimulator.new(invaders, create_kingdom_side(invader), rng.randi())}
 	elif raid != null and rng.randf() < RaidSystem.get_raid_chance(self, raid):
-		var bandits := RaidSystem.create_bandit_side(raid, enemy_units, turn, rng)
+		var bandits := RaidSystem.create_bandit_side(raid, enemy_units, turn, rng, wars.enemy_scale)
 		report["pending_raid"] = BattleSimulator.new(bandits, create_kingdom_side(&""), rng.randi())
 	# Rolled last so the invasion and raid rolls above stay as they were.
 	var no_events: Array[Dictionary] = []
@@ -909,7 +955,8 @@ func finish_invasion(clan_id: StringName, record: BattleRecord) -> Dictionary:
 		stockpile.spend(resources_lost)
 	result.merge({"record": record, "won": won, "clan_id": clan_id, "lost_cells": lost_cells,
 			"resources_lost": resources_lost, "enemy_lost": enemy_lost, "castle_fallen": castle_fallen,
-			"general": general, "advisor": advisor, "item": equipment.roll_loot(false, stockpile) if won else {}})
+			"general": general, "advisor": advisor, "item": equipment.roll_loot(false, stockpile) if won else {},
+			"enemy_officers": clan_officers.after_battle(record, BattleRecord.ATTACKER, clan_id)})
 	return result
 
 
@@ -921,6 +968,7 @@ func start_attack(clan_id: StringName) -> BattleSimulator:
 		return null
 	wars.mark_attacked(clan_id)
 	var defenders := wars.create_clan_side(clan_id, wars.fronts[clan_id].strength, units)
+	clan_officers.lead(defenders, clan_id, wars, difficulty)
 	alliances.add_friends(defenders, clan_id, units)
 	return BattleSimulator.new(create_kingdom_side(clan_id, false), defenders, rng.randi())
 
@@ -953,6 +1001,7 @@ func finish_attack(clan_id: StringName, record: BattleRecord) -> Dictionary:
 			if side != Vector2i.ZERO:
 				board.expand(side, Wars.ANNEX_EXPANSION)
 			result["expanded"] = side
+			result["agents_recalled"] = agents.recall_from(clan_id)
 			annexed = true
 			events.annexed_turn = turn
 	else:
@@ -963,5 +1012,6 @@ func finish_attack(clan_id: StringName, record: BattleRecord) -> Dictionary:
 		stockpile.spend(compensation)
 	result.merge({"record": record, "won": won, "clan_id": clan_id, "enemy_lost": enemy_lost,
 			"loot": loot, "compensation": compensation, "annexed": annexed, "general": general, "advisor": advisor,
-			"item": equipment.roll_loot(true, stockpile) if won else {}})
+			"item": equipment.roll_loot(true, stockpile) if won else {},
+			"enemy_officers": clan_officers.after_battle(record, BattleRecord.DEFENDER, clan_id)})
 	return result

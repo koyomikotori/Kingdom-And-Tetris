@@ -26,7 +26,7 @@ static func get_raid_chance(state: KingdomState, raid: RaidData) -> float:
 
 
 static func create_bandit_side(raid: RaidData, enemy_units: Dictionary[StringName, UnitData],
-		turn: int, rng: RandomNumberGenerator) -> BattleSide:
+		turn: int, rng: RandomNumberGenerator, scale: float = 1.0) -> BattleSide:
 	var squad_count := raid.base_squads + floori(turn * raid.squads_per_turn)
 	var ids: Array[StringName] = []
 	var weights := PackedFloat32Array()
@@ -45,14 +45,14 @@ static func create_bandit_side(raid: RaidData, enemy_units: Dictionary[StringNam
 	side.color = BANDIT_COLOR
 	for unit_id in enemy_units:  # enemy_units is in sort order
 		for i in picked.get(unit_id, 0):
-			side.add_unit(enemy_units[unit_id], enemy_units[unit_id].squad_size)
+			side.add_unit(enemy_units[unit_id], maxi(1, roundi(enemy_units[unit_id].squad_size * scale)))
 	return side
 
 
 ## The kingdom's whole army as a battle side, one battle unit per squad.
 static func create_kingdom_side(state: KingdomState) -> BattleSide:
-	var side := BattleSide.new("Vương quốc")
-	side.color = KingdomState.PLAYER_COLOR
+	var side := BattleSide.new(state.kingdom_name)
+	side.color = state.player_color
 	for squad in state.army.squads:
 		side.add_unit(state.units[squad.unit_id], squad.soldiers, squad)
 	return side
